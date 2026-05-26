@@ -19,7 +19,7 @@ class LocalNotificationService {
   static Future<void> initialize({
     required void Function(Map<String, dynamic> payload) onTap,
   }) async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(android: androidSettings);
 
     await plugin.initialize(
@@ -53,7 +53,7 @@ class LocalNotificationService {
         channelDescription: highImportanceChannel.description,
         importance: Importance.high,
         priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
       ),
     );
 
