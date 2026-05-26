@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background:#e8f1f4; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+    var officeMarker, userMarker, radiusCircle;
+    function updateMap(officeLat, officeLng, radiusMeter, userLat, userLng, distanceMeter, inside) {
+      var oLat = parseFloat(officeLat), oLng = parseFloat(officeLng);
+      var uLat = parseFloat(userLat), uLng = parseFloat(userLng);
+      var radius = parseFloat(radiusMeter || 100);
+      var isInside = inside === true || inside === 'true';
+      if (!officeMarker) officeMarker = L.marker([oLat, oLng]).addTo(map);
+      else officeMarker.setLatLng([oLat, oLng]);
+      if (!radiusCircle) radiusCircle = L.circle([oLat, oLng], { radius: radius, color:'#0e8fa3', weight:2, fillColor:'#2ecc71', fillOpacity:.16 }).addTo(map);
+      else { radiusCircle.setLatLng([oLat, oLng]); radiusCircle.setRadius(radius); }
+      if (!isNaN(uLat) && !isNaN(uLng)) {
+        if (!userMarker) userMarker = L.circleMarker([uLat, uLng], { radius:7, color:'#ffffff', weight:2, fillColor: isInside ? '#2ecc71' : '#f5a623', fillOpacity:1 }).addTo(map);
+        else userMarker.setLatLng([uLat, uLng]);
+        map.fitBounds(L.latLngBounds([[oLat, oLng], [uLat, uLng]]).pad(.45));
+      } else {
+        map.setView([oLat, oLng], 16);
+      }
+      setTimeout(function(){ map.invalidateSize(); }, 150);
+    }
+    updateMap(-6.21462, 106.84513, 150, -6.21462, 106.84513, 0, true);
+  </script>
+</body>
+</html>
