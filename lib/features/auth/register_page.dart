@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/error_mapper.dart';
 import '../../core/firebase_paths.dart';
@@ -123,20 +124,32 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppLoadingOverlay(
-      visible: _loading,
-      message: 'Mendaftarkan akun...',
-      child: Scaffold(
-        body: Container(
-          decoration: AuthUi.screenGradient(),
-          child: SafeArea(
+    final media = MediaQuery.of(context);
+    final topInset = media.padding.top;
+    final bottomInset = media.padding.bottom;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AuthUi.bgBottom,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: AppLoadingOverlay(
+        visible: _loading,
+        message: 'Mendaftarkan akun...',
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          body: Container(
+            decoration: AuthUi.screenGradient(),
             child: Stack(
               children: [
-                const AuthHeaderBackground(
-                  height: 212,
+                AuthHeaderBackground(
+                  height: 212 + topInset,
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(56, 26, 24, 0),
-                    child: Align(
+                    padding: EdgeInsets.fromLTRB(56, topInset + 26, 24, 0),
+                    child: const Align(
                       alignment: Alignment.topLeft,
                       child: AuthBrandTitle(),
                     ),
@@ -144,7 +157,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 Positioned(
                   left: 8,
-                  top: 8,
+                  top: topInset + 8,
                   child: IconButton(
                     onPressed: _loading ? null : () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -152,7 +165,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 122, 24, 24),
+                  padding: EdgeInsets.fromLTRB(24, topInset + 122, 24, 24 + bottomInset),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
