@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
@@ -100,20 +101,32 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppLoadingOverlay(
-      visible: _loading,
-      message: 'Memproses akun...',
-      child: Scaffold(
-        body: Container(
-          decoration: AuthUi.screenGradient(),
-          child: SafeArea(
+    final media = MediaQuery.of(context);
+    final topInset = media.padding.top;
+    final bottomInset = media.padding.bottom;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AuthUi.bgBottom,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: AppLoadingOverlay(
+        visible: _loading,
+        message: 'Memproses akun...',
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          body: Container(
+            decoration: AuthUi.screenGradient(),
             child: Stack(
               children: [
-                const AuthHeaderBackground(
-                  height: 212,
+                AuthHeaderBackground(
+                  height: 212 + topInset,
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(24, 26, 24, 0),
-                    child: Align(
+                    padding: EdgeInsets.fromLTRB(24, topInset + 26, 24, 0),
+                    child: const Align(
                       alignment: Alignment.topLeft,
                       child: AuthBrandTitle(),
                     ),
@@ -121,10 +134,10 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 122, 24, 24),
+                  padding: EdgeInsets.fromLTRB(24, topInset + 122, 24, 24 + bottomInset),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical - 146,
+                      minHeight: media.size.height - topInset - bottomInset - 146,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,6 +224,8 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 18),
+                        const _LoginInfoBox(),
                       ],
                     ),
                   ),
@@ -219,6 +234,101 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LoginInfoBox extends StatelessWidget {
+  const _LoginInfoBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      radius: 22,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AuthUi.softGreen,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.verified_user_outlined, color: AuthUi.deepTeal, size: 21),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Presensi aman untuk karyawan',
+                      style: TextStyle(color: AuthUi.text, fontSize: 13.5, fontWeight: FontWeight.w900),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Akun hanya dapat digunakan oleh karyawan yang terdaftar pada perusahaan.',
+                      style: TextStyle(color: AuthUi.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoPill(icon: Icons.location_on_outlined, label: 'Lokasi tervalidasi'),
+              _InfoPill(icon: Icons.photo_camera_outlined, label: 'Selfie presensi'),
+              _InfoPill(icon: Icons.history_rounded, label: 'Riwayat tersimpan'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: AuthUi.line),
+          const SizedBox(height: 10),
+          const Text(
+            'Butuh bantuan masuk? Hubungi admin perusahaan Anda untuk aktivasi akun atau reset akses.',
+            style: TextStyle(color: AuthUi.muted, fontSize: 11.8, height: 1.35, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AuthUi.paleGreen,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AuthUi.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AuthUi.deepTeal, size: 14),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(color: AuthUi.deepTeal, fontSize: 11.5, fontWeight: FontWeight.w900),
+          ),
+        ],
       ),
     );
   }
