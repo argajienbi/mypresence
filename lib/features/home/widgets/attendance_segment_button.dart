@@ -18,7 +18,7 @@ class AttendanceSegmentButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  bool get _canAct => insideRadius && nextAction != 'done';
+  bool get _canAct => nextAction != 'done';
 
   @override
   Widget build(BuildContext context) {
