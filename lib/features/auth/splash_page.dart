@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/app_session.dart';
 import '../../services/auth_service.dart';
@@ -137,23 +139,34 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final media = MediaQuery.of(context);
+    final size = media.size;
+    final topInset = media.padding.top;
+    final bottomInset = media.padding.bottom;
     final illustrationWidth = size.width.clamp(320.0, 520.0) * .68;
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: AuthUi.screenGradient(),
-        child: SafeArea(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AuthUi.bgBottom,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: AuthUi.screenGradient(),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const AuthHeaderBackground(
-                height: 218,
+              AuthHeaderBackground(
+                height: 218 + topInset,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(24, 26, 24, 0),
-                  child: Align(
+                  padding: EdgeInsets.fromLTRB(24, topInset + 26, 24, 0),
+                  child: const Align(
                     alignment: Alignment.topLeft,
                     child: AuthBrandTitle(),
                   ),
@@ -161,7 +174,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
               ),
               Positioned.fill(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 118, 24, 24),
+                  padding: EdgeInsets.fromLTRB(24, topInset + 118, 24, 24 + bottomInset),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -197,7 +210,18 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                               : _message,
                           key: ValueKey('$_message-$_sessionLoadFailed'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: AuthUi.muted, fontSize: 13, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .94),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: .18),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
