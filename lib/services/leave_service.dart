@@ -252,4 +252,23 @@ class LeaveService {
     rows.sort((a, b) => (b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
     return rows;
   }
+
+  Future<List<Map<String, dynamic>>> getMonthlyApprovedOvertime({required AppSession session, required DateTime month}) async {
+    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+    final rows = <Map<String, dynamic>>[];
+    for (final entry in root.entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final map = value.map((k, v) => MapEntry(k.toString(), v));
+      if ((map['uid'] ?? '').toString() != session.uid) continue;
+      if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
+      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      if (type != 'lembur') continue;
+      final date = DateTime.tryParse((map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      if (date == null || date.year != month.year || date.month != month.month) continue;
+      rows.add({'request_id': entry.key, ...map});
+    }
+    rows.sort((a, b) => (b['overtime_date'] ?? b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['overtime_date'] ?? a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
+    return rows;
+  }
 }
