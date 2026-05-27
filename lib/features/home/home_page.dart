@@ -7,8 +7,10 @@ import '../../core/models/app_notification.dart';
 import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/attendance_reminder_service.dart';
 import '../../services/attendance_service.dart';
 import '../../services/leave_service.dart';
+import '../../services/local_notification_service.dart';
 import '../../services/location_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_feedback.dart';
@@ -25,8 +27,15 @@ import 'widgets/radius_card.dart';
 
 class HomePage extends StatefulWidget {
   final AppSession session;
+  final bool showScheduleOnOpen;
+  final VoidCallback? onScheduleShown;
 
-  const HomePage({super.key, required this.session});
+  const HomePage({
+    super.key,
+    required this.session,
+    this.showScheduleOnOpen = false,
+    this.onScheduleShown,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -40,6 +49,7 @@ class _HomePageState extends State<HomePage> {
   final AppNotificationService _notificationService = AppNotificationService();
 
   Timer? _timer;
+  Timer? _schedulePollTimer;
   String _date = AppDate.dayDate(DateTime.now());
   double? _distance;
   double? _userLat;
@@ -50,27 +60,41 @@ class _HomePageState extends State<HomePage> {
   DailySchedule? _schedule;
   Map<String, dynamic>? _approvedLeaveToday;
   bool _loadingSchedule = true;
+  String _lastScheduleFingerprint = '';
 
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() {
-        _date = AppDate.dayDate(DateTime.now());
+      setState(() => _date = AppDate.dayDate(DateTime.now()));
+    });
+    _schedulePollTimer = Timer.periodic(const Duration(minutes: 5), (_) => _loadSchedule(notifyChange: true));
+    _refresh().then((_) {
+      if (!mounted || !widget.showScheduleOnOpen) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.onScheduleShown?.call();
+        _showScheduleDetails();
       });
     });
-    _refresh();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _schedulePollTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_loadLocation(), _loadToday(), _loadSchedule(), _loadApprovedLeaveToday()]);
+    await Future.wait([
+      _loadLocation(),
+      _loadToday(),
+      _loadSchedule(),
+      _loadApprovedLeaveToday(),
+    ]);
+    await _scheduleAttendanceReminders();
   }
 
   Future<void> _loadLocation() async {
@@ -100,14 +124,19 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _today = data);
   }
 
-  Future<void> _loadSchedule() async {
+  Future<void> _loadSchedule({bool notifyChange = false}) async {
     try {
       final data = await _scheduleService.resolveToday(widget.session);
+      final nextFingerprint = _scheduleFingerprint(data);
+      final changed = notifyChange && _lastScheduleFingerprint.isNotEmpty && _lastScheduleFingerprint != nextFingerprint;
       if (!mounted) return;
       setState(() {
         _schedule = data;
         _loadingSchedule = false;
+        _lastScheduleFingerprint = nextFingerprint;
       });
+      await _scheduleAttendanceReminders();
+      if (changed) await _showScheduleChangedNotification(data);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -127,6 +156,50 @@ class _HomePageState extends State<HomePage> {
     } catch (_) {
       if (mounted) setState(() => _approvedLeaveToday = null);
     }
+  }
+
+  Future<void> _scheduleAttendanceReminders() async {
+    if (_approvedLeaveToday != null) return;
+    await AttendanceReminderService.scheduleToday(
+      session: widget.session,
+      schedule: _schedule,
+      hasIn: hasIn,
+      hasOut: hasOut,
+    );
+  }
+
+  Future<void> _showScheduleChangedNotification(DailySchedule schedule) async {
+    await LocalNotificationService.show(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title: 'Jadwal Kerja Diperbarui',
+      body: schedule.isWorkday ? 'Jadwal hari ini: ${_workTime(schedule)}.' : schedule.message,
+      payload: {
+        'ref_type': 'schedule',
+        'type': 'info',
+        'title': 'Jadwal Kerja Diperbarui',
+        'body': schedule.isWorkday ? 'Jadwal hari ini: ${_workTime(schedule)}.' : schedule.message,
+      },
+    );
+  }
+
+  String _scheduleFingerprint(DailySchedule schedule) {
+    return [
+      schedule.source,
+      schedule.assignmentId,
+      schedule.shiftId,
+      schedule.shiftName,
+      schedule.timetableId,
+      schedule.timetableName,
+      schedule.workStart,
+      schedule.workEnd,
+      schedule.checkInStart,
+      schedule.checkInEnd,
+      schedule.checkOutStart,
+      schedule.checkOutEnd,
+      schedule.message,
+      schedule.isWorkday.toString(),
+      schedule.isHoliday.toString(),
+    ].join('|');
   }
 
   bool get hasIn => _today?['masuk'] is Map;
@@ -169,9 +242,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (!window.allowed) {
-      final message = window.status.startsWith('outside_')
-          ? 'Di luar jam absen. ${window.message}'
-          : window.message;
+      final message = window.status.startsWith('outside_') ? 'Di luar jam absen. ${window.message}' : window.message;
       AppToast.error(context, message);
       return;
     }
@@ -225,12 +296,8 @@ class _HomePageState extends State<HomePage> {
             : _approvedLeaveToday != null
                 ? '${_leaveTypeLabel((_approvedLeaveToday!['type'] ?? _approvedLeaveToday!['leave_type'] ?? '').toString())} Disetujui'
                 : 'Belum Ada Presensi';
-    final masuk = hasIn
-        ? ((_today!['masuk'] as Map)['time'] ?? (_today!['masuk'] as Map)['waktu'] ?? '--:--').toString()
-        : '--:--';
-    final pulang = hasOut
-        ? ((_today!['pulang'] as Map)['time'] ?? (_today!['pulang'] as Map)['waktu'] ?? '--:--').toString()
-        : '--:--';
+    final masuk = hasIn ? ((_today!['masuk'] as Map)['time'] ?? (_today!['masuk'] as Map)['waktu'] ?? '--:--').toString() : '--:--';
+    final pulang = hasOut ? ((_today!['pulang'] as Map)['time'] ?? (_today!['pulang'] as Map)['waktu'] ?? '--:--').toString() : '--:--';
     final firstName = widget.session.displayName.trim().split(' ').where((e) => e.isNotEmpty).firstOrNull ?? 'User';
 
     return Scaffold(
@@ -279,12 +346,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    HomeInfoTile(
-                      label: 'Jadwal',
-                      icon: Icons.event_available_rounded,
-                      color: AppColors.primary,
-                      onTap: _showScheduleDetails,
-                    ),
+                    HomeInfoTile(label: 'Jadwal', icon: Icons.event_available_rounded, color: AppColors.primary, onTap: _showScheduleDetails),
                     const SizedBox(width: 12),
                     HomeInfoTile(
                       label: 'Status',
@@ -295,14 +357,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Menu Cepat',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.text,
-                  ),
-                ),
+                const Text('Menu Cepat', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.text)),
                 const SizedBox(height: 9),
                 _UnreadQuickMenu(
                   session: widget.session,
@@ -366,12 +421,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showDetailSheet({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required List<Widget> children,
-  }) {
+  void _showDetailSheet({required String title, required IconData icon, required Color iconColor, required List<Widget> children}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -384,52 +434,19 @@ class _HomePageState extends State<HomePage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: .14),
-                  blurRadius: 28,
-                  offset: const Offset(0, -4),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .14), blurRadius: 28, offset: const Offset(0, -4))],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.line,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
+                Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(99))),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: iconColor.withValues(alpha: .11),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(icon, color: iconColor),
-                    ),
+                    Container(width: 44, height: 44, decoration: BoxDecoration(color: iconColor.withValues(alpha: .11), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: iconColor)),
                     const SizedBox(width: 13),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded, color: AppColors.muted),
-                    ),
+                    Expanded(child: Text(title, style: const TextStyle(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
+                    IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: AppColors.muted)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -439,13 +456,7 @@ class _HomePageState extends State<HomePage> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary.withValues(alpha: .10),
-                      foregroundColor: AppColors.primary,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.primary.withValues(alpha: .10), foregroundColor: AppColors.primary, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                     child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w900)),
                   ),
                 ),
@@ -523,23 +534,11 @@ class _ApprovedLeaveBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.green.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.green.withValues(alpha: .24)),
-      ),
+      decoration: BoxDecoration(color: AppColors.green.withValues(alpha: .10), borderRadius: BorderRadius.circular(22), border: Border.all(color: AppColors.green.withValues(alpha: .24))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.green.withValues(alpha: .15),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(Icons.verified_rounded, color: AppColors.green),
-          ),
+          Container(width: 42, height: 42, decoration: BoxDecoration(color: AppColors.green.withValues(alpha: .15), borderRadius: BorderRadius.circular(15)), child: const Icon(Icons.verified_rounded, color: AppColors.green)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -577,51 +576,21 @@ class _HomeHeaderInfo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Halo, $firstName',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.5,
-                  height: 1.05,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              Text('Halo, $firstName', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16.5, height: 1.05, fontWeight: FontWeight.w900)),
               const SizedBox(height: 3),
-              Text(
-                date,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: .88),
-                  fontSize: 11.8,
-                  height: 1.05,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              Text(date, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white.withValues(alpha: .88), fontSize: 11.8, height: 1.05, fontWeight: FontWeight.w800)),
             ],
           ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .18),
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: .18), borderRadius: BorderRadius.circular(16)),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.circle, size: 7, color: Colors.white),
               SizedBox(width: 6),
-              Text(
-                'Online',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              Text('Online', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
             ],
           ),
         ),
@@ -684,54 +653,20 @@ class _DetailRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _DetailRow({required this.icon, required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: .08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: AppColors.muted, size: 19),
-          ),
+          Container(width: 34, height: 34, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: .08), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: AppColors.muted, size: 19)),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.text, fontSize: 13, fontWeight: FontWeight.w800))),
           const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: valueColor ?? AppColors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
+          Flexible(child: Text(value, textAlign: TextAlign.right, style: TextStyle(color: valueColor ?? AppColors.text, fontSize: 13, fontWeight: FontWeight.w900))),
         ],
       ),
     );
