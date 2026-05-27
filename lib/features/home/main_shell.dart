@@ -14,11 +14,13 @@ import 'home_page.dart';
 class MainShell extends StatefulWidget {
   final AppSession session;
   final int initialIndex;
+  final bool showScheduleOnOpen;
 
   const MainShell({
     super.key,
     required this.session,
     this.initialIndex = 1,
+    this.showScheduleOnOpen = false,
   });
 
   @override
@@ -27,11 +29,13 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   late int _index;
+  late bool _showScheduleOnOpen;
 
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex.clamp(0, 2);
+    _showScheduleOnOpen = widget.showScheduleOnOpen;
     PushNotificationService.onPayloadReceived = _handlePushPayload;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -69,7 +73,13 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final pages = [
       HistoryPage(session: widget.session),
-      HomePage(session: widget.session),
+      HomePage(
+        session: widget.session,
+        showScheduleOnOpen: _showScheduleOnOpen,
+        onScheduleShown: () {
+          if (_showScheduleOnOpen) setState(() => _showScheduleOnOpen = false);
+        },
+      ),
       ProfilePage(session: widget.session),
     ];
 
