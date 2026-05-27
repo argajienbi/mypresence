@@ -25,6 +25,7 @@ class _HistoryPageState extends State<HistoryPage> {
   bool _loading = true;
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _leaveRows = [];
+  List<Map<String, dynamic>> _overtimeRows = [];
 
   @override
   void initState() {
@@ -37,16 +38,19 @@ class _HistoryPageState extends State<HistoryPage> {
     try {
       final data = await _attendance.getMonthlyHistory(session: widget.session, month: _month);
       final leaves = await _leave.getMonthlyRequests(session: widget.session, month: _month);
+      final overtime = await _leave.getMonthlyApprovedOvertime(session: widget.session, month: _month);
       if (!mounted) return;
       setState(() {
         _rows = data;
         _leaveRows = leaves;
+        _overtimeRows = overtime;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _rows = [];
         _leaveRows = [];
+        _overtimeRows = [];
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -62,12 +66,14 @@ class _HistoryPageState extends State<HistoryPage> {
     int hadir = 0;
     int telat = 0;
     int alpha = 0;
+    int lemburMinute = 0;
     final datesByKey = <String, List<String>>{
       'hadir': [],
       'telat': [],
       'izin': [],
       'sakit': [],
       'cuti': [],
+      'lembur': [],
       'alpha': [],
     };
 
@@ -101,12 +107,20 @@ class _HistoryPageState extends State<HistoryPage> {
       if (date.isNotEmpty) datesByKey[type]!.add(date);
     }
 
+    for (final row in _overtimeRows) {
+      final date = (row['overtime_date'] ?? row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '').toString();
+      if (date.isNotEmpty) datesByKey['lembur']!.add(date);
+      lemburMinute += int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ?? 0;
+    }
+
     return _MonthSummary(
       hadir: hadir,
       telat: telat,
       izin: leaveCount['izin'] ?? 0,
       sakit: leaveCount['sakit'] ?? 0,
       cuti: leaveCount['cuti'] ?? 0,
+      lembur: _overtimeRows.length,
+      lemburMinute: lemburMinute,
       alpha: alpha,
       datesByKey: datesByKey,
     );
@@ -136,6 +150,7 @@ class _HistoryPageState extends State<HistoryPage> {
         month: _month,
         rows: _rows,
         leaveRows: _leaveRows,
+        overtimeRows: _overtimeRows,
       ),
     );
   }
@@ -151,6 +166,7 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     final summary = _summary();
+    final hasAnyData = _rows.isNotEmpty || _leaveRows.isNotEmpty || _overtimeRows.isNotEmpty;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: Column(
@@ -196,7 +212,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                     ),
                   )
-                else if (_rows.isEmpty && _leaveRows.isEmpty)
+                else if (!hasAnyData)
                   const AppCard(
                     child: Padding(
                       padding: EdgeInsets.all(22),
@@ -216,8 +232,21 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                     ),
                   )
-                else
+                else ...[
                   ..._rows.map(_HistoryItem.new),
+                  if (_leaveRows.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const _SectionTitle('Pengajuan Disetujui'),
+                    const SizedBox(height: 10),
+                    ..._leaveRows.map(_LeaveHistoryItem.new),
+                  ],
+                  if (_overtimeRows.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const _SectionTitle('Lembur Disetujui'),
+                    const SizedBox(height: 10),
+                    ..._overtimeRows.map(_OvertimeHistoryItem.new),
+                  ],
+                ],
               ],
             ),
           ),
@@ -240,10 +269,22 @@ class _MonthSummary {
   final int izin;
   final int sakit;
   final int cuti;
+  final int lembur;
+  final int lemburMinute;
   final int alpha;
   final Map<String, List<String>> datesByKey;
 
-  const _MonthSummary({required this.hadir, required this.telat, required this.izin, required this.sakit, required this.cuti, required this.alpha, required this.datesByKey});
+  const _MonthSummary({
+    required this.hadir,
+    required this.telat,
+    required this.izin,
+    required this.sakit,
+    required this.cuti,
+    required this.lembur,
+    required this.lemburMinute,
+    required this.alpha,
+    required this.datesByKey,
+  });
 }
 
 class _MonthFilter extends StatelessWidget {
@@ -307,6 +348,7 @@ class _SummaryGrid extends StatelessWidget {
       _SummaryData('izin', 'Izin', summary.izin, AppColors.blue, const Color(0xFFEFF6FF), Icons.event_note_rounded),
       _SummaryData('sakit', 'Sakit', summary.sakit, AppColors.red, const Color(0xFFFFF0F3), Icons.medical_services_rounded),
       _SummaryData('cuti', 'Cuti', summary.cuti, const Color(0xFFCE7A00), const Color(0xFFFFF8E8), Icons.work_history_rounded),
+      _SummaryData('lembur', 'Lembur', summary.lembur, AppColors.primary, const Color(0xFFEAF7FA), Icons.timelapse_rounded),
       _SummaryData('alpha', 'Alpha', summary.alpha, AppColors.purple, const Color(0xFFF5F0FF), Icons.person_off_rounded),
     ];
     return GridView.builder(
@@ -447,11 +489,139 @@ class _HistoryItem extends StatelessWidget {
   }
 }
 
+class _LeaveHistoryItem extends StatelessWidget {
+  final Map<String, dynamic> row;
+  const _LeaveHistoryItem(this.row);
+
+  String get _type => (row['type'] ?? row['leave_type'] ?? 'izin').toString().toLowerCase();
+  String get _label {
+    switch (_type) {
+      case 'sakit':
+        return 'Sakit';
+      case 'cuti':
+        return 'Cuti';
+      default:
+        return 'Izin';
+    }
+  }
+
+  Color get _color {
+    switch (_type) {
+      case 'sakit':
+        return AppColors.red;
+      case 'cuti':
+        return const Color(0xFFCE7A00);
+      default:
+        return AppColors.blue;
+    }
+  }
+
+  IconData get _icon {
+    switch (_type) {
+      case 'sakit':
+        return Icons.medical_services_rounded;
+      case 'cuti':
+        return Icons.work_history_rounded;
+      default:
+        return Icons.event_note_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '-').toString();
+    final end = (row['date_end'] ?? row['tanggal_selesai'] ?? start).toString();
+    final reason = (row['reason'] ?? row['alasan'] ?? '').toString();
+    final dateText = end.isEmpty || end == start ? start : '$start - $end';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(width: 44, height: 44, decoration: BoxDecoration(color: _color.withValues(alpha: .12), borderRadius: BorderRadius.circular(15)), child: Icon(_icon, color: _color)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$_label Disetujui', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppColors.text)),
+                const SizedBox(height: 5),
+                Text(dateText, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.text)),
+                if (reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(reason, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                ],
+              ]),
+            ),
+            const SizedBox(width: 8),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: _color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999)), child: Text(_label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: _color))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OvertimeHistoryItem extends StatelessWidget {
+  final Map<String, dynamic> row;
+  const _OvertimeHistoryItem(this.row);
+
+  @override
+  Widget build(BuildContext context) {
+    final date = (row['overtime_date'] ?? row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '-').toString();
+    final start = (row['overtime_start_time'] ?? '').toString();
+    final end = (row['overtime_end_time'] ?? '').toString();
+    final reason = (row['reason'] ?? row['alasan'] ?? '').toString();
+    final duration = int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ?? 0;
+    final durationText = _formatDuration(duration);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: .12), borderRadius: BorderRadius.circular(15)), child: const Icon(Icons.timelapse_rounded, color: AppColors.primary)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Lembur Disetujui', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppColors.text)),
+                const SizedBox(height: 5),
+                Text('$date • $start - $end', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.text)),
+                const SizedBox(height: 4),
+                Text('Durasi $durationText', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.primary)),
+                if (reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(reason, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                ],
+              ]),
+            ),
+            const SizedBox(width: 8),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: .12), borderRadius: BorderRadius.circular(999)), child: const Text('LEMBUR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primary))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatDuration(int minutes) {
+    if (minutes <= 0) return '-';
+    final hours = minutes ~/ 60;
+    final remain = minutes % 60;
+    if (hours <= 0) return '$minutes menit';
+    if (remain == 0) return '$hours jam';
+    return '$hours jam $remain menit';
+  }
+}
+
 class _CalendarSheet extends StatelessWidget {
   final DateTime month;
   final List<Map<String, dynamic>> rows;
   final List<Map<String, dynamic>> leaveRows;
-  const _CalendarSheet({required this.month, required this.rows, required this.leaveRows});
+  final List<Map<String, dynamic>> overtimeRows;
+  const _CalendarSheet({required this.month, required this.rows, required this.leaveRows, required this.overtimeRows});
 
   Color _colorFor(DateTime date) {
     final key = AppDate.dateKey(date);
@@ -468,6 +638,8 @@ class _CalendarSheet extends StatelessWidget {
       if (hasMasuk && _HistoryPageState._isLate(masuk)) return AppColors.orange;
       if (hasMasuk || hasPulang) return AppColors.green;
     }
+    final overtime = overtimeRows.where((item) => (item['overtime_date'] ?? item['date_start'] ?? item['tanggal_mulai'] ?? item['date'] ?? '').toString() == key).toList();
+    if (overtime.isNotEmpty) return AppColors.primary;
     final leave = leaveRows.where((item) => (item['date_start'] ?? item['tanggal_mulai'] ?? item['date'] ?? '').toString() == key).toList();
     if (leave.isNotEmpty) return AppColors.blue;
     if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) return const Color(0xFFD9E1EA);
@@ -527,6 +699,7 @@ class _CalendarSheet extends StatelessWidget {
                       _Legend(color: AppColors.green, label: 'HADIR'),
                       _Legend(color: AppColors.orange, label: 'TELAT'),
                       _Legend(color: AppColors.blue, label: 'IZIN/SAKIT'),
+                      _Legend(color: AppColors.primary, label: 'LEMBUR'),
                       _Legend(color: AppColors.red, label: 'ALPHA'),
                       _Legend(color: Color(0xFFD9E1EA), label: 'LIBUR'),
                       _Legend(color: Color(0xFFE9EEF4), label: 'TANPA DATA'),
