@@ -22,6 +22,7 @@ import '../proxy_qr/proxy_attendance_page.dart';
 import 'widgets/attendance_segment_button.dart';
 import 'widgets/company_logo_avatar.dart';
 import 'widgets/home_info_tile.dart';
+import 'widgets/home_schedule_preview.dart';
 import 'widgets/quick_menu.dart';
 import 'widgets/radius_card.dart';
 
@@ -199,6 +200,8 @@ class _HomePageState extends State<HomePage> {
       schedule.message,
       schedule.isWorkday.toString(),
       schedule.isHoliday.toString(),
+      schedule.overtimeScheduleId,
+      schedule.overtimeFlag.toString(),
     ].join('|');
   }
 
@@ -344,16 +347,24 @@ class _HomePageState extends State<HomePage> {
                   onPressed: _openAttendance,
                 ),
                 const SizedBox(height: 10),
+                HomeSchedulePreview(
+                  session: widget.session,
+                  scheduleService: _scheduleService,
+                  todaySchedule: _schedule,
+                  loadingToday: _loadingSchedule,
+                  onOpenTodayDetail: _showScheduleDetails,
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    HomeInfoTile(label: 'Jadwal', icon: Icons.event_available_rounded, color: AppColors.primary, onTap: _showScheduleDetails),
-                    const SizedBox(width: 12),
                     HomeInfoTile(
                       label: 'Status',
                       icon: hasOut || _approvedLeaveToday != null ? Icons.verified_rounded : Icons.assignment_turned_in_rounded,
                       color: hasOut || hasIn || _approvedLeaveToday != null ? AppColors.green : AppColors.muted,
                       onTap: () => _showStatusDetails(status: status, masuk: masuk, pulang: pulang),
                     ),
+                    const SizedBox(width: 12),
+                    HomeInfoTile(label: 'Detail Jadwal', icon: Icons.event_available_rounded, color: AppColors.primary, onTap: _showScheduleDetails),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -398,7 +409,7 @@ class _HomePageState extends State<HomePage> {
         _DetailRow(icon: Icons.schedule_rounded, label: 'Shift', value: _scheduleText(schedule?.shiftName, fallback: schedule?.timetableName ?? '-')),
         _DetailRow(icon: Icons.groups_rounded, label: 'Grup / Struktur', value: _groupLabel()),
         _DetailRow(icon: Icons.access_time_rounded, label: 'Jam Kerja', value: _workTime(schedule)),
-        _DetailRow(icon: Icons.date_range_rounded, label: 'Berlaku', value: 'Sesuai penerapan jadwal aktif'),
+        _DetailRow(icon: Icons.date_range_rounded, label: 'Berlaku', value: schedule?.overtimeFlag == true ? 'Tanggal lembur terjadwal' : 'Sesuai penerapan jadwal aktif'),
         _DetailRow(icon: Icons.receipt_long_rounded, label: 'Sumber Jadwal', value: _sourceLabel(schedule?.source ?? '-')),
         _DetailRow(icon: Icons.verified_user_rounded, label: 'Status', value: readyText, valueColor: statusColor),
       ],
@@ -492,6 +503,8 @@ class _HomePageState extends State<HomePage> {
 
   String _sourceLabel(String source) {
     switch (source) {
+      case 'overtime_schedule':
+        return 'Jadwal Lembur';
       case 'user_assignment':
         return 'Penerapan Jadwal User';
       case 'group_assignment':
