@@ -25,6 +25,9 @@ class DailySchedule {
   final int lateToleranceMinute;
   final int earlyOutToleranceMinute;
   final bool crossesMidnight;
+  final bool overtimeFlag;
+  final String overtimeScheduleId;
+  final bool isHolidayWork;
 
   const DailySchedule({
     required this.scheduleReady,
@@ -48,6 +51,9 @@ class DailySchedule {
     required this.lateToleranceMinute,
     required this.earlyOutToleranceMinute,
     required this.crossesMidnight,
+    this.overtimeFlag = false,
+    this.overtimeScheduleId = '',
+    this.isHolidayWork = false,
   });
 
   String get periodLabel {
@@ -117,6 +123,40 @@ class DailySchedule {
     );
   }
 
+  static DailySchedule overtime({
+    required Map<String, dynamic> item,
+    required String scheduleId,
+    required String date,
+    required bool holidayWork,
+  }) {
+    return DailySchedule(
+      scheduleReady: true,
+      isWorkday: true,
+      isHoliday: false,
+      message: holidayWork ? 'Jadwal lembur aktif pada hari libur.' : 'Jadwal lembur aktif.',
+      source: 'overtime_schedule',
+      assignmentId: scheduleId,
+      assignmentStartDate: date,
+      assignmentEndDate: date,
+      shiftId: '',
+      shiftName: 'Jadwal Lembur',
+      timetableId: scheduleId,
+      timetableName: asString(item['name'], 'Jadwal Lembur'),
+      workStart: asString(item['work_start']),
+      workEnd: asString(item['work_end']),
+      checkInStart: asString(item['check_in_start']),
+      checkInEnd: asString(item['check_in_end']),
+      checkOutStart: asString(item['check_out_start']),
+      checkOutEnd: asString(item['check_out_end']),
+      lateToleranceMinute: asInt(item['late_tolerance_minute']),
+      earlyOutToleranceMinute: asInt(item['early_out_tolerance_minute']),
+      crossesMidnight: _timeCrossesMidnight(asString(item['work_start']), asString(item['work_end'])),
+      overtimeFlag: true,
+      overtimeScheduleId: scheduleId,
+      isHolidayWork: holidayWork,
+    );
+  }
+
   Map<String, dynamic> toAttendancePayload() {
     return <String, dynamic>{
       'schedule_ready': scheduleReady,
@@ -138,7 +178,26 @@ class DailySchedule {
       'late_tolerance_minute': lateToleranceMinute,
       'early_out_tolerance_minute': earlyOutToleranceMinute,
       'crosses_midnight': crossesMidnight,
+      'overtime_flag': overtimeFlag,
+      'overtime_schedule_id': overtimeScheduleId,
+      'is_holiday_work': isHolidayWork,
     };
+  }
+
+  static bool _timeCrossesMidnight(String start, String end) {
+    final startMinute = _minutes(start);
+    final endMinute = _minutes(end);
+    if (startMinute < 0 || endMinute < 0) return false;
+    return endMinute < startMinute;
+  }
+
+  static int _minutes(String time) {
+    final parts = time.split(':');
+    if (parts.length < 2) return -1;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return -1;
+    return hour * 60 + minute;
   }
 }
 
@@ -173,6 +232,18 @@ class ScheduleService {
     return resolveForDate(session, now ?? DateTime.now());
   }
 
+  Future<List<DailySchedule>> resolveRange(AppSession session, DateTime start, DateTime end) async {
+    final from = DateTime(start.year, start.month, start.day);
+    final to = DateTime(end.year, end.month, end.day);
+    final rows = <DailySchedule>[];
+    var current = from;
+    while (!current.isAfter(to)) {
+      rows.add(await resolveForDate(session, current));
+      current = current.add(const Duration(days: 1));
+    }
+    return rows;
+  }
+
   Future<DailySchedule> resolveForDate(AppSession session, DateTime dateTime) async {
     final date = AppDate.dateKey(dateTime);
     final companyUser = await _rtdb.getMap(FirebasePaths.companyUser(session.companyId, session.uid));
@@ -182,9 +253,16 @@ class ScheduleService {
     );
 
     final holiday = await _rtdb.getMap(FirebasePaths.holiday(context.companyId, date));
-    if (holiday != null && _isActive(holiday)) {
-      final title = asString(holiday['title'], 'Hari libur');
-      return DailySchedule.holiday(title);
+    final isHoliday = holiday != null && _isActive(holiday);
+
+    final overtime = await _findOvertimeSchedule(context, date);
+    if (overtime != null) {
+      return DailySchedule.overtime(
+        item: overtime,
+        scheduleId: asString(overtime['id']),
+        date: date,
+        holidayWork: isHoliday,
+      );
     }
 
     final special = await _findSpecialSchedule(context, date);
@@ -198,6 +276,11 @@ class ScheduleService {
         assignmentStartDate: asString(special['date']),
         assignmentEndDate: asString(special['date']),
       );
+    }
+
+    if (isHoliday) {
+      final title = asString(holiday['title'], 'Hari libur');
+      return DailySchedule.holiday(title);
     }
 
     final assignment = await _findAssignment(context, date);
@@ -215,6 +298,41 @@ class ScheduleService {
       assignmentStartDate: asString(assignment['start_date']),
       assignmentEndDate: asString(assignment['end_date']),
     );
+  }
+
+  Future<Map<String, dynamic>?> _findOvertimeSchedule(_ScheduleContext context, String date) async {
+    final root = await _rtdb.getMap(FirebasePaths.overtimeSchedules(context.companyId));
+    if (root == null || root.isEmpty) return null;
+
+    final matches = <Map<String, dynamic>>[];
+    for (final entry in root.entries) {
+      final item = asMap(entry.value);
+      if (!_isActive(item)) continue;
+      final status = asString(item['status'], 'active').toLowerCase();
+      if (status == 'inactive' || status == 'disabled') continue;
+      if (!_dateMatchesOvertime(item, date)) continue;
+      final targets = asMap(item['target_uids']);
+      if (!_targetMatches(targets, context.uid)) continue;
+      item['id'] = asString(item['schedule_id'], entry.key);
+      matches.add(item);
+    }
+
+    if (matches.isEmpty) return null;
+    matches.sort((a, b) => asInt(b['updated_at'], asInt(b['created_at'])).compareTo(asInt(a['updated_at'], asInt(a['created_at']))));
+    return matches.first;
+  }
+
+  bool _dateMatchesOvertime(Map<String, dynamic> item, String date) {
+    final dates = asMap(item['dates']);
+    if (dates.isNotEmpty) return dates[date] == true || asString(dates[date]) == 'true';
+    final directDate = asString(item['date']);
+    if (directDate.isNotEmpty) return directDate == date;
+    return _dateInRange(date, asString(item['date_start']), asString(item['date_end']));
+  }
+
+  bool _targetMatches(Map<String, dynamic> targets, String uid) {
+    if (targets.isEmpty) return false;
+    return targets[uid] == true || asString(targets[uid]) == 'true';
   }
 
   Future<Map<String, dynamic>?> _findSpecialSchedule(_ScheduleContext context, String date) async {
@@ -411,6 +529,7 @@ class ScheduleService {
   }
 
   bool _dateInRange(String date, String startDate, String endDate) {
+    if (startDate.isEmpty && endDate.isEmpty) return false;
     if (startDate.isNotEmpty && date.compareTo(startDate) < 0) return false;
     if (endDate.isNotEmpty && date.compareTo(endDate) > 0) return false;
     return true;
