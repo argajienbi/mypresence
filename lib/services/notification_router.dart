@@ -15,9 +15,9 @@ class NotificationRouter {
     Map<String, dynamic> payload,
   ) {
     final refType = (payload['ref_type'] ?? payload['type'] ?? '').toString();
-    _routeByRefType(context, session, refType);
+    final refId = (payload['ref_id'] ?? payload['related_id'] ?? '').toString();
+    _routeByRefType(context, session, refType, refId: refId);
   }
-
 
   static void openReference(
     BuildContext context,
@@ -25,7 +25,7 @@ class NotificationRouter {
     String? refType,
     String? refId,
   ) {
-    _routeByRefType(context, session, refType ?? '');
+    _routeByRefType(context, session, refType ?? '', refId: refId ?? '');
   }
 
   static void openFromNotification(
@@ -33,26 +33,41 @@ class NotificationRouter {
     AppSession session,
     AppNotification notification,
   ) {
-    _routeByRefType(context, session, notification.refType);
+    _routeByRefType(context, session, notification.refType, refId: notification.refId);
   }
 
   static void _routeByRefType(
     BuildContext context,
     AppSession session,
-    String refType,
-  ) {
+    String refType, {
+    String refId = '',
+  }) {
     final type = refType.toLowerCase();
 
-    if (type.contains('announcement') || type.contains('holiday') || type.contains('schedule')) {
+    if (type.contains('announcement')) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => AnnouncementsPage(session: session)),
       );
       return;
     }
 
-    if (type.contains('leave') || type.contains('qr') || type.contains('attendance')) {
+    if (type.contains('leave') || type.contains('approval')) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 0)),
+      );
+      return;
+    }
+
+    if (type.contains('qr') || type.contains('attendance')) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 0)),
+      );
+      return;
+    }
+
+    if (type.contains('schedule') || type.contains('jadwal') || type.contains('holiday')) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 1, showScheduleOnOpen: true)),
       );
       return;
     }
