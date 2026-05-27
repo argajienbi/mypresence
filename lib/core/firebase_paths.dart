@@ -43,6 +43,9 @@ class FirebasePaths {
   static String scheduleSpecials(String companyId) => 'schedule_specials/$companyId';
   static String scheduleSpecial(String companyId, String specialId) => 'schedule_specials/$companyId/$specialId';
 
+  static String overtimeSchedules(String companyId) => 'overtime_schedules/$companyId';
+  static String overtimeSchedule(String companyId, String scheduleId) => 'overtime_schedules/$companyId/$scheduleId';
+
   static String scheduleChangeLogs(String companyId) => 'schedule_change_logs/$companyId';
   static String scheduleChangeLog(String companyId, String logId) => 'schedule_change_logs/$companyId/$logId';
 
