@@ -114,50 +114,106 @@ class _NotificationToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.black.withValues(alpha: .05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  unreadCount > 0 ? '$unreadCount belum dibaca' : 'Semua notifikasi sudah dibaca',
-                  style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900),
-                ),
-              ),
-              if (unreadCount > 0)
-                TextButton.icon(
-                  onPressed: isMarkingAll || onMarkAll == null ? null : () => onMarkAll!(),
-                  icon: isMarkingAll
-                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.done_all_rounded, size: 18),
-                  label: const Text('Tandai semua dibaca'),
-                ),
-            ],
+          Text(
+            unreadCount > 0 ? '$unreadCount belum dibaca' : 'Semua notifikasi sudah dibaca',
+            style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: 8),
-          Row(
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              ChoiceChip(
-                label: const Text('Semua'),
+              _ToolbarChip(
+                label: 'Semua',
+                icon: Icons.check_rounded,
                 selected: !showUnreadOnly,
-                onSelected: (_) => onShowAll(),
+                onTap: onShowAll,
               ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Belum dibaca'),
+              _ToolbarChip(
+                label: 'Belum dibaca',
+                icon: Icons.mark_email_unread_rounded,
                 selected: showUnreadOnly,
-                onSelected: (_) => onShowUnread(),
+                onTap: onShowUnread,
+              ),
+              _ToolbarChip(
+                label: 'Tandai dibaca',
+                icon: Icons.done_all_rounded,
+                selected: false,
+                enabled: unreadCount > 0 && !isMarkingAll && onMarkAll != null,
+                loading: isMarkingAll,
+                onTap: unreadCount > 0 && !isMarkingAll && onMarkAll != null ? () => onMarkAll!() : null,
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ToolbarChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool enabled;
+  final bool loading;
+  final VoidCallback? onTap;
+
+  const _ToolbarChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.enabled = true,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected ? AppColors.primary.withValues(alpha: .16) : Colors.white;
+    final fg = selected ? AppColors.primary : AppColors.text;
+    final border = selected ? AppColors.primary.withValues(alpha: .24) : AppColors.line;
+
+    return Material(
+      color: enabled ? bg : AppColors.line.withValues(alpha: .35),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: enabled ? border : AppColors.line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (loading)
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              else
+                Icon(icon, color: enabled ? fg : AppColors.muted, size: 19),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: enabled ? fg : AppColors.muted,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
