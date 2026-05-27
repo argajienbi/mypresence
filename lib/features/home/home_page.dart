@@ -8,6 +8,7 @@ import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/attendance_service.dart';
+import '../../services/leave_service.dart';
 import '../../services/location_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_feedback.dart';
@@ -35,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   final AttendanceService _attendance = AttendanceService();
   final LocationService _location = LocationService();
   final ScheduleService _scheduleService = ScheduleService();
+  final LeaveService _leaveService = LeaveService();
   final AppNotificationService _notificationService = AppNotificationService();
 
   Timer? _timer;
@@ -46,6 +48,7 @@ class _HomePageState extends State<HomePage> {
   bool _loadingLocation = true;
   Map<String, dynamic>? _today;
   DailySchedule? _schedule;
+  Map<String, dynamic>? _approvedLeaveToday;
   bool _loadingSchedule = true;
 
   @override
@@ -67,7 +70,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_loadLocation(), _loadToday(), _loadSchedule()]);
+    await Future.wait([_loadLocation(), _loadToday(), _loadSchedule(), _loadApprovedLeaveToday()]);
   }
 
   Future<void> _loadLocation() async {
@@ -114,6 +117,18 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadApprovedLeaveToday() async {
+    try {
+      final data = await _leaveService.getApprovedLeaveForDate(
+        session: widget.session,
+        date: DateTime.now(),
+      );
+      if (mounted) setState(() => _approvedLeaveToday = data);
+    } catch (_) {
+      if (mounted) setState(() => _approvedLeaveToday = null);
+    }
+  }
+
   bool get hasIn => _today?['masuk'] is Map;
   bool get hasOut => _today?['pulang'] is Map;
 
@@ -125,6 +140,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openAttendance() async {
     if (nextAction == 'done') return;
+
+    final leave = _approvedLeaveToday;
+    if (leave != null) {
+      final type = _leaveTypeLabel((leave['type'] ?? leave['leave_type'] ?? '').toString());
+      AppToast.info(context, 'Hari ini pengajuan $type Anda sudah disetujui. Absen tidak wajib dilakukan.');
+      return;
+    }
 
     if (_loadingSchedule) {
       AppToast.info(context, 'Jadwal kerja masih dimuat. Coba beberapa saat lagi.');
@@ -200,7 +222,9 @@ class _HomePageState extends State<HomePage> {
         ? 'Presensi Hari Ini Selesai'
         : hasIn
             ? 'Sudah Absen Masuk'
-            : 'Belum Ada Presensi';
+            : _approvedLeaveToday != null
+                ? '${_leaveTypeLabel((_approvedLeaveToday!['type'] ?? _approvedLeaveToday!['leave_type'] ?? '').toString())} Disetujui'
+                : 'Belum Ada Presensi';
     final masuk = hasIn
         ? ((_today!['masuk'] as Map)['time'] ?? (_today!['masuk'] as Map)['waktu'] ?? '--:--').toString()
         : '--:--';
@@ -225,6 +249,13 @@ class _HomePageState extends State<HomePage> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 96),
               children: [
+                if (_approvedLeaveToday != null) ...[
+                  _ApprovedLeaveBanner(
+                    type: _leaveTypeLabel((_approvedLeaveToday!['type'] ?? _approvedLeaveToday!['leave_type'] ?? '').toString()),
+                    reason: (_approvedLeaveToday!['reason'] ?? _approvedLeaveToday!['alasan'] ?? '').toString(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
@@ -257,8 +288,8 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 12),
                     HomeInfoTile(
                       label: 'Status',
-                      icon: hasOut ? Icons.verified_rounded : Icons.assignment_turned_in_rounded,
-                      color: hasOut || hasIn ? AppColors.green : AppColors.muted,
+                      icon: hasOut || _approvedLeaveToday != null ? Icons.verified_rounded : Icons.assignment_turned_in_rounded,
+                      color: hasOut || hasIn || _approvedLeaveToday != null ? AppColors.green : AppColors.muted,
                       onTap: () => _showStatusDetails(status: status, masuk: masuk, pulang: pulang),
                     ),
                   ],
@@ -323,9 +354,9 @@ class _HomePageState extends State<HomePage> {
     _showDetailSheet(
       title: 'Detail Status Hari Ini',
       icon: Icons.assignment_turned_in_rounded,
-      iconColor: hasOut || hasIn ? AppColors.green : AppColors.muted,
+      iconColor: hasOut || hasIn || _approvedLeaveToday != null ? AppColors.green : AppColors.muted,
       children: [
-        _DetailRow(icon: Icons.person_pin_rounded, label: 'Status Presensi', value: status, valueColor: hasIn || hasOut ? AppColors.green : AppColors.orange),
+        _DetailRow(icon: Icons.person_pin_rounded, label: 'Status Presensi', value: status, valueColor: hasIn || hasOut || _approvedLeaveToday != null ? AppColors.green : AppColors.orange),
         _DetailRow(icon: Icons.login_rounded, label: 'Jam Masuk', value: masuk),
         _DetailRow(icon: Icons.logout_rounded, label: 'Jam Pulang', value: pulang),
         _DetailRow(icon: Icons.notes_rounded, label: 'Keterangan', value: _statusMessage(status)),
@@ -464,9 +495,70 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _statusMessage(String status) {
+    if (_approvedLeaveToday != null) return 'Pengajuan sudah disetujui admin. Absen hari ini tidak wajib dilakukan.';
     if (hasOut) return 'Presensi hari ini sudah lengkap.';
     if (hasIn) return 'Silakan lakukan absen pulang.';
     return 'Silakan lakukan absen masuk sesuai jadwal.';
+  }
+
+  String _leaveTypeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'sakit':
+        return 'Sakit';
+      case 'cuti':
+        return 'Cuti';
+      default:
+        return 'Izin';
+    }
+  }
+}
+
+class _ApprovedLeaveBanner extends StatelessWidget {
+  final String type;
+  final String reason;
+
+  const _ApprovedLeaveBanner({required this.type, required this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.green.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.green.withValues(alpha: .24)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: .15),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.verified_rounded, color: AppColors.green),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$type Disetujui Hari Ini', style: const TextStyle(color: AppColors.text, fontSize: 14.5, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(
+                  reason.trim().isEmpty ? 'Absen tidak wajib dilakukan karena pengajuan sudah disetujui admin.' : reason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12.5, fontWeight: FontWeight.w800, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
