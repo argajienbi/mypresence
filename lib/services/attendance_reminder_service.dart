@@ -27,20 +27,23 @@ class AttendanceReminderService {
 
     if (!hasIn) {
       final workStart = _todayAt(schedule.workStart.isNotEmpty ? schedule.workStart : schedule.checkInStart);
-      final reminderAt = workStart?.subtract(const Duration(minutes: 10));
-      if (reminderAt != null && reminderAt.isAfter(now)) {
-        await LocalNotificationService.scheduleOnce(
-          id: checkInId,
-          title: 'Jangan lupa absen masuk',
-          body: 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.',
-          scheduledAt: reminderAt,
-          payload: {
-            'ref_type': 'attendance_reminder',
-            'type': 'reminder',
-            'title': 'Jangan lupa absen masuk',
-            'body': 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.',
-          },
-        );
+      if (workStart != null) {
+        final reminderAt = workStart.subtract(const Duration(minutes: 10));
+        if (reminderAt.isAfter(now)) {
+          final body = 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.';
+          await LocalNotificationService.scheduleOnce(
+            id: checkInId,
+            title: 'Jangan lupa absen masuk',
+            body: body,
+            scheduledAt: reminderAt,
+            payload: {
+              'ref_type': 'attendance_reminder',
+              'type': 'reminder',
+              'title': 'Jangan lupa absen masuk',
+              'body': body,
+            },
+          );
+        }
       }
     }
 
@@ -49,20 +52,22 @@ class AttendanceReminderService {
       final adjustedEnd = schedule.crossesMidnight && workEnd != null && workEnd.isBefore(now)
           ? workEnd.add(const Duration(days: 1))
           : workEnd;
-      final reminderAt = adjustedEnd?.subtract(const Duration(minutes: 10));
-      if (reminderAt != null && reminderAt.isAfter(now)) {
-        await LocalNotificationService.scheduleOnce(
-          id: checkOutId,
-          title: 'Jangan lupa absen pulang',
-          body: 'Jangan lupa melakukan Check-Out sebelum pulang.',
-          scheduledAt: reminderAt,
-          payload: {
-            'ref_type': 'attendance_reminder',
-            'type': 'reminder',
-            'title': 'Jangan lupa absen pulang',
-            'body': 'Jangan lupa melakukan Check-Out sebelum pulang.',
-          },
-        );
+      if (adjustedEnd != null) {
+        final reminderAt = adjustedEnd.subtract(const Duration(minutes: 10));
+        if (reminderAt.isAfter(now)) {
+          await LocalNotificationService.scheduleOnce(
+            id: checkOutId,
+            title: 'Jangan lupa absen pulang',
+            body: 'Jangan lupa melakukan Check-Out sebelum pulang.',
+            scheduledAt: reminderAt,
+            payload: {
+              'ref_type': 'attendance_reminder',
+              'type': 'reminder',
+              'title': 'Jangan lupa absen pulang',
+              'body': 'Jangan lupa melakukan Check-Out sebelum pulang.',
+            },
+          );
+        }
       }
     }
   }
