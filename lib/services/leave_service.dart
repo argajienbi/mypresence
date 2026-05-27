@@ -171,6 +171,11 @@ class LeaveService {
     return normalized == 'pending' || normalized == 'approved' || normalized == 'validated' || normalized == 'processing';
   }
 
+  bool _isApprovedRequest(String status) {
+    final normalized = status.toLowerCase();
+    return normalized == 'approved' || normalized == 'validated';
+  }
+
   bool _dateRangeOverlap(DateTime startA, DateTime endA, DateTime startB, DateTime endB) {
     return !startA.isAfter(endB) && !startB.isAfter(endA);
   }
@@ -206,6 +211,29 @@ class LeaveService {
     }
   }
 
+  Future<Map<String, dynamic>?> getApprovedLeaveForDate({required AppSession session, required DateTime date}) async {
+    final key = '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+    for (final entry in root.entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final map = value.map((k, v) => MapEntry(k.toString(), v));
+      if ((map['uid'] ?? '').toString() != session.uid) continue;
+      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      if (type == 'lembur') continue;
+      if (type != 'izin' && type != 'sakit' && type != 'cuti') continue;
+      if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
+      final start = DateTime.tryParse((map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final end = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final target = DateTime.tryParse(key);
+      if (start == null || end == null || target == null) continue;
+      if (_dateRangeOverlap(target, target, start, end)) {
+        return {'request_id': entry.key, ...map};
+      }
+    }
+    return null;
+  }
+
   Future<List<Map<String, dynamic>>> getMonthlyRequests({required AppSession session, required DateTime month}) async {
     final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
     final rows = <Map<String, dynamic>>[];
@@ -214,12 +242,14 @@ class LeaveService {
       if (value is! Map) continue;
       final map = value.map((k, v) => MapEntry(k.toString(), v));
       if ((map['uid'] ?? '').toString() != session.uid) continue;
-      final start = DateTime.tryParse((map['date_start'] ?? map['date'] ?? '').toString());
+      if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
+      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      if (type == 'lembur') continue;
+      final start = DateTime.tryParse((map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
       if (start == null || start.year != month.year || start.month != month.month) continue;
       rows.add({'request_id': entry.key, ...map});
     }
-    rows.sort((a, b) => (b['date_start'] ?? b['date'] ?? '').toString().compareTo((a['date_start'] ?? a['date'] ?? '').toString()));
+    rows.sort((a, b) => (b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
     return rows;
   }
-
 }
