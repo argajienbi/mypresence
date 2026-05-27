@@ -347,14 +347,6 @@ class _HomePageState extends State<HomePage> {
                   onPressed: _openAttendance,
                 ),
                 const SizedBox(height: 10),
-                HomeSchedulePreview(
-                  session: widget.session,
-                  scheduleService: _scheduleService,
-                  todaySchedule: _schedule,
-                  loadingToday: _loadingSchedule,
-                  onOpenTodayDetail: _showScheduleDetails,
-                ),
-                const SizedBox(height: 10),
                 Row(
                   children: [
                     HomeInfoTile(
@@ -402,13 +394,21 @@ class _HomePageState extends State<HomePage> {
     final statusColor = schedule != null && schedule.isWorkday ? AppColors.green : AppColors.orange;
 
     _showDetailSheet(
-      title: 'Detail Jadwal Hari Ini',
+      title: 'Detail Jadwal',
       icon: Icons.event_available_rounded,
       iconColor: AppColors.primary,
       children: [
-        _DetailRow(icon: Icons.schedule_rounded, label: 'Shift', value: _scheduleText(schedule?.shiftName, fallback: schedule?.timetableName ?? '-')),
+        HomeSchedulePreview(
+          session: widget.session,
+          scheduleService: _scheduleService,
+          todaySchedule: _schedule,
+          loadingToday: _loadingSchedule,
+          onOpenTodayDetail: () {},
+        ),
+        const SizedBox(height: 12),
+        _DetailRow(icon: Icons.schedule_rounded, label: 'Shift Hari Ini', value: _scheduleText(schedule?.shiftName, fallback: schedule?.timetableName ?? '-')),
         _DetailRow(icon: Icons.groups_rounded, label: 'Grup / Struktur', value: _groupLabel()),
-        _DetailRow(icon: Icons.access_time_rounded, label: 'Jam Kerja', value: _workTime(schedule)),
+        _DetailRow(icon: Icons.access_time_rounded, label: 'Jam Kerja Hari Ini', value: _workTime(schedule)),
         _DetailRow(icon: Icons.date_range_rounded, label: 'Berlaku', value: schedule?.overtimeFlag == true ? 'Tanggal lembur terjadwal' : 'Sesuai penerapan jadwal aktif'),
         _DetailRow(icon: Icons.receipt_long_rounded, label: 'Sumber Jadwal', value: _sourceLabel(schedule?.source ?? '-')),
         _DetailRow(icon: Icons.verified_user_rounded, label: 'Status', value: readyText, valueColor: statusColor),
@@ -438,8 +438,10 @@ class _HomePageState extends State<HomePage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final maxHeight = MediaQuery.sizeOf(context).height * .88;
         return SafeArea(
           child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
             margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
             padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
             decoration: BoxDecoration(
@@ -447,31 +449,33 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .14), blurRadius: 28, offset: const Offset(0, -4))],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(99))),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(width: 44, height: 44, decoration: BoxDecoration(color: iconColor.withValues(alpha: .11), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: iconColor)),
-                    const SizedBox(width: 13),
-                    Expanded(child: Text(title, style: const TextStyle(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
-                    IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: AppColors.muted)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...children,
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.primary.withValues(alpha: .10), foregroundColor: AppColors.primary, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w900)),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 42, height: 4, decoration: BoxDecoration(color: AppColors.line, borderRadius: BorderRadius.circular(99))),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(width: 44, height: 44, decoration: BoxDecoration(color: iconColor.withValues(alpha: .11), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: iconColor)),
+                      const SizedBox(width: 13),
+                      Expanded(child: Text(title, style: const TextStyle(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
+                      IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close_rounded, color: AppColors.muted)),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  ...children,
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary.withValues(alpha: .10), foregroundColor: AppColors.primary, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
