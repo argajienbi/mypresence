@@ -19,6 +19,8 @@ class NotificationDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _typeColor(notification.type, notification.refType);
     final hasReference = notification.refType.trim().isNotEmpty || notification.refId.trim().isNotEmpty;
+    final referenceLabel = _referenceLabel(notification.refType);
+    final buttonLabel = _referenceButtonLabel(notification.refType);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -59,7 +61,7 @@ class NotificationDetailPage extends StatelessWidget {
                           _Badge(label: notification.displayType, color: color),
                           const SizedBox(height: 8),
                           Text(
-                            notification.title.trim().isEmpty ? 'MYPRESENSI' : notification.title,
+                            notification.title.trim().isEmpty ? 'MY PRESENCE' : notification.title,
                             style: const TextStyle(
                               color: AppColors.text,
                               fontSize: 21,
@@ -93,13 +95,11 @@ class NotificationDetailPage extends StatelessWidget {
                   label: 'Waktu',
                   value: _formatTime(notification.createdAt),
                 ),
-                if (notification.refType.trim().isNotEmpty)
+                if (hasReference)
                   _InfoRow(
                     icon: Icons.link_rounded,
-                    label: 'Referensi',
-                    value: notification.refId.trim().isEmpty
-                        ? notification.refType
-                        : '${notification.refType} · ${notification.refId}',
+                    label: 'Sumber',
+                    value: referenceLabel,
                   ),
                 if (hasReference) ...[
                   const SizedBox(height: 18),
@@ -113,7 +113,7 @@ class NotificationDetailPage extends StatelessWidget {
                         notification.refId,
                       ),
                       icon: const Icon(Icons.open_in_new_rounded),
-                      label: const Text('Buka Referensi'),
+                      label: Text(buttonLabel),
                     ),
                   ),
                 ],
@@ -141,6 +141,24 @@ class NotificationDetailPage extends StatelessWidget {
     if (value.contains('danger') || value.contains('error') || value.contains('rejected')) return Icons.error_rounded;
     if (value.contains('attendance') || value.contains('qr')) return Icons.fact_check_rounded;
     return Icons.notifications_rounded;
+  }
+
+  static String _referenceLabel(String refType) {
+    final type = refType.toLowerCase();
+    if (type.contains('announcement')) return 'Pengumuman';
+    if (type.contains('leave')) return 'Pengajuan';
+    if (type.contains('qr') || type.contains('attendance')) return 'Riwayat Presensi';
+    if (type.contains('schedule') || type.contains('jadwal')) return 'Jadwal Kerja';
+    return 'Notifikasi';
+  }
+
+  static String _referenceButtonLabel(String refType) {
+    final type = refType.toLowerCase();
+    if (type.contains('announcement')) return 'Lihat Pengumuman';
+    if (type.contains('leave')) return 'Lihat Pengajuan';
+    if (type.contains('qr') || type.contains('attendance')) return 'Lihat Riwayat';
+    if (type.contains('schedule') || type.contains('jadwal')) return 'Lihat Jadwal';
+    return 'Lihat Detail';
   }
 
   static String _formatTime(int timestamp) {
