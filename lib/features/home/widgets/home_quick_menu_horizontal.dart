@@ -23,81 +23,218 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
     required this.onQrTeman,
   });
 
+  List<_MenuAction> get _actions => [
+        _MenuAction(
+          label: 'Status',
+          icon: Icons.assignment_turned_in_rounded,
+          color: const Color(0xFF7A8793),
+          onTap: onStatus,
+        ),
+        _MenuAction(
+          label: 'Detail Jadwal',
+          icon: Icons.event_available_rounded,
+          color: AppColors.primary,
+          onTap: onSchedule,
+        ),
+        _MenuAction(
+          label: 'Izin',
+          icon: Icons.event_note_rounded,
+          color: AppColors.primary,
+          onTap: onIzin,
+        ),
+        _MenuAction(
+          label: 'Sakit',
+          icon: Icons.medical_services_rounded,
+          color: AppColors.red,
+          onTap: onSakit,
+        ),
+        _MenuAction(
+          label: 'Cuti',
+          icon: Icons.work_rounded,
+          color: AppColors.orange,
+          onTap: onCuti,
+        ),
+        _MenuAction(
+          label: 'Lembur',
+          icon: Icons.more_time_rounded,
+          color: const Color(0xFF7C3AED),
+          onTap: onLembur,
+        ),
+        _MenuAction(
+          label: 'QR',
+          icon: Icons.qr_code_2_rounded,
+          color: AppColors.green,
+          onTap: onQrTeman,
+        ),
+      ];
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 0),
-      child: Row(
-        children: [
-          _MenuItem(
-            label: 'Status',
-            icon: Icons.assignment_turned_in_rounded,
-            color: const Color(0xFF7A8793),
-            onTap: onStatus,
+    final actions = _actions;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Menu Cepat',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Akses cepat ke fitur penting harian.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _showAllMenu(context, actions),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Lihat semua',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: [
+              for (int index = 0; index < actions.length; index++) ...[
+                _MenuItem(action: actions[index]),
+                SizedBox(width: index == actions.length - 1 ? 4 : 12),
+              ],
+            ],
           ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'Detail Jadwal',
-            icon: Icons.event_available_rounded,
-            color: AppColors.primary,
-            onTap: onSchedule,
+        ),
+      ],
+    );
+  }
+
+  void _showAllMenu(BuildContext context, List<_MenuAction> actions) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .14),
+                  blurRadius: 28,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Semua Menu Cepat',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Pilih fitur yang ingin digunakan.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: actions.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: .82,
+                  ),
+                  itemBuilder: (context, index) {
+                    return _MenuItem(
+                      action: actions[index],
+                      onTapOverride: () {
+                        Navigator.of(context).pop();
+                        actions[index].onTap();
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'Izin',
-            icon: Icons.event_note_rounded,
-            color: AppColors.primary,
-            onTap: onIzin,
-          ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'Sakit',
-            icon: Icons.medical_services_rounded,
-            color: AppColors.red,
-            onTap: onSakit,
-          ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'Cuti',
-            icon: Icons.work_rounded,
-            color: AppColors.orange,
-            onTap: onCuti,
-          ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'Lembur',
-            icon: Icons.more_time_rounded,
-            color: const Color(0xFF7C3AED),
-            onTap: onLembur,
-          ),
-          const SizedBox(width: 12),
-          _MenuItem(
-            label: 'QR',
-            icon: Icons.qr_code_2_rounded,
-            color: AppColors.green,
-            onTap: onQrTeman,
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _MenuItem extends StatelessWidget {
+class _MenuAction {
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
-  const _MenuItem({
+  const _MenuAction({
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
   });
+}
+
+class _MenuItem extends StatelessWidget {
+  final _MenuAction action;
+  final VoidCallback? onTapOverride;
+
+  const _MenuItem({required this.action, this.onTapOverride});
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +242,7 @@ class _MenuItem extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
+        onTap: onTapOverride ?? action.onTap,
         child: SizedBox(
           width: 76,
           height: 76,
@@ -116,16 +253,16 @@ class _MenuItem extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: action.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(action.icon, color: action.color, size: 22),
               ),
               const SizedBox(height: 8),
               Expanded(
                 child: Center(
                   child: Text(
-                    label,
+                    action.label,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
