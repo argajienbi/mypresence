@@ -22,7 +22,6 @@ import 'widgets/clock_attendance_card.dart';
 import 'widgets/home_announcement_card.dart';
 import 'widgets/home_quick_menu_horizontal.dart';
 import 'widgets/home_sticky_profile_header.dart';
-import 'widgets/home_info_tile.dart';
 import 'widgets/home_schedule_preview.dart';
 import 'widgets/radius_card.dart';
 
@@ -71,7 +70,9 @@ class _HomePageState extends State<HomePage> {
       setState(() => _date = AppDate.dayDate(DateTime.now()));
     });
     _schedulePollTimer = Timer.periodic(
-        const Duration(minutes: 5), (_) => _loadSchedule(notifyChange: true));
+      const Duration(minutes: 5),
+      (_) => _loadSchedule(notifyChange: true),
+    );
     _refresh().then((_) {
       if (!mounted || !widget.showScheduleOnOpen) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -227,15 +228,17 @@ class _HomePageState extends State<HomePage> {
     final leave = _approvedLeaveToday;
     if (leave != null) {
       final type = _leaveTypeLabel(
-          (leave['type'] ?? leave['leave_type'] ?? '').toString());
-      AppToast.info(context,
-          'Hari ini pengajuan $type Anda sudah disetujui. Absen tidak wajib dilakukan.');
+        (leave['type'] ?? leave['leave_type'] ?? '').toString(),
+      );
+      AppToast.info(
+        context,
+        'Hari ini pengajuan $type Anda sudah disetujui. Absen tidak wajib dilakukan.',
+      );
       return;
     }
 
     if (_loadingSchedule) {
-      AppToast.info(
-          context, 'Jadwal kerja masih dimuat. Coba beberapa saat lagi.');
+      AppToast.info(context, 'Jadwal kerja masih dimuat. Coba beberapa saat lagi.');
       return;
     }
 
@@ -244,8 +247,7 @@ class _HomePageState extends State<HomePage> {
       schedule ??= await _scheduleService.resolveToday(widget.session);
     } catch (_) {
       if (!mounted) return;
-      AppToast.error(
-          context, 'Jadwal kerja belum bisa dibaca. Coba muat ulang aplikasi.');
+      AppToast.error(context, 'Jadwal kerja belum bisa dibaca. Coba muat ulang aplikasi.');
       return;
     }
     if (!mounted) return;
@@ -272,8 +274,7 @@ class _HomePageState extends State<HomePage> {
       final distanceText = _distance == null
           ? ''
           : ' (${_distance!.toStringAsFixed(0)} m dari kantor)';
-      AppToast.error(
-          context, 'Anda berada di luar radius kantor$distanceText.');
+      AppToast.error(context, 'Anda berada di luar radius kantor$distanceText.');
       return;
     }
 
@@ -332,18 +333,19 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: AppColors.bg,
       body: Stack(
         children: [
-          // Content ListView
           Positioned.fill(
             child: ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 170, 18, 96),
+              padding: const EdgeInsets.fromLTRB(18, 188, 18, 128),
               children: [
                 if (_approvedLeaveToday != null) ...[
                   _ApprovedLeaveBanner(
-                    type: _leaveTypeLabel((_approvedLeaveToday!['type'] ??
-                            _approvedLeaveToday!['leave_type'] ??
-                            '')
-                        .toString()),
+                    type: _leaveTypeLabel(
+                      (_approvedLeaveToday!['type'] ??
+                              _approvedLeaveToday!['leave_type'] ??
+                              '')
+                          .toString(),
+                    ),
                     reason: (_approvedLeaveToday!['reason'] ??
                             _approvedLeaveToday!['alasan'] ??
                             '')
@@ -363,7 +365,7 @@ class _HomePageState extends State<HomePage> {
                   inside: _insideRadius,
                   loading: _loadingLocation,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 ClockAttendanceCard(
                   nextAction: nextAction,
                   insideRadius: _insideRadius,
@@ -371,16 +373,13 @@ class _HomePageState extends State<HomePage> {
                   hasOut: hasOut,
                   onPressed: _openAttendance,
                 ),
-                const SizedBox(height: 18),
-                const Text('Menu Cepat',
-                    style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text)),
-                const SizedBox(height: 9),
+                const SizedBox(height: 16),
                 HomeQuickMenuHorizontal(
                   onStatus: () => _showStatusDetails(
-                      status: status, masuk: masuk, pulang: pulang),
+                    status: status,
+                    masuk: masuk,
+                    pulang: pulang,
+                  ),
                   onSchedule: _showScheduleDetails,
                   onIzin: () => _openLeave('izin'),
                   onSakit: () => _openLeave('sakit'),
@@ -393,7 +392,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // Sticky Header
           Positioned(
             top: 0,
             left: 0,
@@ -401,23 +399,15 @@ class _HomePageState extends State<HomePage> {
             child: StreamBuilder<List<AppNotification>>(
               stream: _notificationService.watchFirestoreInbox(widget.session),
               builder: (context, firestoreSnapshot) {
-                final firestoreItems =
-                    firestoreSnapshot.data ?? const <AppNotification>[];
+                final firestoreItems = firestoreSnapshot.data ?? const <AppNotification>[];
                 return StreamBuilder<List<AppNotification>>(
-                  stream:
-                      _notificationService.watchRtdbFallback(widget.session),
+                  stream: _notificationService.watchRtdbFallback(widget.session),
                   builder: (context, rtdbSnapshot) {
-                    final rtdbItems =
-                        rtdbSnapshot.data ?? const <AppNotification>[];
-                    // Filter hanya untuk notifikasi penting (bukan announcement/pengumuman)
-                    final allItems = _notificationService.mergeInbox(
-                        firestoreItems, rtdbItems);
-                    final importantItems = allItems
-                        .where((item) =>
-                            !item.read &&
-                            _isImportantNotification(item.refType))
-                        .toList();
-                    final unreadCount = importantItems.length;
+                    final rtdbItems = rtdbSnapshot.data ?? const <AppNotification>[];
+                    final allItems = _notificationService.mergeInbox(firestoreItems, rtdbItems);
+                    final unreadCount = allItems
+                        .where((item) => !item.read && _isImportantNotification(item.refType))
+                        .length;
 
                     return HomeStickyProfileHeader(
                       session: widget.session,
@@ -436,15 +426,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   bool _isImportantNotification(String refType) {
-    const importantTypes = [
-      'approval',
-      'leave',
-      'schedule',
-      'jadwal',
-      'attendance',
-      'system'
-    ];
-    return importantTypes.contains(refType.toLowerCase());
+    final value = refType.toLowerCase();
+
+    if (value.contains('announcement') || value.contains('pengumuman')) {
+      return false;
+    }
+
+    return value.contains('approval') ||
+        value.contains('leave') ||
+        value.contains('izin') ||
+        value.contains('cuti') ||
+        value.contains('sakit') ||
+        value.contains('schedule') ||
+        value.contains('jadwal') ||
+        value.contains('attendance') ||
+        value.contains('presensi') ||
+        value.contains('system');
   }
 
   void _showScheduleDetails() {
@@ -476,39 +473,50 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 12),
         _DetailRow(
-            icon: Icons.schedule_rounded,
-            label: 'Shift Hari Ini',
-            value: _scheduleText(schedule?.shiftName,
-                fallback: schedule?.timetableName ?? '-')),
+          icon: Icons.schedule_rounded,
+          label: 'Shift Hari Ini',
+          value: _scheduleText(
+            schedule?.shiftName,
+            fallback: schedule?.timetableName ?? '-',
+          ),
+        ),
         _DetailRow(
-            icon: Icons.groups_rounded,
-            label: 'Grup / Struktur',
-            value: _groupLabel()),
+          icon: Icons.groups_rounded,
+          label: 'Grup / Struktur',
+          value: _groupLabel(),
+        ),
         _DetailRow(
-            icon: Icons.access_time_rounded,
-            label: 'Jam Kerja Hari Ini',
-            value: _workTime(schedule)),
+          icon: Icons.access_time_rounded,
+          label: 'Jam Kerja Hari Ini',
+          value: _workTime(schedule),
+        ),
         _DetailRow(
-            icon: Icons.date_range_rounded,
-            label: 'Berlaku',
-            value: schedule?.overtimeFlag == true
-                ? 'Tanggal lembur terjadwal'
-                : 'Sesuai penerapan jadwal aktif'),
+          icon: Icons.date_range_rounded,
+          label: 'Berlaku',
+          value: schedule?.overtimeFlag == true
+              ? 'Tanggal lembur terjadwal'
+              : 'Sesuai penerapan jadwal aktif',
+        ),
         _DetailRow(
-            icon: Icons.receipt_long_rounded,
-            label: 'Sumber Jadwal',
-            value: _sourceLabel(schedule?.source ?? '-')),
+          icon: Icons.receipt_long_rounded,
+          label: 'Sumber Jadwal',
+          value: _sourceLabel(schedule?.source ?? '-'),
+        ),
         _DetailRow(
-            icon: Icons.verified_user_rounded,
-            label: 'Status',
-            value: readyText,
-            valueColor: statusColor),
+          icon: Icons.verified_user_rounded,
+          label: 'Status',
+          value: readyText,
+          valueColor: statusColor,
+        ),
       ],
     );
   }
 
-  void _showStatusDetails(
-      {required String status, required String masuk, required String pulang}) {
+  void _showStatusDetails({
+    required String status,
+    required String masuk,
+    required String pulang,
+  }) {
     _showDetailSheet(
       title: 'Detail Status Hari Ini',
       icon: Icons.assignment_turned_in_rounded,
@@ -517,38 +525,42 @@ class _HomePageState extends State<HomePage> {
           : AppColors.muted,
       children: [
         _DetailRow(
-            icon: Icons.person_pin_rounded,
-            label: 'Status Presensi',
-            value: status,
-            valueColor: hasIn || hasOut || _approvedLeaveToday != null
-                ? AppColors.green
-                : AppColors.orange),
+          icon: Icons.person_pin_rounded,
+          label: 'Status Presensi',
+          value: status,
+          valueColor: hasIn || hasOut || _approvedLeaveToday != null
+              ? AppColors.green
+              : AppColors.orange,
+        ),
         _DetailRow(icon: Icons.login_rounded, label: 'Jam Masuk', value: masuk),
+        _DetailRow(icon: Icons.logout_rounded, label: 'Jam Pulang', value: pulang),
         _DetailRow(
-            icon: Icons.logout_rounded, label: 'Jam Pulang', value: pulang),
+          icon: Icons.notes_rounded,
+          label: 'Keterangan',
+          value: _statusMessage(status),
+        ),
         _DetailRow(
-            icon: Icons.notes_rounded,
-            label: 'Keterangan',
-            value: _statusMessage(status)),
-        _DetailRow(
-            icon: Icons.location_on_rounded,
-            label: 'Lokasi / Jarak',
-            value: _distance == null
-                ? 'Belum tersedia'
-                : '${_distance!.round()} m dari kantor'),
+          icon: Icons.location_on_rounded,
+          label: 'Lokasi / Jarak',
+          value: _distance == null
+              ? 'Belum tersedia'
+              : '${_distance!.round()} m dari kantor',
+        ),
         const _DetailRow(
-            icon: Icons.camera_alt_rounded,
-            label: 'Metode',
-            value: 'Selfie + GPS'),
+          icon: Icons.camera_alt_rounded,
+          label: 'Metode',
+          value: 'Selfie + GPS',
+        ),
       ],
     );
   }
 
-  void _showDetailSheet(
-      {required String title,
-      required IconData icon,
-      required Color iconColor,
-      required List<Widget> children}) {
+  void _showDetailSheet({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<Widget> children,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -565,9 +577,10 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: .14),
-                    blurRadius: 28,
-                    offset: const Offset(0, -4))
+                  color: Colors.black.withValues(alpha: .14),
+                  blurRadius: 28,
+                  offset: const Offset(0, -4),
+                ),
               ],
             ),
             child: SingleChildScrollView(
@@ -575,32 +588,40 @@ class _HomePageState extends State<HomePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                      width: 42,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: AppColors.line,
-                          borderRadius: BorderRadius.circular(99))),
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                              color: iconColor.withValues(alpha: .11),
-                              borderRadius: BorderRadius.circular(16)),
-                          child: Icon(icon, color: iconColor)),
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: iconColor.withValues(alpha: .11),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(icon, color: iconColor),
+                      ),
                       const SizedBox(width: 13),
                       Expanded(
-                          child: Text(title,
-                              style: const TextStyle(
-                                  color: AppColors.text,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900))),
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: AppColors.text,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
                       IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded,
-                              color: AppColors.muted)),
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded, color: AppColors.muted),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -611,15 +632,18 @@ class _HomePageState extends State<HomePage> {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: FilledButton.styleFrom(
-                          backgroundColor:
-                              AppColors.primary.withValues(alpha: .10),
-                          foregroundColor: AppColors.primary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16))),
-                      child: const Text('Tutup',
-                          style: TextStyle(fontWeight: FontWeight.w900)),
+                        backgroundColor: AppColors.primary.withValues(alpha: .10),
+                        foregroundColor: AppColors.primary,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        'Tutup',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
                     ),
                   ),
                 ],
@@ -643,12 +667,11 @@ class _HomePageState extends State<HomePage> {
     final parts = <String>[
       if (group.isNotEmpty) group,
       if (department.isNotEmpty) department,
-      if (sub.isNotEmpty) sub
+      if (sub.isNotEmpty) sub,
     ];
-    if (parts.isEmpty)
-      return widget.session.officeName.isEmpty
-          ? '-'
-          : widget.session.officeName;
+    if (parts.isEmpty) {
+      return widget.session.officeName.isEmpty ? '-' : widget.session.officeName;
+    }
     return parts.join(' — ');
   }
 
@@ -657,8 +680,9 @@ class _HomePageState extends State<HomePage> {
     final start = schedule.workStart.isNotEmpty
         ? schedule.workStart
         : schedule.checkInStart;
-    final end =
-        schedule.workEnd.isNotEmpty ? schedule.workEnd : schedule.checkOutEnd;
+    final end = schedule.workEnd.isNotEmpty
+        ? schedule.workEnd
+        : schedule.checkOutEnd;
     if (start.isEmpty && end.isEmpty) return '-';
     return '$start - $end';
   }
@@ -681,8 +705,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _statusMessage(String status) {
-    if (_approvedLeaveToday != null)
+    if (_approvedLeaveToday != null) {
       return 'Pengajuan sudah disetujui admin. Absen hari ini tidak wajib dilakukan.';
+    }
     if (hasOut) return 'Presensi hari ini sudah lengkap.';
     if (hasIn) return 'Silakan lakukan absen pulang.';
     return 'Silakan lakukan absen masuk sesuai jadwal.';
@@ -711,30 +736,35 @@ class _ApprovedLeaveBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: AppColors.green.withValues(alpha: .10),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.green.withValues(alpha: .24))),
+        color: AppColors.green.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.green.withValues(alpha: .24)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                  color: AppColors.green.withValues(alpha: .15),
-                  borderRadius: BorderRadius.circular(15)),
-              child:
-                  const Icon(Icons.verified_rounded, color: AppColors.green)),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: .15),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(Icons.verified_rounded, color: AppColors.green),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$type Disetujui Hari Ini',
-                    style: const TextStyle(
-                        color: AppColors.text,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w900)),
+                Text(
+                  '$type Disetujui Hari Ini',
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   reason.trim().isEmpty
@@ -743,10 +773,11 @@ class _ApprovedLeaveBanner extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      height: 1.35),
+                    color: AppColors.muted,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -763,42 +794,54 @@ class _DetailRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _DetailRow(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      this.valueColor});
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.line))),
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
       child: Row(
         children: [
           Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: .08),
-                  borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: AppColors.muted, size: 19)),
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.muted, size: 19),
+          ),
           const SizedBox(width: 12),
           Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800))),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
           const SizedBox(width: 12),
           Flexible(
-              child: Text(value,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                      color: valueColor ?? AppColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900))),
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: valueColor ?? AppColors.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
         ],
       ),
     );
