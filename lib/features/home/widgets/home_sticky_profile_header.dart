@@ -38,102 +38,61 @@ class HomeStickyProfileHeader extends StatelessWidget {
     final photoUrl = session.photoUrl.trim();
 
     return SizedBox(
-      height: 178,
+      height: 184,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF04B96E), Color(0xFF0796B6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
+            child: CustomPaint(
+              painter: _HeaderPainter(),
             ),
           ),
-          Positioned(
-            left: -40,
-            right: -40,
-            bottom: -42,
-            child: Container(
-              height: 86,
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(100),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 18,
-            right: 18,
-            bottom: 22,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(32),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: .20),
-                      Colors.white.withValues(alpha: .08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _ProfileAvatar(firstName: firstName, photoUrl: photoUrl),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$greeting, $firstName',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.text,
+                            fontSize: 20,
+                            height: 1.08,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 9),
+                        Text(
+                          date,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.text.withValues(alpha: .82),
+                            fontSize: 14,
+                            height: 1.05,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  border: Border.all(color: Colors.white.withValues(alpha: .34)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: .14),
-                      blurRadius: 24,
-                      offset: const Offset(0, 14),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    _ProfileAvatar(firstName: firstName, photoUrl: photoUrl),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$greeting, $firstName',
-                            style: const TextStyle(
-                              fontSize: 19,
-                              height: 1.08,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.text,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            date,
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.text.withValues(alpha: .72),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _NotificationButton(
-                      count: unreadNotifications,
-                      onPressed: onNotificationPressed,
-                    ),
-                  ],
-                ),
+                  const SizedBox(width: 12),
+                  _NotificationButton(
+                    count: unreadNotifications,
+                    onPressed: onNotificationPressed,
+                  ),
+                ],
               ),
             ),
           ),
@@ -141,6 +100,52 @@ class HomeStickyProfileHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HeaderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF08B65F), Color(0xFF078FAF)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(rect);
+
+    final path = Path()
+      ..lineTo(0, size.height - 36)
+      ..quadraticBezierTo(
+        size.width * .50,
+        size.height + 18,
+        size.width,
+        size.height - 36,
+      )
+      ..lineTo(size.width, 0)
+      ..close();
+
+    canvas.drawPath(path, paint);
+
+    final accentPaint = Paint()
+      ..color = Colors.white.withValues(alpha: .06)
+      ..style = PaintingStyle.fill;
+    final accentPath = Path()
+      ..moveTo(size.width * .42, 0)
+      ..cubicTo(
+        size.width * .72,
+        20,
+        size.width * .86,
+        78,
+        size.width,
+        58,
+      )
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(accentPath, accentPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _ProfileAvatar extends StatelessWidget {
@@ -154,17 +159,17 @@ class _ProfileAvatar extends StatelessWidget {
     final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
-      width: 64,
-      height: 64,
-      padding: const EdgeInsets.all(3),
+      width: 72,
+      height: 72,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: .82),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .12),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -191,17 +196,14 @@ class _InitialAvatar extends StatelessWidget {
     final initial = firstName.trim().isEmpty ? 'U' : firstName.characters.first.toUpperCase();
 
     return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primary.withValues(alpha: .30),
-      ),
+      color: AppColors.primary.withValues(alpha: .32),
       alignment: Alignment.center,
       child: Text(
         initial,
         style: const TextStyle(
-          fontSize: 25,
-          fontWeight: FontWeight.w900,
           color: Colors.white,
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
@@ -219,25 +221,22 @@ class _NotificationButton extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Material(
-          color: Colors.white.withValues(alpha: .18),
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(18),
-            child: const SizedBox(
-              width: 50,
-              height: 50,
-              child: Icon(Icons.notifications_rounded, color: AppColors.text, size: 28),
-            ),
+        IconButton(
+          onPressed: onPressed,
+          icon: const Icon(
+            Icons.notifications_rounded,
+            color: Colors.white,
+            size: 34,
           ),
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(minWidth: 50, minHeight: 50),
         ),
         if (count > 0)
           Positioned(
-            right: -2,
-            top: -3,
+            right: 2,
+            top: 2,
             child: Container(
-              constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+              constraints: const BoxConstraints(minWidth: 23, minHeight: 23),
               padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(
                 color: AppColors.red,
@@ -248,9 +247,9 @@ class _NotificationButton extends StatelessWidget {
               child: Text(
                 count > 99 ? '99+' : count.toString(),
                 style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
-                  color: Colors.white,
                 ),
               ),
             ),
