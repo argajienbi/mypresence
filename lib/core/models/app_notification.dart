@@ -102,6 +102,7 @@ class AppNotification {
     if (value.contains('success')) return 'Sukses';
     if (value.contains('warning')) return 'Peringatan';
     if (value.contains('danger') || value.contains('error')) return 'Penting';
+    if (ref.contains('correction') || ref.contains('koreksi')) return 'Koreksi';
     if (ref.contains('approval') || value.contains('approval')) return 'Persetujuan';
     if (ref.contains('attendance') || value.contains('attendance')) return 'Absensi';
     if (ref.contains('schedule')) return 'Jadwal';
@@ -141,11 +142,19 @@ class AppNotification {
 
     if (value.isEmpty) return original;
     if (value.contains('announcement') || value.contains('pengumuman')) return 'announcement';
+    if (value.contains('correction') || value.contains('koreksi')) return 'attendance_correction';
     if (value.contains('approval')) return 'approval';
-    if (value.contains('leave') || value.contains('izin') || value.contains('cuti') || value.contains('sakit')) return 'leave';
+    if (value.contains('leave') ||
+        value.contains('izin') ||
+        value.contains('cuti') ||
+        value.contains('sakit') ||
+        value.contains('lembur') ||
+        value.contains('overtime')) {
+      return 'leave';
+    }
     if (value.contains('schedule') || value.contains('jadwal') || value.contains('holiday')) return 'schedule';
     if (value.contains('attendance') || value.contains('presensi') || value.contains('qr')) return 'attendance';
-    if (value.contains('system')) return 'system';
+    if (value.contains('system') || value.contains('sistem')) return 'system';
 
     return original;
   }
