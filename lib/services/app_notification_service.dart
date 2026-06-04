@@ -120,6 +120,19 @@ class AppNotificationService {
     }
   }
 
+  Future<void> markAllPersonalAsRead(
+    AppSession session,
+    List<AppNotification> notifications,
+  ) async {
+    final unread = notifications
+        .where((item) => !item.read && isPersonalNotification(item))
+        .toList();
+
+    for (final item in unread) {
+      await markAsRead(session, item);
+    }
+  }
+
   List<AppNotification> mergeInbox(
     List<AppNotification> firestore,
     List<AppNotification> rtdb,
@@ -138,6 +151,78 @@ class AppNotificationService {
     final list = map.values.toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  List<AppNotification> mergePersonalInbox(
+    List<AppNotification> firestore,
+    List<AppNotification> rtdb,
+  ) {
+    return mergeInbox(firestore, rtdb)
+        .where(isPersonalNotification)
+        .toList();
+  }
+
+  int unreadPersonalCount(List<AppNotification> notifications) {
+    return notifications
+        .where((item) => !item.read && isPersonalNotification(item))
+        .length;
+  }
+
+  bool isAnnouncementNotification(AppNotification item) {
+    final value = _notificationSearchText(item);
+
+    return value.contains('announcement') ||
+        value.contains('pengumuman') ||
+        value.contains('news') ||
+        value.contains('company_event') ||
+        value.contains('company event') ||
+        value.contains('policy') ||
+        value.contains('kebijakan') ||
+        value.contains('info_umum') ||
+        value.contains('info umum');
+  }
+
+  bool isPersonalNotification(AppNotification item) {
+    final value = _notificationSearchText(item);
+
+    if (isAnnouncementNotification(item)) return false;
+
+    return value.contains('approval') ||
+        value.contains('approved') ||
+        value.contains('rejected') ||
+        value.contains('pending') ||
+        value.contains('leave') ||
+        value.contains('izin') ||
+        value.contains('sakit') ||
+        value.contains('cuti') ||
+        value.contains('lembur') ||
+        value.contains('overtime') ||
+        value.contains('correction') ||
+        value.contains('koreksi') ||
+        value.contains('schedule') ||
+        value.contains('jadwal') ||
+        value.contains('attendance') ||
+        value.contains('presensi') ||
+        value.contains('absensi') ||
+        value.contains('qr') ||
+        value.contains('status_update') ||
+        value.contains('status update') ||
+        value.contains('user_status') ||
+        value.contains('user status') ||
+        value.contains('system') ||
+        value.contains('sistem');
+  }
+
+  String _notificationSearchText(AppNotification item) {
+    return [
+      item.type,
+      item.refType,
+      item.title,
+      item.body,
+      item.message,
+      item.displayType,
+      item.senderRole,
+    ].join(' ').toLowerCase();
   }
 
   String _firstNonEmpty(Map<String, dynamic> data, List<String> keys) {
