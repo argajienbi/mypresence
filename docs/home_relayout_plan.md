@@ -1,387 +1,87 @@
-# Rencana Relayout Home MyPresence
+# Rencana Pemisahan Notifikasi dan Pengumuman MyPresence
 
-Dokumen ini menyimpan keputusan desain dan rencana implementasi relayout Home pada repo `argajienbi/mypresence`.
+Dokumen ini menggantikan arah sebelumnya: **skema Home tetap memakai skema yang sudah ada sekarang**. Fokus pekerjaan saat ini hanya membagi antara:
 
-Status dokumen: rencana desain, belum implementasi kode.
+1. Notifikasi personal dari ikon lonceng header.
+2. Pengumuman umum yang tetap muncul di Home.
 
----
-
-## 1. Tujuan Relayout Home
-
-Home diarahkan menjadi halaman utama yang lebih fokus ke kebutuhan harian user:
-
-1. Melihat status kehadiran hari ini.
-2. Melakukan Clock In / Clock Out.
-3. Melihat detail jadwal hari ini.
-4. Mengakses menu aksi cepat.
-5. Membaca pengumuman perusahaan.
-6. Membuka notifikasi penting melalui ikon lonceng di header.
-
-Referensi visual utama: desain home dengan header hijau, kartu status kehadiran putih, aksi cepat horizontal, dan pengumuman di bawah aksi cepat.
+Status dokumen: rencana teknis, belum implementasi kode.
 
 ---
 
-## 2. Keputusan Layout Home Baru
-
-Urutan layout Home final:
-
-1. Header hijau.
-   - Avatar user.
-   - Greeting user.
-   - Tanggal hari ini.
-   - Icon lonceng notifikasi dengan badge unread.
-2. Kartu utama presensi.
-   - Status kehadiran.
-   - Tombol Clock In dan Clock Out.
-   - Pesan status presensi hari ini.
-   - Detail jadwal hari ini.
-3. Aksi cepat.
-   - Izin.
-   - Sakit.
-   - Cuti.
-   - Lembur.
-   - QR.
-   - Jadwal.
-   - Koreksi.
-4. Pengumuman.
-   - Muncul langsung di Home.
-   - Posisi berada di bawah menu aksi cepat.
-5. Bottom navigation.
-   - Riwayat.
-   - Home.
-   - Profil.
-
----
-
-## 3. Perubahan dari Layout Lama
-
-Layout lama menampilkan RadiusCard / peta lokasi sebelum kartu presensi. Pada layout baru, prioritas utama dipindah ke presensi dan jadwal.
-
-Keputusan:
-
-1. `RadiusCard` tidak menjadi konten utama paling atas.
-2. Informasi lokasi tetap dipakai sebagai validasi Clock In / Clock Out.
-3. Detail radius dan peta dipindahkan ke bottom sheet atau detail lokasi.
-4. Logic validasi presensi tidak diubah.
-5. Relayout difokuskan pada struktur UI dan pemisahan konten.
-
----
-
-## 4. Kartu Utama Presensi
-
-Widget baru yang direncanakan:
+## 1. Keputusan Utama
 
 ```text
-lib/features/home/widgets/home_attendance_hero_card.dart
+[FIX] Skema Home tetap memakai layout yang ada sekarang.
+[FIX] Tidak ada relayout besar Home pada tahap ini.
+[FIX] Tidak memindahkan RadiusCard, ClockAttendanceCard, Quick Menu, atau AnnouncementCard.
+[FIX] Perubahan difokuskan pada pemisahan data dan tampilan antara notifikasi dan pengumuman.
 ```
 
-Isi kartu:
-
-1. Label kecil: `Status Kehadiran`.
-2. Status utama:
-   - `Belum Clock In`.
-   - `Sudah Clock In`.
-   - `Presensi Hari Ini Selesai`.
-   - `Izin Disetujui` / `Sakit Disetujui` / `Cuti Disetujui`.
-3. Tombol aksi:
-   - `Clock In` aktif jika user belum clock in.
-   - `Clock Out` aktif jika user sudah clock in dan belum clock out.
-   - Kedua tombol disabled jika presensi selesai atau user sedang izin/sakit/cuti disetujui.
-4. Pesan status:
-   - `Belum melakukan Clock In hari ini.`
-   - `Silakan lakukan Clock Out sesuai jadwal.`
-   - `Presensi hari ini sudah lengkap.`
-   - `Pengajuan hari ini sudah disetujui admin.`
-5. Detail jadwal hari ini:
-   - Shift.
-   - Jam Masuk.
-   - Jam Pulang.
-   - Lokasi / Kantor.
-   - Status Jadwal.
-
-Data yang digunakan tetap dari `HomePage`:
+Artinya, struktur Home existing tetap dipertahankan:
 
 ```text
-_today
-_schedule
-_loadingSchedule
-_approvedLeaveToday
-hasIn
-hasOut
-nextAction
-widget.session.officeName
-widget.session.officeAddress
+HomePage existing
+├── Header / HomeStickyProfileHeader
+├── ApprovedLeaveBanner jika ada
+├── RadiusCard
+├── ClockAttendanceCard
+├── HomeQuickMenuHorizontal
+└── HomeAnnouncementCard
 ```
 
----
-
-## 5. Aksi Cepat Final
-
-Aksi cepat final hanya berisi 7 menu:
+Aksi cepat tetap mengikuti keputusan terakhir:
 
 ```text
 Izin | Sakit | Cuti | Lembur | QR | Jadwal | Koreksi
 ```
 
-Menu yang dihapus dari aksi cepat:
+Catatan:
 
-1. `Status`.
-2. `Riwayat`.
+1. `Riwayat` tidak dimasukkan ke aksi cepat karena sudah ada di bottom navigation.
+2. `Koreksi` tetap direncanakan sebagai fitur baru, tetapi bukan bagian dari pekerjaan pemisahan notifikasi tahap awal.
 
-Alasan:
+---
 
-1. Status sudah masuk ke kartu utama presensi.
-2. Riwayat sudah tersedia di bottom navigation.
+## 2. Pembagian Area Informasi
 
-### 5.1 Izin
+| Area | Fungsi | Sumber / Service | Lokasi Tampil |
+|---|---|---|---|
+| Notifikasi personal | Approval, status pengajuan, jadwal personal, koreksi, sistem personal | `AppNotificationService` | Ikon lonceng header |
+| Pengumuman umum | Info perusahaan, kebijakan, event, berita kantor | `AnnouncementService` | Home, di bawah aksi cepat |
 
-Fungsi: pengajuan izin biasa.
-
-Isi form:
-
-```text
-- Tanggal izin
-- Durasi izin
-- Alasan izin
-- Lampiran opsional
-- Tombol Kirim Pengajuan
-- Status: Menunggu / Disetujui / Ditolak
-```
-
-Action:
+Keputusan final:
 
 ```text
-LeaveFormPage(type: izin)
-```
-
-### 5.2 Sakit
-
-Fungsi: pengajuan sakit.
-
-Isi form:
-
-```text
-- Tanggal mulai sakit
-- Tanggal selesai sakit
-- Keterangan sakit
-- Upload surat dokter / bukti sakit
-- Tombol Kirim Pengajuan
-- Status: Menunggu / Disetujui / Ditolak
-```
-
-Action:
-
-```text
-LeaveFormPage(type: sakit)
-```
-
-### 5.3 Cuti
-
-Fungsi: pengajuan cuti.
-
-Isi form:
-
-```text
-- Jenis cuti
-- Tanggal mulai
-- Tanggal selesai
-- Total hari otomatis
-- Alasan cuti
-- Lampiran opsional
-- Tombol Kirim Pengajuan
-- Status: Menunggu / Disetujui / Ditolak
-```
-
-Action:
-
-```text
-LeaveFormPage(type: cuti)
-```
-
-### 5.4 Lembur
-
-Fungsi: pengajuan atau laporan lembur.
-
-Isi form:
-
-```text
-- Tanggal lembur
-- Jam mulai
-- Jam selesai
-- Total durasi otomatis
-- Lokasi lembur
-- Deskripsi pekerjaan
-- Lampiran opsional
-- Tombol Kirim Pengajuan
-- Status: Menunggu / Disetujui / Ditolak
-```
-
-Action:
-
-```text
-LeaveFormPage(type: lembur)
-```
-
-### 5.5 QR
-
-Fungsi: presensi proxy saat user lupa membawa HP.
-
-Isi alur:
-
-```text
-- Scan QR teman
-- Validasi pemilik QR
-- Ambil foto setelah QR berhasil
-- Kirim presensi metode QR
-- Catat siapa yang melakukan scan
-- Kirim ke admin untuk validasi
-```
-
-Data wajib:
-
-```text
-- User yang diabsenkan
-- User yang melakukan scan
-- Waktu scan
-- Lokasi scan
-- Foto bukti
-- Metode presensi: QR Proxy
-- Status validasi admin
-```
-
-Action:
-
-```text
-ProxyAttendancePage
-```
-
-### 5.6 Jadwal
-
-Fungsi: melihat jadwal kerja.
-
-Isi menu:
-
-```text
-- Jadwal hari ini
-- Shift aktif
-- Jam masuk
-- Jam pulang
-- Window clock in
-- Window clock out
-- Lokasi kerja
-- Status jadwal: Aktif / Libur / Lembur / Khusus
-```
-
-Mode yang tetap dipertahankan:
-
-```text
-- Harian
-- Mingguan
-- Bulanan
-```
-
-Action:
-
-```text
-HomeSchedulePreview / bottom sheet detail jadwal
-```
-
-### 5.7 Koreksi
-
-Fitur baru. Sebelumnya belum ada dan perlu direncanakan untuk dibuat.
-
-Fungsi: memperbaiki data presensi ketika user lupa absen atau ada data presensi bermasalah.
-
-Kasus penggunaan:
-
-```text
-- Lupa Clock In
-- Lupa Clock Out
-- Salah Jam Masuk
-- Salah Jam Pulang
-- Lokasi Bermasalah
-- Foto Bermasalah
-- Aplikasi error saat absen
-- Lainnya
-```
-
-Isi form:
-
-```text
-- Tanggal presensi yang dikoreksi
-- Jenis koreksi
-- Jam yang diajukan
-- Alasan koreksi
-- Lampiran bukti opsional
-- Tombol Kirim Koreksi
-- Status pengajuan
-```
-
-Status:
-
-```text
-pending     = Menunggu persetujuan admin
-approved    = Disetujui
-rejected    = Ditolak
-cancelled   = Dibatalkan user
-```
-
-Rencana path data:
-
-```text
-attendance_corrections
-└── correctionId
-    ├── userId
-    ├── companyId
-    ├── userName
-    ├── date
-    ├── correctionType
-    ├── requestedTime
-    ├── reason
-    ├── attachmentUrl
-    ├── oldAttendanceData
-    ├── status
-    ├── adminNote
-    ├── createdAt
-    ├── updatedAt
-    └── reviewedBy
-```
-
-Rencana file baru:
-
-```text
-lib/features/correction/correction_form_page.dart
-lib/features/correction/correction_history_page.dart
-lib/services/attendance_correction_service.dart
-lib/core/models/attendance_correction.dart
+Lonceng header = notifikasi personal / penting untuk user.
+Home pengumuman = pengumuman umum perusahaan.
+Pengumuman tidak masuk halaman lonceng.
+Pengumuman tidak dihitung sebagai badge unread lonceng.
 ```
 
 ---
 
-## 6. Rencana Pemisahan Notifikasi dan Pengumuman
+## 3. Notifikasi Lonceng Header
 
-Keputusan baru: notifikasi approval dan perubahan status user harus dipisahkan dari pengumuman.
+Halaman notifikasi dibuka saat user menekan ikon lonceng di header.
 
-### 6.1 Notifikasi via lonceng header
+Isi yang boleh masuk halaman lonceng:
 
-Notifikasi yang muncul saat user menekan ikon lonceng di header:
+```text
+- Approval Izin
+- Approval Sakit
+- Approval Cuti
+- Approval Lembur
+- Approval Koreksi
+- Perubahan status pengajuan user
+- Perubahan jadwal user
+- Validasi presensi QR
+- Validasi presensi koreksi/manual
+- Status akun user
+- Notifikasi sistem personal
+```
 
-1. Approval izin.
-2. Approval sakit.
-3. Approval cuti.
-4. Approval lembur.
-5. Approval koreksi presensi.
-6. Perubahan status pengajuan user.
-7. Perubahan jadwal user yang perlu perhatian langsung.
-8. Notifikasi sistem yang bersifat personal untuk user.
-
-Tujuan:
-
-1. Lonceng hanya untuk informasi penting/personal.
-2. Badge unread di header dihitung dari notifikasi penting/personal saja.
-3. Pengumuman umum tidak menaikkan badge lonceng header.
-
-Kategori notifikasi personal:
+Kategori `refType` / `type` yang dianggap personal:
 
 ```text
 approval
@@ -391,198 +91,437 @@ sakit
 cuti
 lembur
 correction
+koreksi
 schedule
+jadwal
 attendance
+presensi
+qr
 status_update
+user_status
 system
 ```
 
-### 6.2 Pengumuman di Home
-
-Pengumuman tetap muncul di Home, tepat di bawah menu aksi cepat.
-
-Isi pengumuman:
-
-1. Pengumuman perusahaan.
-2. Kebijakan umum.
-3. Informasi event.
-4. Informasi operasional yang berlaku untuk banyak user.
-5. Berita internal kantor.
-
-Kategori pengumuman:
+Kategori yang harus dikeluarkan dari halaman lonceng:
 
 ```text
 announcement
 pengumuman
 news
-info_umum
 company_event
 policy
-```
-
-Pengumuman tidak muncul di halaman notifikasi approval/personal, kecuali nanti dibuat halaman `Semua Pengumuman` terpisah.
-
----
-
-## 7. Rencana UI Halaman Notifikasi
-
-Halaman notifikasi dibuka dari ikon lonceng di header.
-
-Referensi visual: halaman notifikasi dengan background soft blue, kartu filter, item unread berwarna biru muda, item read berwarna putih.
-
-Isi halaman:
-
-1. App bar:
-   - Tombol back.
-   - Title `Notifikasi`.
-2. Summary unread:
-   - Contoh: `3 belum dibaca`.
-3. Filter:
-   - `Semua`.
-   - `Belum dibaca`.
-   - `Tandai dibaca`.
-4. List notifikasi:
-   - Icon kategori.
-   - Judul.
-   - Isi singkat.
-   - Kategori.
-   - Pengirim.
-   - Tanggal/jam.
-   - Dot unread.
-   - Chevron detail.
-
-Notifikasi unread:
-
-```text
-- Background biru muda
-- Border biru muda lebih tegas
-- Dot unread aktif
-```
-
-Notifikasi read:
-
-```text
-- Background putih
-- Border soft grey
-- Dot unread hilang
+info_umum
 ```
 
 ---
 
-## 8. Rencana Data dan Filtering
+## 4. Pengumuman Home
 
-Service notifikasi perlu memisahkan dua jenis konten:
+Pengumuman tetap muncul di Home melalui card pengumuman yang sudah ada.
 
-1. Personal notifications.
-2. Announcements.
-
-Rencana method:
+Isi pengumuman:
 
 ```text
-watchPersonalInbox(session)
-watchAnnouncements(session)
-mergePersonalInbox(firestoreItems, rtdbItems)
-markPersonalAsRead(session, item)
-markAllPersonalAsRead(session)
+- Pengumuman perusahaan
+- Kebijakan umum
+- Informasi event
+- Informasi operasional kantor
+- Berita internal
+- Informasi untuk banyak user / group / kantor / departemen
 ```
 
-Filtering personal notification:
+Sumber data pengumuman:
 
 ```text
-bool isPersonalNotification(String refType) {
-  final value = refType.toLowerCase();
-  if (value.contains('announcement') || value.contains('pengumuman')) return false;
-  return value.contains('approval') ||
-         value.contains('leave') ||
-         value.contains('izin') ||
-         value.contains('cuti') ||
-         value.contains('sakit') ||
-         value.contains('lembur') ||
-         value.contains('correction') ||
-         value.contains('koreksi') ||
-         value.contains('schedule') ||
-         value.contains('jadwal') ||
-         value.contains('attendance') ||
-         value.contains('presensi') ||
-         value.contains('status_update') ||
-         value.contains('system');
-}
+companies/{companyId}/announcements
 ```
 
-Filtering announcement:
+Pengumuman tidak dibuka dari lonceng. Kalau user ingin melihat semua pengumuman, alurnya berasal dari section pengumuman di Home.
+
+---
+
+## 5. Skema Layout Halaman Notifikasi Lonceng
+
+Target UI mengikuti referensi halaman notifikasi:
 
 ```text
-bool isAnnouncement(String refType) {
-  final value = refType.toLowerCase();
+NotificationsPage
+├── Background soft blue / soft green
+├── SafeArea
+│
+├── Header
+│   ├── Back button kiri
+│   └── Title tengah: Notifikasi
+│
+├── Filter Card Putih
+│   ├── Text: "3 belum dibaca"
+│   ├── Chip: Semua
+│   ├── Chip: Belum dibaca
+│   └── Chip: Tandai dibaca
+│
+└── List Notifikasi Personal
+    ├── NotificationTile unread
+    │   ├── Icon kategori
+    │   ├── Judul
+    │   ├── Isi singkat
+    │   ├── Meta: kategori, pengirim, waktu
+    │   ├── Dot unread
+    │   └── Chevron
+    │
+    └── NotificationTile read
+        ├── Icon kategori
+        ├── Judul
+        ├── Isi singkat
+        ├── Meta: kategori, pengirim, waktu
+        └── Chevron
+```
+
+---
+
+## 6. State UI Halaman Notifikasi
+
+### 6.1 Filter Semua
+
+```text
+Menampilkan semua notifikasi personal.
+Tidak menampilkan pengumuman.
+```
+
+### 6.2 Filter Belum Dibaca
+
+```text
+Menampilkan hanya notifikasi personal yang belum dibaca.
+Tidak menampilkan pengumuman.
+```
+
+### 6.3 Tandai Dibaca
+
+```text
+Menandai semua notifikasi personal sebagai dibaca.
+Tidak mengubah status pengumuman.
+```
+
+### 6.4 Empty State
+
+Jika tidak ada notifikasi personal:
+
+```text
+Belum ada notifikasi personal.
+Approval, status pengajuan, jadwal, dan informasi sistem personal akan muncul di sini.
+```
+
+Jika filter belum dibaca kosong:
+
+```text
+Tidak ada notifikasi belum dibaca.
+Semua notifikasi personal sudah dibaca.
+```
+
+---
+
+## 7. Desain Notification Tile
+
+### 7.1 Tile belum dibaca
+
+```text
+- Background: soft blue / soft green
+- Border: primary soft
+- Dot unread: aktif di kanan
+- Title: bold
+- Body: maksimal 2 baris
+- Meta: kategori, pengirim, waktu
+- Chevron: kanan
+```
+
+Contoh:
+
+```text
+[Jadwal Icon] Jadwal Kerja Diperbarui     ●  >
+Ini test push detail jadwal.
+Jadwal • Admin • 05/06 04:37
+```
+
+### 7.2 Tile sudah dibaca
+
+```text
+- Background: putih
+- Border: soft grey
+- Dot unread: tidak ada
+- Title: semi-bold
+- Body: maksimal 2 baris
+- Meta: kategori, pengirim, waktu
+- Chevron: kanan
+```
+
+---
+
+## 8. Mapping Icon dan Warna
+
+| Jenis | Icon | Warna |
+|---|---|---|
+| Approval disetujui | `Icons.check_circle_rounded` | Hijau |
+| Approval ditolak | `Icons.error_rounded` | Merah |
+| Pending / review | `Icons.warning_rounded` | Orange |
+| Jadwal | `Icons.calendar_month_rounded` atau `Icons.notifications_rounded` | Biru / teal |
+| Presensi | `Icons.fact_check_rounded` | Teal |
+| QR | `Icons.qr_code_2_rounded` | Hijau |
+| Koreksi | `Icons.edit_note_rounded` | Orange |
+| Sistem | `Icons.notifications_rounded` | Teal |
+
+Catatan:
+
+```text
+Icon announcement / campaign tidak dipakai di halaman lonceng.
+Icon pengumuman hanya dipakai di HomeAnnouncementCard.
+```
+
+---
+
+## 9. Rencana Perubahan Service
+
+File utama:
+
+```text
+lib/services/app_notification_service.dart
+```
+
+Tambahkan filter:
+
+```dart
+bool isAnnouncementNotification(AppNotification item) {
+  final value = '${item.type} ${item.refType}'.toLowerCase();
+
   return value.contains('announcement') ||
-         value.contains('pengumuman') ||
-         value.contains('news') ||
-         value.contains('policy') ||
-         value.contains('company_event');
+      value.contains('pengumuman') ||
+      value.contains('news') ||
+      value.contains('company_event') ||
+      value.contains('policy') ||
+      value.contains('info_umum');
+}
+
+bool isPersonalNotification(AppNotification item) {
+  final value = '${item.type} ${item.refType}'.toLowerCase();
+
+  if (isAnnouncementNotification(item)) return false;
+
+  return value.contains('approval') ||
+      value.contains('leave') ||
+      value.contains('izin') ||
+      value.contains('sakit') ||
+      value.contains('cuti') ||
+      value.contains('lembur') ||
+      value.contains('correction') ||
+      value.contains('koreksi') ||
+      value.contains('schedule') ||
+      value.contains('jadwal') ||
+      value.contains('attendance') ||
+      value.contains('presensi') ||
+      value.contains('qr') ||
+      value.contains('status_update') ||
+      value.contains('user_status') ||
+      value.contains('system');
+}
+```
+
+Tambahkan merge personal:
+
+```dart
+List<AppNotification> mergePersonalInbox(
+  List<AppNotification> firestore,
+  List<AppNotification> rtdb,
+) {
+  return mergeInbox(firestore, rtdb)
+      .where(isPersonalNotification)
+      .toList();
+}
+```
+
+Tambahkan unread personal count:
+
+```dart
+int unreadPersonalCount(List<AppNotification> items) {
+  return items.where((item) => !item.read && isPersonalNotification(item)).length;
+}
+```
+
+Tambahkan mark all personal:
+
+```dart
+Future<void> markAllPersonalAsRead(
+  AppSession session,
+  List<AppNotification> notifications,
+) async {
+  final unread = notifications
+      .where((item) => !item.read && isPersonalNotification(item))
+      .toList();
+
+  for (final item in unread) {
+    await markAsRead(session, item);
+  }
 }
 ```
 
 ---
 
-## 9. File yang Akan Diubah
+## 10. Rencana Perubahan NotificationsPage
 
-File existing yang direncanakan berubah:
+File:
+
+```text
+lib/features/notifications/notifications_page.dart
+```
+
+Sebelum:
+
+```text
+mergeInbox(firestoreItems, rtdbItems)
+```
+
+Sesudah:
+
+```text
+mergePersonalInbox(firestoreItems, rtdbItems)
+```
+
+Alur baru:
+
+```dart
+final merged = _service.mergePersonalInbox(firestoreItems, rtdbItems);
+final unreadCount = merged.where((e) => !e.read).length;
+final items = _showUnreadOnly
+    ? merged.where((e) => !e.read).toList()
+    : merged;
+```
+
+Tombol `Tandai dibaca` memakai:
+
+```text
+markAllPersonalAsRead(session, merged)
+```
+
+Bukan `markAllAsRead(session, semuaNotifikasi)`.
+
+---
+
+## 11. Rencana Perubahan Badge Lonceng Home
+
+File:
 
 ```text
 lib/features/home/home_page.dart
-lib/features/home/main_shell.dart
 lib/features/home/widgets/home_sticky_profile_header.dart
-lib/features/home/widgets/home_quick_menu_horizontal.dart
+```
+
+Target:
+
+```text
+Badge lonceng = jumlah unread notifikasi personal saja.
+```
+
+Tidak menghitung:
+
+```text
+announcement
+pengumuman
+news
+policy
+company_event
+info_umum
+```
+
+---
+
+## 12. Rencana HomeAnnouncementCard
+
+File:
+
+```text
 lib/features/home/widgets/home_announcement_card.dart
-lib/features/notifications/notifications_page.dart
+lib/services/announcement_service.dart
+```
+
+Keputusan:
+
+```text
+HomeAnnouncementCard tetap berada di skema Home existing.
+HomeAnnouncementCard tetap memakai AnnouncementService.
+Tidak digabung dengan NotificationsPage.
+Tidak dihitung sebagai badge lonceng.
+```
+
+Jika nanti diperlukan halaman semua pengumuman, buat halaman terpisah:
+
+```text
+lib/features/announcements/announcements_page.dart
+```
+
+---
+
+## 13. File yang Akan Diubah
+
+Tahap pemisahan notifikasi dan pengumuman:
+
+```text
 lib/services/app_notification_service.dart
-lib/core/app_theme.dart
+lib/features/notifications/notifications_page.dart
+lib/features/home/home_page.dart
+lib/features/home/widgets/home_sticky_profile_header.dart
 ```
 
-File baru yang direncanakan:
+Opsional untuk merapikan UI:
 
 ```text
-lib/features/home/widgets/home_attendance_hero_card.dart
-lib/features/home/widgets/home_schedule_detail_grid.dart
-lib/features/correction/correction_form_page.dart
-lib/features/correction/correction_history_page.dart
-lib/services/attendance_correction_service.dart
-lib/core/models/attendance_correction.dart
+lib/features/notifications/widgets/notification_filter_card.dart
+lib/features/notifications/widgets/personal_notification_tile.dart
+lib/features/notifications/widgets/empty_personal_notification.dart
+```
+
+Tidak diubah pada tahap ini:
+
+```text
+Struktur utama HomePage
+RadiusCard
+ClockAttendanceCard
+HomeAnnouncementCard position
+BottomNavigation
 ```
 
 ---
 
-## 10. Urutan Implementasi Aman
+## 14. Urutan Implementasi Aman
 
-1. Simpan rencana relayout ke dokumen ini.
-2. Buat `HomeAttendanceHeroCard` tanpa mengubah logic presensi.
-3. Update `HomePage` agar urutan layout menjadi header, hero card, aksi cepat, pengumuman.
-4. Update quick action menjadi 7 menu final.
-5. Pisahkan filtering notifikasi personal dan pengumuman.
-6. Pastikan badge lonceng hanya menghitung notifikasi personal unread.
-7. Pastikan pengumuman hanya muncul di Home.
-8. Redesign `NotificationsPage` sesuai referensi.
-9. Tambahkan rencana/fitur `Koreksi` setelah relayout home stabil.
-10. Test flow Clock In, Clock Out, notifikasi, dan pengumuman.
+```text
+1. Tambahkan filter personal vs pengumuman di AppNotificationService.
+2. Tambahkan mergePersonalInbox dan unreadPersonalCount.
+3. Ubah NotificationsPage agar hanya memakai mergePersonalInbox.
+4. Ubah mark all read agar hanya menandai personal notification.
+5. Samakan badge lonceng Home dengan unreadPersonalCount.
+6. Pastikan HomeAnnouncementCard tetap memakai AnnouncementService.
+7. Test data campuran: approval + jadwal + pengumuman.
+8. Pastikan pengumuman tidak muncul di lonceng.
+9. Pastikan pengumuman tetap muncul di Home.
+10. Baru setelah stabil, lanjut redesign visual halaman notifikasi sesuai referensi.
+```
 
 ---
 
-## 11. Checklist Validasi
+## 15. Checklist Validasi
 
 ```text
-[ ] Home menampilkan header hijau baru
-[ ] Card presensi utama tampil di atas
-[ ] Status kehadiran tampil akurat
-[ ] Clock In / Clock Out tetap memakai validasi lama
-[ ] Aksi cepat hanya 7 menu
-[ ] Status dihapus dari aksi cepat
-[ ] Riwayat dihapus dari aksi cepat
-[ ] Koreksi muncul sebagai menu baru / placeholder awal
-[ ] Pengumuman tampil di Home di bawah aksi cepat
-[ ] Pengumuman tidak muncul di halaman notifikasi personal
+[ ] Skema Home existing tidak berubah
+[ ] RadiusCard tetap berada sesuai posisi existing
+[ ] ClockAttendanceCard tetap berada sesuai posisi existing
+[ ] HomeAnnouncementCard tetap berada di Home
+[ ] Pengumuman tetap muncul di Home
+[ ] Pengumuman tidak muncul di NotificationsPage
 [ ] Badge lonceng tidak menghitung pengumuman
-[ ] Halaman notifikasi hanya menampilkan approval/status user/sistem personal
-[ ] Mark read dan filter unread tetap berjalan
-[ ] Tidak ada overflow di layar kecil
-[ ] Tidak ada null error saat jadwal belum dimuat
+[ ] Lonceng hanya menampilkan notifikasi personal
+[ ] Approval izin/sakit/cuti/lembur masuk lonceng
+[ ] Approval koreksi masuk lonceng setelah fitur koreksi dibuat
+[ ] Perubahan jadwal personal masuk lonceng
+[ ] Perubahan status pengajuan user masuk lonceng
+[ ] Filter Semua hanya menampilkan personal notification
+[ ] Filter Belum dibaca hanya menampilkan unread personal notification
+[ ] Tandai dibaca tidak memengaruhi pengumuman
+[ ] Empty state sesuai kondisi personal notification
 ```
