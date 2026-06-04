@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -9,20 +11,29 @@ import 'services/push_notification_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  DartPluginRegistrant.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await PushNotificationService.showBackgroundMessage(message);
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await initializeDateFormatting('id_ID', null);
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   await PushNotificationService.initialize(
     onNotificationTap: PushNotificationService.handlePayload,
   );
+
   runApp(const MyPresensiApp());
 }
