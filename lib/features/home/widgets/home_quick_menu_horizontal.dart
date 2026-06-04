@@ -24,113 +24,81 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
   });
 
   List<_MenuAction> get _actions => [
-        _MenuAction(
-          label: 'Status',
-          icon: Icons.assignment_turned_in_rounded,
-          color: const Color(0xFF7A8793),
-          onTap: onStatus,
-        ),
-        _MenuAction(
-          label: 'Detail Jadwal',
-          icon: Icons.event_available_rounded,
-          color: AppColors.primary,
-          onTap: onSchedule,
-        ),
-        _MenuAction(
-          label: 'Izin',
-          icon: Icons.event_note_rounded,
-          color: AppColors.primary,
-          onTap: onIzin,
-        ),
-        _MenuAction(
-          label: 'Sakit',
-          icon: Icons.medical_services_rounded,
-          color: AppColors.red,
-          onTap: onSakit,
-        ),
-        _MenuAction(
-          label: 'Cuti',
-          icon: Icons.work_rounded,
-          color: AppColors.orange,
-          onTap: onCuti,
-        ),
-        _MenuAction(
-          label: 'Lembur',
-          icon: Icons.more_time_rounded,
-          color: const Color(0xFF7C3AED),
-          onTap: onLembur,
-        ),
-        _MenuAction(
-          label: 'QR',
-          icon: Icons.qr_code_2_rounded,
-          color: AppColors.green,
-          onTap: onQrTeman,
-        ),
+        _MenuAction('Status', Icons.assignment_turned_in_rounded, const Color(0xFF7A8793), onStatus),
+        _MenuAction('Detail Jadwal', Icons.event_available_rounded, AppColors.primary, onSchedule),
+        _MenuAction('Izin', Icons.event_note_rounded, AppColors.primary, onIzin),
+        _MenuAction('Sakit', Icons.medical_services_rounded, AppColors.red, onSakit),
+        _MenuAction('Cuti', Icons.work_rounded, AppColors.orange, onCuti),
+        _MenuAction('Lembur', Icons.more_time_rounded, const Color(0xFF7C3AED), onLembur),
+        _MenuAction('QR', Icons.qr_code_2_rounded, AppColors.green, onQrTeman),
       ];
 
   @override
   Widget build(BuildContext context) {
     final actions = _actions;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Menu Cepat',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Akses cepat ke fitur penting harian.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () => _showAllMenu(context, actions),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Lihat semua',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (int index = 0; index < actions.length; index++) ...[
-                _MenuItem(action: actions[index]),
-                SizedBox(width: index == actions.length - 1 ? 4 : 12),
-              ],
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Menu Cepat',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Akses cepat ke fitur penting harian.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => _showAllMenu(context, actions),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Lihat semua',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+                ),
+              ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                for (int index = 0; index < actions.length; index++) ...[
+                  _MenuItem(action: actions[index]),
+                  SizedBox(width: index == actions.length - 1 ? 2 : 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -171,20 +139,12 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Text(
                   'Semua Menu Cepat',
-                  style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Pilih fitur yang ingin digunakan.',
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(color: AppColors.muted, fontSize: 12.5, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
                 GridView.builder(
@@ -197,15 +157,13 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
                     crossAxisSpacing: 10,
                     childAspectRatio: .82,
                   ),
-                  itemBuilder: (context, index) {
-                    return _MenuItem(
-                      action: actions[index],
-                      onTapOverride: () {
-                        Navigator.of(context).pop();
-                        actions[index].onTap();
-                      },
-                    );
-                  },
+                  itemBuilder: (context, index) => _MenuItem(
+                    action: actions[index],
+                    closeThenTap: () {
+                      Navigator.of(context).pop();
+                      actions[index].onTap();
+                    },
+                  ),
                 ),
               ],
             ),
@@ -222,58 +180,49 @@ class _MenuAction {
   final Color color;
   final VoidCallback onTap;
 
-  const _MenuAction({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  const _MenuAction(this.label, this.icon, this.color, this.onTap);
 }
 
 class _MenuItem extends StatelessWidget {
   final _MenuAction action;
-  final VoidCallback? onTapOverride;
+  final VoidCallback? closeThenTap;
 
-  const _MenuItem({required this.action, this.onTapOverride});
+  const _MenuItem({required this.action, this.closeThenTap});
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: EdgeInsets.zero,
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: onTapOverride ?? action.onTap,
-        child: SizedBox(
-          width: 76,
-          height: 76,
+        onTap: closeThenTap ?? action.onTap,
+        child: Container(
+          width: 78,
+          height: 86,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.line),
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: action.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(action.icon, color: action.color, size: 22),
+                child: Icon(action.icon, color: action.color, size: 23),
               ),
               const SizedBox(height: 8),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    action.label,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
+              Text(
+                action.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: AppColors.text, fontWeight: FontWeight.w800, height: 1.15),
               ),
             ],
           ),
