@@ -50,6 +50,7 @@ class AppNotification {
     final title = _firstString(data, const ['title', 'notification_title', 'subject']);
     final readValue = data['read'];
     final isReadValue = data['is_read'];
+    final rawRefType = _string(data['ref_type']);
 
     return AppNotification(
       id: id,
@@ -59,7 +60,7 @@ class AppNotification {
       body: body,
       message: message,
       type: _string(data['type'], 'info'),
-      refType: _string(data['ref_type']),
+      refType: _normalizeRefType(rawRefType),
       refId: _string(data['ref_id'], _string(data['related_id'])),
       relatedId: _string(data['related_id'], _string(data['ref_id'])),
       senderUid: _string(data['sender_uid'], _string(data['created_by'])),
@@ -96,12 +97,15 @@ class AppNotification {
 
   String get displayType {
     final value = type.toLowerCase();
-    if (refType.toLowerCase().contains('announcement')) return 'Pengumuman';
+    final ref = refType.toLowerCase();
+    if (ref.contains('announcement')) return 'Pengumuman';
     if (value.contains('success')) return 'Sukses';
     if (value.contains('warning')) return 'Peringatan';
     if (value.contains('danger') || value.contains('error')) return 'Penting';
-    if (value.contains('approval')) return 'Persetujuan';
-    if (value.contains('attendance')) return 'Absensi';
+    if (ref.contains('approval') || value.contains('approval')) return 'Persetujuan';
+    if (ref.contains('attendance') || value.contains('attendance')) return 'Absensi';
+    if (ref.contains('schedule')) return 'Jadwal';
+    if (ref.contains('leave')) return 'Pengajuan';
     return 'Informasi';
   }
 
@@ -129,6 +133,21 @@ class AppNotification {
   static String _string(dynamic value, [String fallback = '']) {
     if (value == null) return fallback;
     return value.toString();
+  }
+
+  static String _normalizeRefType(String raw) {
+    final original = raw.trim();
+    final value = original.toLowerCase();
+
+    if (value.isEmpty) return original;
+    if (value.contains('announcement') || value.contains('pengumuman')) return 'announcement';
+    if (value.contains('approval')) return 'approval';
+    if (value.contains('leave') || value.contains('izin') || value.contains('cuti') || value.contains('sakit')) return 'leave';
+    if (value.contains('schedule') || value.contains('jadwal') || value.contains('holiday')) return 'schedule';
+    if (value.contains('attendance') || value.contains('presensi') || value.contains('qr')) return 'attendance';
+    if (value.contains('system')) return 'system';
+
+    return original;
   }
 
   static int _toInt(dynamic value) {
