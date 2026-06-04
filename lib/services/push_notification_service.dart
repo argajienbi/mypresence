@@ -44,20 +44,7 @@ class PushNotificationService {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      final payload = _normalizePayload(message);
-      final title = payload['title']?.toString().trim().isNotEmpty == true
-          ? payload['title'].toString()
-          : 'MYPRESENSI';
-      final body = payload['body']?.toString().trim().isNotEmpty == true
-          ? payload['body'].toString()
-          : 'Ada notifikasi baru.';
-
-      await LocalNotificationService.show(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: title,
-        body: body,
-        payload: payload,
-      );
+      await showForegroundMessage(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -72,8 +59,40 @@ class PushNotificationService {
     }
   }
 
+  static Future<void> showForegroundMessage(RemoteMessage message) async {
+    final payload = _normalizePayload(message);
+
+    await LocalNotificationService.show(
+      id: _notificationId(message),
+      title: payload['title'].toString(),
+      body: payload['body'].toString(),
+      payload: payload,
+    );
+  }
+
+  static Future<void> showBackgroundMessage(RemoteMessage message) async {
+    // Kalau payload FCM berisi notification, Android biasanya sudah menampilkan
+    // notifikasi otomatis saat aplikasi background/killed.
+    // Jadi local notification hanya ditampilkan untuk data-only message.
+    if (message.notification != null) return;
+
+    await LocalNotificationService.initialize(
+      onTap: handlePayload,
+    );
+
+    final payload = _normalizePayload(message);
+
+    await LocalNotificationService.show(
+      id: _notificationId(message),
+      title: payload['title'].toString(),
+      body: payload['body'].toString(),
+      payload: payload,
+    );
+  }
+
   static void handlePayload(Map<String, dynamic> payload) {
     pendingPayload = Map<String, dynamic>.from(payload);
+
     final listener = onPayloadReceived;
     if (listener != null) {
       listener(pendingPayload!);
@@ -83,11 +102,18 @@ class PushNotificationService {
   static Map<String, dynamic> consumePendingPayload() {
     final payload = pendingPayload;
     pendingPayload = null;
-    return payload == null ? <String, dynamic>{} : Map<String, dynamic>.from(payload);
+
+    return payload == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(payload);
   }
 
   static Future<void> registerDeviceToken(AppSession session) async {
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     final token = await _messaging.getToken();
     if (token == null || token.isEmpty) return;
@@ -95,23 +121,27 @@ class PushNotificationService {
     await _saveToken(session, token, preserveCreatedAt: true);
 
     await _tokenRefreshSubscription?.cancel();
-    _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((newToken) async {
-      if (newToken.isEmpty) return;
-      await _saveToken(session, newToken, preserveCreatedAt: false);
-    });
+    _tokenRefreshSubscription = _messaging.onTokenRefresh.listen(
+      (newToken) async {
+        if (newToken.isEmpty) return;
+        await _saveToken(session, newToken, preserveCreatedAt: false);
+      },
+    );
   }
 
   static Future<void> deactivateCurrentToken(AppSession session) async {
     final token = await _messaging.getToken();
     if (token == null || token.isEmpty) return;
+
     final tokenId = _tokenId(token);
+    final now = DateTime.now().millisecondsSinceEpoch;
 
     await _firestore
         .doc(FirestorePaths.fcmToken(session.companyId, session.uid, tokenId))
         .set({
       'active': false,
-      'updated_at': DateTime.now().millisecondsSinceEpoch,
-      'last_seen_at': DateTime.now().millisecondsSinceEpoch,
+      'updated_at': now,
+      'last_seen_at': now,
     }, SetOptions(merge: true));
   }
 
@@ -129,7 +159,11 @@ class PushNotificationService {
 
     final payload = <String, dynamic>{
       'token': token,
-      'platform': Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : Platform.operatingSystem,
+      'platform': Platform.isAndroid
+          ? 'android'
+          : Platform.isIOS
+              ? 'ios'
+              : Platform.operatingSystem,
       'device_name': Platform.operatingSystem,
       'active': true,
       'updated_at': now,
@@ -147,24 +181,54 @@ class PushNotificationService {
     if (preserveCreatedAt) {
       final snap = await ref.get();
       final data = snap.data();
+
       if (data == null || data['created_at'] == null) {
         await ref.set({'created_at': now}, SetOptions(merge: true));
       }
     }
   }
 
-  static String _tokenId(String token) => token.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  static int _notificationId(RemoteMessage message) {
+    final rawId = message.messageId;
+
+    if (rawId != null && rawId.trim().isNotEmpty) {
+      return rawId.hashCode.abs().remainder(2147483647);
+    }
+
+    return DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+  }
+
+  static String _tokenId(String token) {
+    return token.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  }
 
   static Map<String, dynamic> _normalizePayload(RemoteMessage message) {
     final data = Map<String, dynamic>.from(message.data);
     final notification = message.notification;
 
-    final title = notification?.title ?? data['title'] ?? data['notification_title'];
-    final body = notification?.body ?? data['body'] ?? data['message'];
+    final title =
+        notification?.title ?? data['title'] ?? data['notification_title'];
 
-    data['title'] = (title?.toString().trim().isNotEmpty == true) ? title.toString() : 'MYPRESENSI';
-    data['body'] = (body?.toString().trim().isNotEmpty == true) ? body.toString() : 'Ada notifikasi baru.';
-    data['message'] = data['message']?.toString().trim().isNotEmpty == true ? data['message'].toString() : data['body'];
+    final body = notification?.body ??
+        data['body'] ??
+        data['message'] ??
+        data['notification_body'];
+
+    data['title'] = (title?.toString().trim().isNotEmpty == true)
+        ? title.toString()
+        : 'MYPRESENSI';
+
+    data['body'] = (body?.toString().trim().isNotEmpty == true)
+        ? body.toString()
+        : 'Ada notifikasi baru.';
+
+    data['message'] = data['message']?.toString().trim().isNotEmpty == true
+        ? data['message'].toString()
+        : data['body'];
+
+    if (message.messageId != null && message.messageId!.isNotEmpty) {
+      data['message_id'] = message.messageId;
+    }
 
     return data;
   }
