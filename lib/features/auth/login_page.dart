@@ -34,33 +34,38 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
+
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
       setState(() => _error = 'Email dan kata sandi wajib diisi.');
       return;
     }
+
     setState(() {
       _loading = true;
       _error = '';
     });
+
     try {
       await _auth.login(_email.text.trim(), _password.text);
-final AppSession session = await _auth.loadSession();
+      final AppSession session = await _auth.loadSession();
 
-try {
-  await PushNotificationService.registerDeviceToken(session)
-      .timeout(const Duration(seconds: 10));
-} catch (e) {
-  debugPrint('Gagal register FCM token: $e');
-}
+      try {
+        await PushNotificationService.registerDeviceToken(session)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        debugPrint('Gagal register FCM token: $e');
+      }
 
-if (!mounted) return;
-AppToast.success(context, 'Berhasil masuk.');
-Navigator.of(context).pushReplacement(
-  MaterialPageRoute(builder: (_) => MainShell(session: session)),
-);
+      if (!mounted) return;
+
+      AppToast.success(context, 'Berhasil masuk.');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => MainShell(session: session)),
+      );
     } catch (e) {
       final message = friendlyError(e);
       if (!mounted) return;
+
       setState(() => _error = message);
       AppToast.error(context, message);
     } finally {
