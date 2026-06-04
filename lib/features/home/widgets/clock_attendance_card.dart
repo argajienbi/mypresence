@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../widgets/app_card.dart';
 
 class ClockAttendanceCard extends StatelessWidget {
   final String nextAction;
@@ -19,159 +18,150 @@ class ClockAttendanceCard extends StatelessWidget {
     required this.onPressed,
   });
 
-  bool get _canAct => nextAction != 'done';
-
   @override
   Widget build(BuildContext context) {
     final done = nextAction == 'done';
-    final clockInTarget = nextAction == 'masuk' && !done;
-    final clockOutTarget = nextAction == 'pulang' && !done;
-    final clockInActive = clockInTarget && _canAct;
-    final clockOutActive = clockOutTarget && _canAct;
-    final clockInDone = hasIn;
-    final clockOutDone = hasOut;
+    final clockInActive = nextAction == 'masuk' && !done;
+    final clockOutActive = nextAction == 'pulang' && !done;
 
-    final leftColor = done
-        ? AppColors.green
-        : clockInTarget
-            ? AppColors.green
-            : clockInDone
-                ? const Color(0xFF9CA3AF)
-                : const Color(0xFFD1D5DB);
-    final rightColor = done
-        ? AppColors.green
-        : clockOutTarget
-            ? AppColors.primary
-            : const Color(0xFFD1D5DB);
-
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              // Clock In Button
-              Expanded(
-                child: _ClockButton(
-                  title: 'Clock In',
-                  subtitle: 'Masuk',
-                  icon: clockInDone
-                      ? Icons.check_rounded
-                      : Icons.fingerprint_rounded,
-                  color: leftColor,
-                  active: clockInActive,
-                  enabled: clockInActive,
-                  onTap: clockInActive ? onPressed : null,
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 80,
-                color: AppColors.line,
-              ),
-              // Clock Out Button
-              Expanded(
-                child: _ClockButton(
-                  title: 'Clock Out',
-                  subtitle: 'Pulang',
-                  icon: clockOutDone
-                      ? Icons.check_rounded
-                      : Icons.fingerprint_rounded,
-                  color: rightColor,
-                  active: clockOutActive,
-                  enabled: clockOutActive,
-                  onTap: clockOutActive ? onPressed : null,
-                ),
-              ),
-            ],
+    return Row(
+      children: [
+        Expanded(
+          child: _ClockActionCard(
+            title: 'Clock In',
+            subtitle: hasIn ? 'Sudah masuk' : 'Masuk',
+            icon: hasIn ? Icons.check_rounded : Icons.fingerprint_rounded,
+            color: AppColors.green,
+            active: clockInActive,
+            completed: hasIn,
+            onTap: clockInActive ? onPressed : null,
           ),
-          if (done)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.green.withValues(alpha: 0.08),
-                border:
-                    Border(top: BorderSide(color: AppColors.line, width: 1)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppColors.green, size: 18),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Presensi Hari Ini Selesai',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _ClockActionCard(
+            title: 'Clock Out',
+            subtitle: hasOut ? 'Sudah pulang' : 'Pulang',
+            icon: hasOut ? Icons.check_rounded : Icons.fingerprint_rounded,
+            color: AppColors.blue,
+            active: clockOutActive,
+            completed: hasOut,
+            onTap: clockOutActive ? onPressed : null,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _ClockButton extends StatelessWidget {
+class _ClockActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final Color color;
   final bool active;
-  final bool enabled;
+  final bool completed;
   final VoidCallback? onTap;
 
-  const _ClockButton({
+  const _ClockActionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.color,
     required this.active,
-    required this.enabled,
+    required this.completed,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final enabled = active;
+    final visualColor = completed ? AppColors.green : active ? color : const Color(0xFF9CA3AF);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Container(
-          height: 80,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+        borderRadius: BorderRadius.circular(28),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          height: 92,
+          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
           decoration: BoxDecoration(
-            color: enabled ? color.withValues(alpha: 0.1) : Colors.transparent,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: enabled ? color : const Color(0xFF9CA3AF),
-                size: 26,
+            color: active
+                ? color.withValues(alpha: .12)
+                : completed
+                    ? AppColors.green.withValues(alpha: .08)
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: active
+                  ? color.withValues(alpha: .35)
+                  : completed
+                      ? AppColors.green.withValues(alpha: .30)
+                      : AppColors.line,
+              width: active ? 1.4 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .07),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: enabled ? color : const Color(0xFF9CA3AF),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: visualColor.withValues(alpha: enabled || completed ? .15 : .10),
+                ),
+                child: Icon(icon, color: visualColor, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: active || completed ? AppColors.text : const Color(0xFF8E98A5),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: visualColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: enabled ? color : const Color(0xFFB4B9C1),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: visualColor.withValues(alpha: active ? .16 : .10),
+                ),
+                child: Icon(
+                  completed ? Icons.check_rounded : Icons.chevron_right_rounded,
+                  color: visualColor,
+                  size: 23,
                 ),
               ),
             ],
