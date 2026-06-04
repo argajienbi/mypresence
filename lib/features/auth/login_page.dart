@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../services/auth_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../home/main_shell.dart';
 import 'auth_visuals.dart';
@@ -43,10 +44,20 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       await _auth.login(_email.text.trim(), _password.text);
-      final AppSession session = await _auth.loadSession();
-      if (!mounted) return;
-      AppToast.success(context, 'Berhasil masuk.');
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => MainShell(session: session)));
+final AppSession session = await _auth.loadSession();
+
+try {
+  await PushNotificationService.registerDeviceToken(session)
+      .timeout(const Duration(seconds: 10));
+} catch (e) {
+  debugPrint('Gagal register FCM token: $e');
+}
+
+if (!mounted) return;
+AppToast.success(context, 'Berhasil masuk.');
+Navigator.of(context).pushReplacement(
+  MaterialPageRoute(builder: (_) => MainShell(session: session)),
+);
     } catch (e) {
       final message = friendlyError(e);
       if (!mounted) return;
