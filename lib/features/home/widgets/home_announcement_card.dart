@@ -5,7 +5,6 @@ import '../../../core/models/announcement.dart';
 import '../../../core/models/app_session.dart';
 import '../../../services/announcement_service.dart';
 import '../../../widgets/app_card.dart';
-import '../../announcements/announcements_page.dart';
 
 class HomeAnnouncementCard extends StatefulWidget {
   final AppSession session;
@@ -50,7 +49,7 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
         return Icons.check_circle_rounded;
       case 'info':
       default:
-        return Icons.info_rounded;
+        return Icons.campaign_rounded;
     }
   }
 
@@ -70,18 +69,24 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () {
-                    setState(() => _isExpanded = !_isExpanded);
-                  },
+                  onTap: () => setState(() => _isExpanded = !_isExpanded),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     child: Row(
                       children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: .10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,30 +99,29 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
                                   color: AppColors.text,
                                 ),
                               ),
-                              if (!hasAnnouncements)
-                                const Text(
-                                  'Belum ada pengumuman terbaru',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.muted,
-                                  ),
+                              Text(
+                                hasAnnouncements ? 'Baca pengumuman langsung di halaman Home' : 'Belum ada pengumuman terbaru',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.muted,
                                 ),
+                              ),
                             ],
                           ),
                         ),
                         AnimatedRotation(
                           turns: _isExpanded ? 0 : 0.5,
                           duration: const Duration(milliseconds: 200),
-                          child: const Icon(Icons.expand_less_rounded,
-                              color: AppColors.muted, size: 24),
+                          child: const Icon(Icons.expand_less_rounded, color: AppColors.muted, size: 24),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-              // Content
               if (_isExpanded && hasAnnouncements) ...[
                 Container(height: 1, color: AppColors.line),
                 ...List.generate(
@@ -125,83 +129,61 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
                   (index) {
                     final item = displayItems[index];
                     final isLast = index == displayItems.length - 1;
+                    final color = _getTypeColor(item.type);
 
                     return Column(
                       children: [
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      AnnouncementDetailPage(item: item),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: _getTypeColor(item.type)
-                                          .withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        _getTypeIcon(item.type),
-                                        color: _getTypeColor(item.type),
-                                        size: 20,
+                                child: Center(
+                                  child: Icon(_getTypeIcon(item.type), color: color, size: 20),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.text,
+                                        height: 1.25,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.text,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          item.body,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColors.muted,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      item.body,
+                                      maxLines: 5,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.muted,
+                                        height: 1.45,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward_rounded,
-                                      color: AppColors.muted, size: 18),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
-                        if (!isLast)
-                          Container(height: 1, color: AppColors.line),
+                        if (!isLast) Container(height: 1, color: AppColors.line),
                       ],
                     );
                   },
