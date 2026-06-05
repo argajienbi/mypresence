@@ -51,6 +51,13 @@ class NotificationRouter {
       return;
     }
 
+    if (type.contains('attendance_reminder') || type.contains('reminder')) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 1)),
+      );
+      return;
+    }
+
     if (type.contains('leave') || type.contains('approval')) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 0)),
