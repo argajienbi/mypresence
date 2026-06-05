@@ -14,16 +14,23 @@ class LocalNotificationService {
     'MYPRESENSI Notifications',
     description: 'Notifikasi penting MYPRESENSI',
     importance: Importance.high,
+    playSound: true,
+    enableVibration: true,
   );
 
   static bool _timezoneReady = false;
+  static bool _initialized = false;
+  static void Function(Map<String, dynamic> payload)? _onTap;
 
   static Future<void> initialize({
     required void Function(Map<String, dynamic> payload) onTap,
   }) async {
+    _onTap = onTap;
     _ensureTimezone();
 
-    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
+    if (_initialized) return;
+
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     const initSettings = InitializationSettings(android: androidSettings);
 
     await plugin.initialize(
@@ -33,7 +40,9 @@ class LocalNotificationService {
         if (payload == null || payload.isEmpty) return;
         try {
           final decoded = jsonDecode(payload);
-          if (decoded is Map<String, dynamic>) onTap(decoded);
+          if (decoded is Map) {
+            _onTap?.call(Map<String, dynamic>.from(decoded));
+          }
         } catch (_) {}
       },
     );
@@ -41,6 +50,8 @@ class LocalNotificationService {
     final androidPlugin = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(highImportanceChannel);
     await androidPlugin?.requestNotificationsPermission();
+
+    _initialized = true;
   }
 
   static Future<void> show({
@@ -92,7 +103,9 @@ class LocalNotificationService {
         channelDescription: highImportanceChannel.description,
         importance: Importance.high,
         priority: Priority.high,
-        icon: '@drawable/ic_notification',
+        icon: 'ic_notification',
+        playSound: true,
+        enableVibration: true,
       ),
     );
   }
