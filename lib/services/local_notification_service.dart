@@ -85,7 +85,7 @@ class LocalNotificationService {
       id,
       title,
       body,
-      tz.TZDateTime.from(scheduledAt, tz.local),
+      _scheduledDate(scheduledAt),
       _notificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
@@ -106,13 +106,31 @@ class LocalNotificationService {
         icon: 'ic_notification',
         playSound: true,
         enableVibration: true,
+        category: AndroidNotificationCategory.reminder,
+        visibility: NotificationVisibility.public,
       ),
+    );
+  }
+
+  static tz.TZDateTime _scheduledDate(DateTime dateTime) {
+    final local = tz.local;
+    return tz.TZDateTime(
+      local,
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      dateTime.hour,
+      dateTime.minute,
+      dateTime.second,
+      dateTime.millisecond,
+      dateTime.microsecond,
     );
   }
 
   static void _ensureTimezone() {
     if (_timezoneReady) return;
     tz_data.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
     _timezoneReady = true;
   }
 }
