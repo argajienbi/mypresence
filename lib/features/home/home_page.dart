@@ -18,12 +18,13 @@ import '../attendance/camera_presence_page.dart';
 import '../leave/leave_form_page.dart';
 import '../notifications/notifications_page.dart';
 import '../proxy_qr/proxy_attendance_page.dart';
+import '../schedule/schedule_detail_page.dart';
 import 'widgets/clock_attendance_card.dart';
 import 'widgets/home_announcement_card.dart';
 import 'widgets/home_quick_menu_horizontal.dart';
 import 'widgets/home_sticky_profile_header.dart';
-import 'widgets/home_schedule_preview.dart';
 import 'widgets/radius_card.dart';
+import 'widgets/status_detail_sheet.dart';
 
 class HomePage extends StatefulWidget {
   final AppSession session;
@@ -227,9 +228,7 @@ class _HomePageState extends State<HomePage> {
 
     final leave = _approvedLeaveToday;
     if (leave != null) {
-      final type = _leaveTypeLabel(
-        (leave['type'] ?? leave['leave_type'] ?? '').toString(),
-      );
+      final type = _leaveTypeLabel((leave['type'] ?? leave['leave_type'] ?? '').toString());
       AppToast.info(
         context,
         'Hari ini pengajuan $type Anda sudah disetujui. Absen tidak wajib dilakukan.',
@@ -271,9 +270,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (!_insideRadius) {
-      final distanceText = _distance == null
-          ? ''
-          : ' (${_distance!.toStringAsFixed(0)} m dari kantor)';
+      final distanceText = _distance == null ? '' : ' (${_distance!.toStringAsFixed(0)} m dari kantor)';
       AppToast.error(context, 'Anda berada di luar radius kantor$distanceText.');
       return;
     }
@@ -305,6 +302,38 @@ class _HomePageState extends State<HomePage> {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => NotificationsPage(session: widget.session),
     ));
+  }
+
+  void _showScheduleDetails() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ScheduleDetailPage(
+        session: widget.session,
+        scheduleService: _scheduleService,
+        initialDate: DateTime.now(),
+        initialSchedule: _schedule,
+      ),
+    ));
+  }
+
+  void _showStatusDetails({
+    required String status,
+    required String masuk,
+    required String pulang,
+  }) {
+    showStatusDetailSheet(
+      context: context,
+      data: StatusDetailData(
+        status: status,
+        masuk: masuk,
+        pulang: pulang,
+        message: _statusMessage(status),
+        distanceMeter: _distance,
+        insideRadius: _insideRadius,
+        hasIn: hasIn,
+        hasOut: hasOut,
+        hasApprovedLeave: _approvedLeaveToday != null,
+      ),
+    );
   }
 
   @override
@@ -444,264 +473,12 @@ class _HomePageState extends State<HomePage> {
         value.contains('system');
   }
 
-  void _showScheduleDetails() {
-    final schedule = _schedule;
-    final readyText = _loadingSchedule
-        ? 'Memuat'
-        : schedule == null
-            ? 'Belum tersedia'
-            : schedule.isHoliday
-                ? 'Libur'
-                : schedule.isWorkday
-                    ? 'Aktif'
-                    : 'Tidak Aktif';
-    final statusColor = schedule != null && schedule.isWorkday
-        ? AppColors.green
-        : AppColors.orange;
-
-    _showDetailSheet(
-      title: 'Detail Jadwal',
-      icon: Icons.event_available_rounded,
-      iconColor: AppColors.primary,
-      children: [
-        HomeSchedulePreview(
-          session: widget.session,
-          scheduleService: _scheduleService,
-          todaySchedule: _schedule,
-          loadingToday: _loadingSchedule,
-          onOpenTodayDetail: () {},
-        ),
-        const SizedBox(height: 12),
-        _DetailRow(
-          icon: Icons.schedule_rounded,
-          label: 'Shift Hari Ini',
-          value: _scheduleText(
-            schedule?.shiftName,
-            fallback: schedule?.timetableName ?? '-',
-          ),
-        ),
-        _DetailRow(
-          icon: Icons.groups_rounded,
-          label: 'Grup / Struktur',
-          value: _groupLabel(),
-        ),
-        _DetailRow(
-          icon: Icons.access_time_rounded,
-          label: 'Jam Kerja Hari Ini',
-          value: _workTime(schedule),
-        ),
-        _DetailRow(
-          icon: Icons.date_range_rounded,
-          label: 'Berlaku',
-          value: schedule?.overtimeFlag == true
-              ? 'Tanggal lembur terjadwal'
-              : 'Sesuai penerapan jadwal aktif',
-        ),
-        _DetailRow(
-          icon: Icons.receipt_long_rounded,
-          label: 'Sumber Jadwal',
-          value: _sourceLabel(schedule?.source ?? '-'),
-        ),
-        _DetailRow(
-          icon: Icons.verified_user_rounded,
-          label: 'Status',
-          value: readyText,
-          valueColor: statusColor,
-        ),
-      ],
-    );
-  }
-
-  void _showStatusDetails({
-    required String status,
-    required String masuk,
-    required String pulang,
-  }) {
-    _showDetailSheet(
-      title: 'Detail Status Hari Ini',
-      icon: Icons.assignment_turned_in_rounded,
-      iconColor: hasOut || hasIn || _approvedLeaveToday != null
-          ? AppColors.green
-          : AppColors.muted,
-      children: [
-        _DetailRow(
-          icon: Icons.person_pin_rounded,
-          label: 'Status Presensi',
-          value: status,
-          valueColor: hasIn || hasOut || _approvedLeaveToday != null
-              ? AppColors.green
-              : AppColors.orange,
-        ),
-        _DetailRow(icon: Icons.login_rounded, label: 'Jam Masuk', value: masuk),
-        _DetailRow(icon: Icons.logout_rounded, label: 'Jam Pulang', value: pulang),
-        _DetailRow(
-          icon: Icons.notes_rounded,
-          label: 'Keterangan',
-          value: _statusMessage(status),
-        ),
-        _DetailRow(
-          icon: Icons.location_on_rounded,
-          label: 'Lokasi / Jarak',
-          value: _distance == null
-              ? 'Belum tersedia'
-              : '${_distance!.round()} m dari kantor',
-        ),
-        const _DetailRow(
-          icon: Icons.camera_alt_rounded,
-          label: 'Metode',
-          value: 'Selfie + GPS',
-        ),
-      ],
-    );
-  }
-
-  void _showDetailSheet({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required List<Widget> children,
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final maxHeight = MediaQuery.sizeOf(context).height * .88;
-        return SafeArea(
-          child: Container(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: .14),
-                  blurRadius: 28,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.line,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: iconColor.withValues(alpha: .11),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(icon, color: iconColor),
-                      ),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded, color: AppColors.muted),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ...children,
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary.withValues(alpha: .10),
-                        foregroundColor: AppColors.primary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text(
-                        'Tutup',
-                        style: TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  String _scheduleText(String? value, {String fallback = '-'}) {
-    final text = (value ?? '').trim();
-    return text.isEmpty ? fallback : text;
-  }
-
-  String _groupLabel() {
-    final group = widget.session.groupName.trim();
-    final department = widget.session.departmentName.trim();
-    final sub = widget.session.subDepartmentName.trim();
-    final parts = <String>[
-      if (group.isNotEmpty) group,
-      if (department.isNotEmpty) department,
-      if (sub.isNotEmpty) sub,
-    ];
-    if (parts.isEmpty) {
-      return widget.session.officeName.isEmpty ? '-' : widget.session.officeName;
-    }
-    return parts.join(' — ');
-  }
-
   String _workTime(DailySchedule? schedule) {
     if (schedule == null || !schedule.isWorkday) return '-';
-    final start = schedule.workStart.isNotEmpty
-        ? schedule.workStart
-        : schedule.checkInStart;
-    final end = schedule.workEnd.isNotEmpty
-        ? schedule.workEnd
-        : schedule.checkOutEnd;
+    final start = schedule.workStart.isNotEmpty ? schedule.workStart : schedule.checkInStart;
+    final end = schedule.workEnd.isNotEmpty ? schedule.workEnd : schedule.checkOutEnd;
     if (start.isEmpty && end.isEmpty) return '-';
     return '$start - $end';
-  }
-
-  String _sourceLabel(String source) {
-    switch (source) {
-      case 'overtime_schedule':
-        return 'Jadwal Lembur';
-      case 'user_assignment':
-        return 'Penerapan Jadwal User';
-      case 'group_assignment':
-        return 'Penerapan Jadwal Rutin';
-      case 'special_schedule':
-        return 'Jadwal Khusus';
-      case 'holiday':
-        return 'Hari Libur';
-      default:
-        return source.isEmpty ? '-' : source;
-    }
   }
 
   String _statusMessage(String status) {
@@ -785,73 +562,5 @@ class _ApprovedLeaveBanner extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.line)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: .08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: AppColors.muted, size: 19),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: valueColor ?? AppColors.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-extension _FirstOrNull<E> on Iterable<E> {
-  E? get firstOrNull {
-    final iterator = this.iterator;
-    if (iterator.moveNext()) return iterator.current;
-    return null;
   }
 }
