@@ -19,10 +19,3 @@ class AppNotification {
   final Map<String, dynamic> raw;
 
   const AppNotification({
-    required this.id,
-    required this.companyId,
-    required this.uid,
-    required this.title,
-    required this.body,
-    required this.message,
-    required
