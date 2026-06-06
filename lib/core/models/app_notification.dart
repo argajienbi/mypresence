@@ -25,14 +25,4 @@ class AppNotification {
     required this.title,
     required this.body,
     required this.message,
-    required this.type,
-    required this.refType,
-    required this.refId,
-    required this.relatedId,
-    required this.senderUid,
-    required this.senderName,
-    required this.senderRole,
-    required this.read,
-    required this.createdAt,
-    required this.createdDate,
-    required this
+    required
