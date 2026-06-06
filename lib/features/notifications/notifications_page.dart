@@ -6,7 +6,15 @@ import '../../core/models/app_session.dart';
 import '../../services/app_notification_service.dart';
 import 'notification_detail_page.dart';
 
-enum _NotificationFilter { all, unread, approval, schedule, correction, attendance, system }
+enum _NotificationFilter {
+  all,
+  unread,
+  approval,
+  schedule,
+  correction,
+  attendance,
+  system
+}
 
 class NotificationsPage extends StatefulWidget {
   final AppSession session;
@@ -38,12 +46,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: StreamBuilder<List<AppNotification>>(
           stream: _service.watchFirestoreInbox(widget.session),
           builder: (context, firestoreSnapshot) {
-            final firestoreItems = firestoreSnapshot.data ?? const <AppNotification>[];
+            final firestoreItems =
+                firestoreSnapshot.data ?? const <AppNotification>[];
             return StreamBuilder<List<AppNotification>>(
               stream: _service.watchRtdbFallback(widget.session),
               builder: (context, rtdbSnapshot) {
-                final rtdbItems = rtdbSnapshot.data ?? const <AppNotification>[];
-                final merged = _service.mergePersonalInbox(firestoreItems, rtdbItems);
+                final rtdbItems =
+                    rtdbSnapshot.data ?? const <AppNotification>[];
+                final merged =
+                    _service.mergePersonalInbox(firestoreItems, rtdbItems);
                 final unreadCount = merged.where((e) => !e.read).length;
                 final filtered = _applyFilters(merged);
                 final grouped = _groupNotifications(filtered);
@@ -57,11 +68,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _NotificationHeader(onBack: () => Navigator.of(context).pop()),
+                            _NotificationHeader(
+                                onBack: () => Navigator.of(context).pop()),
                             const SizedBox(height: 18),
                             _SearchField(
                               controller: _searchController,
-                              onChanged: (value) => setState(() => _query = value.trim()),
+                              onChanged: (value) =>
+                                  setState(() => _query = value.trim()),
                             ),
                             const SizedBox(height: 14),
                             _SummaryCard(
@@ -72,9 +85,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   : () async {
                                       setState(() => _markingAll = true);
                                       try {
-                                        await _service.markAllPersonalAsRead(widget.session, merged);
+                                        await _service.markAllPersonalAsRead(
+                                            widget.session, merged);
                                       } finally {
-                                        if (mounted) setState(() => _markingAll = false);
+                                        if (mounted)
+                                          setState(() => _markingAll = false);
                                       }
                                     },
                             ),
@@ -83,7 +98,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               selected: _filter,
                               totalCount: merged.length,
                               unreadCount: unreadCount,
-                              onChanged: (filter) => setState(() => _filter = filter),
+                              onChanged: (filter) =>
+                                  setState(() => _filter = filter),
                             ),
                             const SizedBox(height: 18),
                           ],
@@ -115,7 +131,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         ),
                         SliverList.separated(
                           itemCount: section.value.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final item = section.value[index];
                             return Padding(
@@ -123,12 +140,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 18,
                                 0,
                                 18,
-                                section.key == grouped.keys.last && index == section.value.length - 1 ? 32 : 0,
+                                section.key == grouped.keys.last &&
+                                        index == section.value.length - 1
+                                    ? 32
+                                    : 0,
                               ),
                               child: _NotificationTile(
                                 item: item,
                                 onTap: () async {
-                                  await _service.markAsRead(widget.session, item);
+                                  await _service.markAsRead(
+                                      widget.session, item);
                                   if (!context.mounted) return;
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
@@ -175,26 +196,43 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   bool _matchesFilter(AppNotification item, _NotificationFilter filter) {
-    if (filter == _NotificationFilter.all || filter == _NotificationFilter.unread) return true;
-    final value = '${item.type} ${item.refType} ${item.title} ${item.displayBody}'.toLowerCase();
+    if (filter == _NotificationFilter.all ||
+        filter == _NotificationFilter.unread) return true;
+    final value =
+        '${item.type} ${item.refType} ${item.title} ${item.displayBody}'
+            .toLowerCase();
     switch (filter) {
       case _NotificationFilter.approval:
-        return value.contains('approval') || value.contains('approved') || value.contains('rejected') || value.contains('leave') || value.contains('izin') || value.contains('cuti') || value.contains('sakit') || value.contains('lembur');
+        return value.contains('approval') ||
+            value.contains('approved') ||
+            value.contains('rejected') ||
+            value.contains('leave') ||
+            value.contains('izin') ||
+            value.contains('cuti') ||
+            value.contains('sakit') ||
+            value.contains('lembur');
       case _NotificationFilter.schedule:
         return value.contains('schedule') || value.contains('jadwal');
       case _NotificationFilter.correction:
         return value.contains('correction') || value.contains('koreksi');
       case _NotificationFilter.attendance:
-        return value.contains('attendance') || value.contains('presensi') || value.contains('absensi') || value.contains('qr');
+        return value.contains('attendance') ||
+            value.contains('presensi') ||
+            value.contains('absensi') ||
+            value.contains('qr');
       case _NotificationFilter.system:
-        return value.contains('system') || value.contains('sistem') || value.contains('user_status') || value.contains('status_update');
+        return value.contains('system') ||
+            value.contains('sistem') ||
+            value.contains('user_status') ||
+            value.contains('status_update');
       case _NotificationFilter.all:
       case _NotificationFilter.unread:
         return true;
     }
   }
 
-  Map<String, List<AppNotification>> _groupNotifications(List<AppNotification> items) {
+  Map<String, List<AppNotification>> _groupNotifications(
+      List<AppNotification> items) {
     final now = DateTime.now();
     final today = <AppNotification>[];
     final previous = <AppNotification>[];
@@ -305,21 +343,26 @@ class _SearchField extends StatelessWidget {
               ),
         filled: true,
         fillColor: Colors.white.withValues(alpha: .92),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.primary.withValues(alpha: .10)),
+          borderSide:
+              BorderSide(color: AppColors.primary.withValues(alpha: .10)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.primary.withValues(alpha: .10)),
+          borderSide:
+              BorderSide(color: AppColors.primary.withValues(alpha: .10)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: AppColors.primary.withValues(alpha: .35), width: 1.4),
+          borderSide: BorderSide(
+              color: AppColors.primary.withValues(alpha: .35), width: 1.4),
         ),
       ),
-      style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
+      style:
+          const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
     );
   }
 }
@@ -367,7 +410,8 @@ class _SummaryCard extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: const Icon(Icons.notifications_rounded, color: Colors.white, size: 28),
+            child: const Icon(Icons.notifications_rounded,
+                color: Colors.white, size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -375,7 +419,9 @@ class _SummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  unreadCount > 0 ? '$unreadCount belum dibaca' : 'Semua sudah dibaca',
+                  unreadCount > 0
+                      ? '$unreadCount belum dibaca'
+                      : 'Semua sudah dibaca',
                   style: const TextStyle(
                     color: AppColors.text,
                     fontSize: 16,
@@ -396,7 +442,8 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           FilledButton(
-            onPressed: onMarkAll == null || markingAll ? null : () => onMarkAll!(),
+            onPressed:
+                onMarkAll == null || markingAll ? null : () => onMarkAll!(),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -404,14 +451,22 @@ class _SummaryCard extends StatelessWidget {
               disabledForegroundColor: AppColors.muted,
               minimumSize: const Size(0, 44),
               padding: const EdgeInsets.symmetric(horizontal: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
             child: markingAll
-                ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
                 : const Text(
                     'Tandai semua\ndibaca',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, height: 1.12),
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        height: 1.12),
                   ),
           ),
         ],
@@ -436,13 +491,20 @@ class _FilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chips = [
-      _FilterChipData(_NotificationFilter.all, 'Semua', totalCount, Icons.done_rounded),
-      _FilterChipData(_NotificationFilter.unread, 'Belum dibaca', unreadCount, Icons.mark_email_unread_rounded),
-      _FilterChipData(_NotificationFilter.approval, 'Approval', null, Icons.verified_rounded),
-      _FilterChipData(_NotificationFilter.schedule, 'Jadwal', null, Icons.calendar_month_rounded),
-      _FilterChipData(_NotificationFilter.correction, 'Koreksi', null, Icons.edit_note_rounded),
-      _FilterChipData(_NotificationFilter.attendance, 'Presensi', null, Icons.fact_check_rounded),
-      _FilterChipData(_NotificationFilter.system, 'Sistem', null, Icons.settings_rounded),
+      _FilterChipData(
+          _NotificationFilter.all, 'Semua', totalCount, Icons.done_rounded),
+      _FilterChipData(_NotificationFilter.unread, 'Belum dibaca', unreadCount,
+          Icons.mark_email_unread_rounded),
+      _FilterChipData(_NotificationFilter.approval, 'Approval', null,
+          Icons.verified_rounded),
+      _FilterChipData(_NotificationFilter.schedule, 'Jadwal', null,
+          Icons.calendar_month_rounded),
+      _FilterChipData(_NotificationFilter.correction, 'Koreksi', null,
+          Icons.edit_note_rounded),
+      _FilterChipData(_NotificationFilter.attendance, 'Presensi', null,
+          Icons.fact_check_rounded),
+      _FilterChipData(
+          _NotificationFilter.system, 'Sistem', null, Icons.settings_rounded),
     ];
 
     return SingleChildScrollView(
@@ -478,13 +540,16 @@ class _FilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.data, required this.selected, required this.onTap});
+  const _FilterChip(
+      {required this.data, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected ? AppColors.primary : Colors.white.withValues(alpha: .88);
+    final bg =
+        selected ? AppColors.primary : Colors.white.withValues(alpha: .88);
     final fg = selected ? Colors.white : AppColors.text;
-    final border = selected ? AppColors.primary : AppColors.primary.withValues(alpha: .10);
+    final border =
+        selected ? AppColors.primary : AppColors.primary.withValues(alpha: .10);
 
     return Material(
       color: bg,
@@ -506,7 +571,8 @@ class _FilterChip extends StatelessWidget {
               const SizedBox(width: 7),
               Text(
                 data.count == null ? data.label : '${data.label} ${data.count}',
-                style: TextStyle(color: fg, fontSize: 12.5, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                    color: fg, fontSize: 12.5, fontWeight: FontWeight.w900),
               ),
             ],
           ),
@@ -538,7 +604,9 @@ class _NotificationTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: unread ? category.color.withValues(alpha: .28) : AppColors.line,
+              color: unread
+                  ? category.color.withValues(alpha: .28)
+                  : AppColors.line,
               width: unread ? 1.2 : 1,
             ),
             boxShadow: [
@@ -590,20 +658,29 @@ class _NotificationTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            item.title.trim().isEmpty ? 'MYPRESENSI' : item.title,
+                            item.title.trim().isEmpty
+                                ? 'MYPRESENSI'
+                                : item.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: AppColors.text,
                               fontSize: 15.5,
-                              fontWeight: unread ? FontWeight.w900 : FontWeight.w800,
+                              fontWeight:
+                                  unread ? FontWeight.w900 : FontWeight.w800,
                               height: 1.2,
                             ),
                           ),
                         ),
                         if (unread) ...[
                           const SizedBox(width: 8),
-                          Container(width: 10, height: 10, margin: const EdgeInsets.only(top: 5), decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                          Container(
+                              width: 10,
+                              height: 10,
+                              margin: const EdgeInsets.only(top: 5),
+                              decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle)),
                         ],
                       ],
                     ),
@@ -625,16 +702,24 @@ class _NotificationTile extends StatelessWidget {
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        _MiniMeta(icon: category.metaIcon, text: category.label, color: category.color),
-                        _MiniMeta(icon: Icons.person_rounded, text: item.displaySender),
-                        _MiniMeta(icon: Icons.schedule_rounded, text: _formatShortTime(item.createdAt)),
+                        _MiniMeta(
+                            icon: category.metaIcon,
+                            text: category.label,
+                            color: category.color),
+                        _MiniMeta(
+                            icon: Icons.person_rounded,
+                            text: item.displaySender),
+                        _MiniMeta(
+                            icon: Icons.schedule_rounded,
+                            text: _formatShortTime(item.createdAt)),
                       ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.muted, size: 26),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.muted, size: 26),
             ],
           ),
         ),
@@ -646,8 +731,10 @@ class _NotificationTile extends StatelessWidget {
     if (timestamp <= 0) return '--:--';
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
-    final time = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    if (date.year == now.year && date.month == now.month && date.day == now.day) return time;
+    final time =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    if (date.year == now.year && date.month == now.month && date.day == now.day)
+      return time;
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
   }
 }
@@ -666,29 +753,73 @@ class _NotificationCategory {
   });
 
   factory _NotificationCategory.from(AppNotification item) {
-    final value = '${item.type} ${item.refType} ${item.title} ${item.displayBody}'.toLowerCase();
+    final value =
+        '${item.type} ${item.refType} ${item.title} ${item.displayBody}'
+            .toLowerCase();
     if (value.contains('correction') || value.contains('koreksi')) {
-      return const _NotificationCategory(label: 'Koreksi', icon: Icons.edit_note_rounded, metaIcon: Icons.edit_rounded, color: AppColors.orange);
+      return const _NotificationCategory(
+          label: 'Koreksi',
+          icon: Icons.edit_note_rounded,
+          metaIcon: Icons.edit_rounded,
+          color: AppColors.orange);
     }
     if (value.contains('schedule') || value.contains('jadwal')) {
-      return const _NotificationCategory(label: 'Jadwal', icon: Icons.calendar_month_rounded, metaIcon: Icons.calendar_month_rounded, color: AppColors.blue);
+      return const _NotificationCategory(
+          label: 'Jadwal',
+          icon: Icons.calendar_month_rounded,
+          metaIcon: Icons.calendar_month_rounded,
+          color: AppColors.blue);
     }
     if (value.contains('qr')) {
-      return const _NotificationCategory(label: 'QR', icon: Icons.qr_code_2_rounded, metaIcon: Icons.qr_code_2_rounded, color: AppColors.purple);
+      return const _NotificationCategory(
+          label: 'QR',
+          icon: Icons.qr_code_2_rounded,
+          metaIcon: Icons.qr_code_2_rounded,
+          color: AppColors.purple);
     }
-    if (value.contains('attendance') || value.contains('presensi') || value.contains('absensi')) {
-      return const _NotificationCategory(label: 'Presensi', icon: Icons.fact_check_rounded, metaIcon: Icons.fact_check_rounded, color: AppColors.purple);
+    if (value.contains('attendance') ||
+        value.contains('presensi') ||
+        value.contains('absensi')) {
+      return const _NotificationCategory(
+          label: 'Presensi',
+          icon: Icons.fact_check_rounded,
+          metaIcon: Icons.fact_check_rounded,
+          color: AppColors.purple);
     }
-    if (value.contains('system') || value.contains('sistem') || value.contains('status_update') || value.contains('user_status')) {
-      return const _NotificationCategory(label: 'Sistem', icon: Icons.settings_rounded, metaIcon: Icons.settings_rounded, color: AppColors.muted);
+    if (value.contains('system') ||
+        value.contains('sistem') ||
+        value.contains('status_update') ||
+        value.contains('user_status')) {
+      return const _NotificationCategory(
+          label: 'Sistem',
+          icon: Icons.settings_rounded,
+          metaIcon: Icons.settings_rounded,
+          color: AppColors.muted);
     }
-    if (value.contains('warning') || value.contains('pending') || value.contains('lembur')) {
-      return const _NotificationCategory(label: 'Approval', icon: Icons.pending_actions_rounded, metaIcon: Icons.verified_user_rounded, color: AppColors.orange);
+    if (value.contains('warning') ||
+        value.contains('pending') ||
+        value.contains('lembur')) {
+      return const _NotificationCategory(
+          label: 'Approval',
+          icon: Icons.pending_actions_rounded,
+          metaIcon: Icons.verified_user_rounded,
+          color: AppColors.orange);
     }
-    if (value.contains('danger') || value.contains('error') || value.contains('rejected') || value.contains('ditolak')) {
-      return const _NotificationCategory(label: 'Approval', icon: Icons.error_rounded, metaIcon: Icons.verified_user_rounded, color: AppColors.red);
+    if (value.contains('danger') ||
+        value.contains('error') ||
+        value.contains('rejected') ||
+        value.contains('ditolak')) {
+      return const _NotificationCategory(
+          label: 'Approval',
+          icon: Icons.error_rounded,
+          metaIcon: Icons.verified_user_rounded,
+          color: AppColors.red);
     }
-    return const _NotificationCategory(label: 'Approval', icon: Icons.check_circle_rounded, metaIcon: Icons.verified_user_rounded, color: AppColors.green);
+    return const _NotificationCategory(
+        label: 'Approval',
+        icon: Icons.check_circle_rounded,
+        metaIcon: Icons.verified_user_rounded,
+        color: AppColors.green);
   }
 }
 
@@ -751,19 +882,27 @@ class _EmptyNotification extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: AppColors.primary.withValues(alpha: .10),
               ),
-              child: const Icon(Icons.notifications_none_rounded, size: 42, color: AppColors.primary),
+              child: const Icon(Icons.notifications_none_rounded,
+                  size: 42, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.text, fontSize: 17, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 7),
             Text(
               body,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w700, height: 1.45),
+              style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45),
             ),
           ],
         ),

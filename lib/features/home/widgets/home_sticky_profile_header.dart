@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
 import '../../../core/models/app_session.dart';
-import '../../../core/utils.dart';
 
 class HomeStickyProfileHeader extends StatelessWidget {
   final AppSession session;
@@ -178,7 +177,8 @@ class _ProfileAvatar extends StatelessWidget {
             ? Image.network(
                 photoUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _InitialAvatar(firstName: firstName),
+                errorBuilder: (_, __, ___) =>
+                    _InitialAvatar(firstName: firstName),
               )
             : _InitialAvatar(firstName: firstName),
       ),
@@ -193,7 +193,9 @@ class _InitialAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = firstName.trim().isEmpty ? 'U' : firstName.characters.first.toUpperCase();
+    final initial = firstName.trim().isEmpty
+        ? 'U'
+        : firstName.characters.first.toUpperCase();
 
     return Container(
       color: AppColors.primary.withValues(alpha: .32),

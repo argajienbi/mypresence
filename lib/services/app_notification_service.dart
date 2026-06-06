@@ -13,7 +13,8 @@ class AppNotificationService {
 
   Stream<List<AppNotification>> watchFirestoreInbox(AppSession session) {
     return _firestore
-        .collection(FirestorePaths.notificationInbox(session.companyId, session.uid))
+        .collection(
+            FirestorePaths.notificationInbox(session.companyId, session.uid))
         .orderBy('created_at', descending: true)
         .limit(100)
         .snapshots()
@@ -57,22 +58,25 @@ class AppNotificationService {
     });
   }
 
-  Future<void> markAsRead(AppSession session, AppNotification notification) async {
+  Future<void> markAsRead(
+      AppSession session, AppNotification notification) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     await _firestore
         .doc(FirestorePaths.notificationItem(
-          session.companyId,
-          session.uid,
-          notification.id,
-        ))
+      session.companyId,
+      session.uid,
+      notification.id,
+    ))
         .set({
       'read': true,
       'is_read': true,
       'read_at': now,
     }, SetOptions(merge: true)).catchError((_) {});
 
-    await _database.ref('notifications/${session.uid}/${notification.id}').update({
+    await _database
+        .ref('notifications/${session.uid}/${notification.id}')
+        .update({
       'read': true,
       'is_read': true,
       'read_at': now,
@@ -93,10 +97,10 @@ class AppNotificationService {
     final now = DateTime.now().millisecondsSinceEpoch;
     await _firestore
         .doc(FirestorePaths.notificationItem(
-          session.companyId,
-          session.uid,
-          notificationId,
-        ))
+      session.companyId,
+      session.uid,
+      notificationId,
+    ))
         .set({
       'read': true,
       'is_read': true,
@@ -157,9 +161,7 @@ class AppNotificationService {
     List<AppNotification> firestore,
     List<AppNotification> rtdb,
   ) {
-    return mergeInbox(firestore, rtdb)
-        .where(isPersonalNotification)
-        .toList();
+    return mergeInbox(firestore, rtdb).where(isPersonalNotification).toList();
   }
 
   int unreadPersonalCount(List<AppNotification> notifications) {
