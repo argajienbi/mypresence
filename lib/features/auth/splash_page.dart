@@ -17,4 +17,6 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class
+class _SplashPageState extends State<SplashPage> {
+  final AuthService _auth = AuthService();
+  String _message = 'Mem
