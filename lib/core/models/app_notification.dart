@@ -1,1 +1,23 @@
-class AppNotification{final String id,companyId,uid,title,body,message,type,refType,refId,relatedId,senderUid,senderName,senderRole,createdDate,createdTime;final bool read;final int createdAt;final Map<String,dynamic>raw;const AppNotification({required this.id,required this.companyId,required this.uid,required this.title,required this.body,required this.message,required this.type,required this.refType,required this.refId,required this.relatedId,required this.senderUid,required this.sender
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class AppNotification {
+  final String id;
+  final String companyId;
+  final String uid;
+  final String title;
+  final String body;
+  final String message;
+  final String type;
+  final String refType;
+  final String refId;
+  final String relatedId;
+  final String senderUid;
+  final String senderName;
+  final String senderRole;
+  final String createdDate;
+  final String createdTime;
+  final bool read;
+  final int createdAt;
+  final Map<String, dynamic> raw;
+
+  const AppNotification({
