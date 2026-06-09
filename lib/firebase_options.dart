@@ -46,7 +46,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '112547967654',
     projectId: 'inventory-410f4',
     authDomain: 'inventory-410f4.firebaseapp.com',
-    databaseURL: 'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'inventory-410f4.firebasestorage.app',
   );
 
@@ -55,7 +56,8 @@ class DefaultFirebaseOptions {
     appId: '1:112547967654:android:c862030a1105b4b2237a67',
     messagingSenderId: '112547967654',
     projectId: 'inventory-410f4',
-    databaseURL: 'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'inventory-410f4.firebasestorage.app',
   );
 
@@ -64,10 +66,12 @@ class DefaultFirebaseOptions {
     appId: '1:112547967654:ios:bbd9445014336057237a67',
     messagingSenderId: '112547967654',
     projectId: 'inventory-410f4',
-    databaseURL: 'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'inventory-410f4.firebasestorage.app',
-    iosClientId: '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
-    iosBundleId: 'com.my.mypresensi',
+    iosClientId:
+        '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
+    iosBundleId: 'com.mypresence',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -75,10 +79,12 @@ class DefaultFirebaseOptions {
     appId: '1:112547967654:ios:bbd9445014336057237a67',
     messagingSenderId: '112547967654',
     projectId: 'inventory-410f4',
-    databaseURL: 'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'inventory-410f4.firebasestorage.app',
-    iosClientId: '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
-    iosBundleId: 'com.my.mypresensi',
+    iosClientId:
+        '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
+    iosBundleId: 'com.mypresence',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -87,7 +93,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '112547967654',
     projectId: 'inventory-410f4',
     authDomain: 'inventory-410f4.firebaseapp.com',
-    databaseURL: 'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'inventory-410f4.firebasestorage.app',
     measurementId: 'G-XN0DW6D60V',
   );

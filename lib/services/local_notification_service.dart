@@ -7,12 +7,14 @@ import 'package:timezone/timezone.dart' as tz;
 class LocalNotificationService {
   LocalNotificationService._();
 
-  static final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin plugin =
+      FlutterLocalNotificationsPlugin();
 
-  static const AndroidNotificationChannel highImportanceChannel = AndroidNotificationChannel(
-    'mypresensi_high_importance_channel',
-    'MYPRESENSI Notifications',
-    description: 'Notifikasi penting MYPRESENSI',
+  static const AndroidNotificationChannel highImportanceChannel =
+      AndroidNotificationChannel(
+    'mypresence_high_importance_channel',
+    'MYPRESENCE Notifications',
+    description: 'Notifikasi penting MYPRESENCE',
     importance: Importance.high,
     playSound: true,
     enableVibration: true,
@@ -47,7 +49,8 @@ class LocalNotificationService {
       },
     );
 
-    final androidPlugin = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(highImportanceChannel);
     await androidPlugin?.requestNotificationsPermission();
 
@@ -88,7 +91,8 @@ class LocalNotificationService {
       _scheduledDate(scheduledAt),
       _notificationDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode(payload),
     );
   }
