@@ -3,9 +3,39 @@
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
 Peran Codex: implementer teknis untuk Flutter app.
-Peran orkestrator: ChatGPT akan menjaga urutan kerja, validasi hasil, dan sinkronisasi dengan dashboard admin.
+Peran ChatGPT: orkestrator, penjaga urutan kerja, validasi hasil, dan sinkronisasi dengan dashboard admin.
 
-Jangan mengubah fitur yang sudah berjalan tanpa alasan kuat. Jangan refactor besar-besaran hanya karena ingin terlihat pintar. Proyek ini butuh stabil, bukan atraksi sulap kode.
+Jangan melakukan refactor besar, jangan mengganti stack, jangan mengganti package, dan jangan menghapus fitur yang sudah berjalan. Proyek ini butuh stabil, bukan aksi heroik yang berakhir dengan error merah seperti lampu rem truk.
+
+---
+
+## Keputusan penting yang tidak boleh diubah
+
+### Package Android final
+
+```text
+com.mypresence
+```
+
+Codex wajib mempertahankan package ini.
+
+Jangan ubah menjadi:
+
+```text
+com.my.presence
+com.my.presensce
+com.my.presensi
+com.mypresensi
+```
+
+Repo saat ini memang memakai:
+
+```kotlin
+namespace = "com.mypresence"
+applicationId = "com.mypresence"
+```
+
+Jadi tugas Codex bukan rename package, melainkan memastikan konfigurasi Firebase dan fitur QR/foto tetap konsisten dengan package tersebut.
 
 ---
 
@@ -14,10 +44,10 @@ Jangan mengubah fitur yang sudah berjalan tanpa alasan kuat. Jangan refactor bes
 1. Kerjakan bertahap sesuai prioritas di bawah.
 2. Jangan menghapus flow login, splash, home, history, profile, attendance selfie, QR, notification, schedule, atau service Firebase yang sudah ada.
 3. Jangan mengganti struktur besar aplikasi tanpa kebutuhan jelas.
-4. Jika membuat file baru, pastikan import dan route/page navigation lengkap.
-5. Setiap perubahan harus bisa dijelaskan di akhir pekerjaan.
+4. Jangan mengganti package Android dari `com.mypresence`.
+5. Jika membuat file baru, pastikan import dan navigation lengkap.
 6. Jangan membuat konfigurasi Firebase palsu.
-7. Jangan commit secret baru, keystore, file credential pribadi, atau service account.
+7. Jangan commit secret baru, keystore, file credential pribadi, service account, `.env`, atau file rahasia lain.
 8. Jalankan minimal:
    - `flutter pub get`
    - `flutter analyze`
@@ -44,56 +74,45 @@ Flow utama sudah ada:
 
 ---
 
-## PATCH-FLUTTER-01 - Normalisasi package dan Firebase config
+## PATCH-FLUTTER-01 - Validasi Firebase config tanpa rename package
 
 ### Masalah
 
-Ada indikasi konfigurasi Android/Firebase tidak konsisten:
-
-- `android/app/build.gradle.kts` memakai package/app id `com.mypresence`.
-- `android/app/google-services.json` memakai package `com.mypresence`.
-- `lib/firebase_options.dart` memakai Firebase project `inventory-410f4`.
-- `firebase.json` bisa berisi app id Android lama yang berbeda.
+Konfigurasi Firebase/Android perlu dicek agar tidak ada app id atau metadata lama yang bertentangan. Namun package Android final tetap `com.mypresence`.
 
 ### Target
 
-Pastikan semua konfigurasi Android dan Firebase konsisten.
-
-### Keputusan package
-
-Gunakan package final:
+Pastikan semua konfigurasi Android dan Firebase konsisten dengan package:
 
 ```text
-com.my.presence
+com.mypresence
 ```
 
-Catatan: jangan gunakan `com.my.presensce` karena itu typo. Jika project Firebase belum punya Android app untuk `com.my.presence`, jangan memalsukan `google-services.json`. Buat catatan bahwa user harus membuat Android app baru di Firebase Console dan mengunduh file config baru.
-
-### File yang perlu dicek atau diubah
+### File yang perlu dicek
 
 - `android/app/build.gradle.kts`
 - `android/app/src/main/AndroidManifest.xml`
 - `android/app/google-services.json`
 - `lib/firebase_options.dart`
 - `firebase.json`
-- package namespace Android native jika ada file Kotlin/Java di bawah `android/app/src/main/kotlin` atau `android/app/src/main/java`
+- file Kotlin/Java native jika ada di bawah `android/app/src/main/kotlin` atau `android/app/src/main/java`
 
 ### Instruksi implementasi
 
-1. Ubah `namespace` dan `applicationId` menjadi `com.my.presence`.
-2. Cek apakah `google-services.json` sudah cocok dengan package `com.my.presence`.
-3. Jika belum cocok, jangan edit manual app id Firebase secara asal. Laporkan bahwa file harus digenerate ulang dari Firebase Console atau FlutterFire CLI.
-4. Cek `firebase.json`. Pastikan app id Android tidak stale.
-5. Jika `firebase_options.dart` perlu digenerate ulang, lakukan hanya jika Firebase CLI/FlutterFire tersedia dan konfigurasi valid.
-6. Pastikan app masih bisa dianalisis dengan `flutter analyze`.
+1. Jangan ubah `namespace` dan `applicationId` jika sudah `com.mypresence`.
+2. Cek `android/app/google-services.json` dan pastikan `client_info.android_client_info.package_name` adalah `com.mypresence`.
+3. Cek `lib/firebase_options.dart` dan pastikan masih mengarah ke Firebase project yang sama dengan `google-services.json`.
+4. Cek `firebase.json`. Jika ada Android app id lama/stale, jangan ubah package. Update hanya metadata FlutterFire yang memang tidak cocok, atau tulis catatan bila harus regenerate lewat FlutterFire CLI.
+5. Jangan membuat app id Firebase palsu secara manual.
+6. Pastikan `flutter analyze` tidak error.
 
 ### Acceptance criteria
 
-- `applicationId` final jelas.
-- Tidak ada dua package Android yang berbeda.
-- Tidak ada app id Firebase yang saling bertentangan.
-- Build/debug tidak rusak karena package rename.
-- Jika butuh file Firebase baru dari user, laporan akhir harus menyebut file yang dibutuhkan.
+- `namespace` tetap `com.mypresence`.
+- `applicationId` tetap `com.mypresence`.
+- `google-services.json` cocok dengan `com.mypresence`.
+- Tidak ada instruksi rename package.
+- Jika butuh regenerate config Firebase, laporan akhir menyebut langkah manual yang diperlukan.
 
 ---
 
@@ -163,7 +182,7 @@ helper_uid
 helper_name
 target_uid
 target_name
-created_by_qr: true atau equivalent jika memang digunakan di request
+created_by_qr atau field equivalent jika memang digunakan di request
 ```
 
 10. Pastikan admin web tetap bisa membaca `photo_url` dan `photo_path` dari QR request.
@@ -174,7 +193,7 @@ created_by_qr: true atau equivalent jika memang digunakan di request
 - Tombol: `Lanjut Ambil Foto`.
 - Setelah foto berhasil: preview foto.
 - Tombol submit: `Kirim Request Admin`.
-- Setelah sukses: kembali ke home atau halaman sebelumnya dengan toast sukses.
+- Setelah sukses: kembali ke halaman sebelumnya dengan toast sukses.
 
 ### Acceptance criteria
 
@@ -244,13 +263,11 @@ updated_at
 
 ---
 
-## PATCH-FLUTTER-04 - Release signing, jangan dikerjakan sebelum config stabil
+## PATCH-FLUTTER-04 - Release signing, hanya rapikan jika belum valid
 
-Tahap ini jangan dikerjakan sebelum PATCH-FLUTTER-01 dan PATCH-FLUTTER-02 selesai.
+### Catatan status
 
-### Masalah
-
-Release build masih memakai debug signing.
+Jika `android/app/build.gradle.kts` sudah memakai `key.properties` dan fallback debug signing saat key belum ada, jangan rewrite total. Cukup validasi dan rapikan bagian yang kurang.
 
 ### Target
 
@@ -267,14 +284,16 @@ key.properties
 *.keystore
 ```
 
-3. Update `build.gradle.kts` agar release signing membaca dari `key.properties` jika tersedia.
-4. Jangan membuat atau commit keystore asli.
+3. Pastikan `build.gradle.kts` membaca dari `key.properties` jika tersedia.
+4. Pastikan debug build tetap bisa jalan ketika `key.properties` belum ada.
+5. Jangan membuat atau commit keystore asli.
 
 ### Acceptance criteria
 
 - Debug build tetap jalan.
 - Release build bisa dikonfigurasi oleh user lokal.
 - Tidak ada secret masuk repo.
+- Package tetap `com.mypresence`.
 
 ---
 
@@ -293,6 +312,11 @@ Setelah mengerjakan, buat ringkasan:
 - flutter analyze: pass/fail
 - build debug: pass/fail/not run
 
+## Package Check
+- namespace:
+- applicationId:
+- google-services package:
+
 ## Notes
 - Hal yang butuh tindakan user:
 - Risiko yang tersisa:
@@ -309,4 +333,4 @@ Kerjakan berurutan:
 3. PATCH-FLUTTER-03
 4. PATCH-FLUTTER-04
 
-Jangan lompat ke release signing sebelum QR dan Firebase config stabil.
+Jangan rename package. Jangan mulai dari redesign UI. Jangan melakukan perubahan besar di luar daftar ini.
