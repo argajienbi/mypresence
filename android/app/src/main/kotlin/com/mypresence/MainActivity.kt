@@ -1,4 +1,4 @@
-package com.my.presence
+package com.mypresence
 
 import io.flutter.embedding.android.FlutterActivity
 
