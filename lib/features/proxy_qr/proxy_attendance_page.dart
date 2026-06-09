@@ -6,6 +6,7 @@ import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
+import 'proxy_qr_camera_page.dart';
 
 class ProxyAttendancePage extends StatefulWidget {
   final AppSession session;
@@ -74,29 +75,48 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
       target = null;
       error = '';
       pausedAfterScan = false;
+      loading = false;
     });
     await _scanner.start();
   }
 
-  Future<void> _submit() async {
-    if (target == null) return;
-    setState(() => loading = true);
+  Future<void> _continueToPhoto() async {
+    if (target == null || loading) return;
+
+    setState(() {
+      loading = true;
+      error = '';
+    });
+
     try {
-      await _qr.createProxyRequest(
-          helperSession: widget.session,
-          target: target!,
-          actionType: actionType);
+      await _scanner.stop();
       if (!mounted) return;
-      AppToast.success(context, 'Request QR dikirim. Menunggu validasi admin.');
-      Navigator.pop(context);
+
+      final submitted = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ProxyQrCameraPage(
+            session: widget.session,
+            target: target!,
+            actionType: actionType,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+      setState(() => loading = false);
+
+      if (submitted == true) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       final msg = friendlyError(e);
       if (mounted) {
-        setState(() => error = msg);
+        setState(() {
+          loading = false;
+          error = msg;
+        });
         AppToast.error(context, msg);
       }
-    } finally {
-      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -104,7 +124,7 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
   Widget build(BuildContext context) {
     return AppLoadingOverlay(
       visible: loading,
-      message: target == null ? 'Memvalidasi QR...' : 'Mengirim request QR...',
+      message: target == null ? 'Memvalidasi QR...' : 'Menyiapkan kamera...',
       child: Scaffold(
         backgroundColor: const Color(0xFF111827),
         appBar: AppBar(
@@ -219,8 +239,9 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
                           selected: actionType == 'masuk',
                           selectedColor:
                               AppColors.primary.withValues(alpha: .18),
-                          onSelected: (_) =>
-                              setState(() => actionType = 'masuk'),
+                          onSelected: loading
+                              ? null
+                              : (_) => setState(() => actionType = 'masuk'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -230,8 +251,9 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
                           selected: actionType == 'pulang',
                           selectedColor:
                               AppColors.primary.withValues(alpha: .18),
-                          onSelected: (_) =>
-                              setState(() => actionType = 'pulang'),
+                          onSelected: loading
+                              ? null
+                              : (_) => setState(() => actionType = 'pulang'),
                         ),
                       ),
                     ],
@@ -248,12 +270,13 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: target == null || loading ? null : _submit,
+                      onPressed:
+                          target == null || loading ? null : _continueToPhoto,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.green,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18))),
-                      child: const Text('Kirim Request Admin',
+                      child: const Text('Lanjut Ambil Foto',
                           style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900)),

@@ -128,14 +128,18 @@ class NotificationDetailPage extends StatelessWidget {
 
   static String _referenceButtonLabel(String refType) {
     final type = refType.toLowerCase();
-    if (type.contains('leave') || type.contains('approval'))
+    if (type.contains('leave') || type.contains('approval')) {
       return 'Lihat Detail Pengajuan';
-    if (type.contains('correction') || type.contains('koreksi'))
+    }
+    if (type.contains('correction') || type.contains('koreksi')) {
       return 'Lihat Detail Koreksi';
-    if (type.contains('qr') || type.contains('attendance'))
+    }
+    if (type.contains('qr') || type.contains('attendance')) {
       return 'Lihat Detail Presensi';
-    if (type.contains('schedule') || type.contains('jadwal'))
+    }
+    if (type.contains('schedule') || type.contains('jadwal')) {
       return 'Lihat Detail Jadwal';
+    }
     return 'Lihat Detail';
   }
 
@@ -307,12 +311,15 @@ class _DetailInfoCard extends StatelessWidget {
   static String _referenceLabel(String refType) {
     final type = refType.toLowerCase();
     if (type.contains('leave') || type.contains('approval')) return 'Pengajuan';
-    if (type.contains('correction') || type.contains('koreksi'))
+    if (type.contains('correction') || type.contains('koreksi')) {
       return 'Koreksi Presensi';
-    if (type.contains('qr') || type.contains('attendance'))
+    }
+    if (type.contains('qr') || type.contains('attendance')) {
       return 'Riwayat Presensi';
-    if (type.contains('schedule') || type.contains('jadwal'))
+    }
+    if (type.contains('schedule') || type.contains('jadwal')) {
       return 'Jadwal Kerja';
+    }
     if (type.contains('system')) return 'Sistem';
     return 'Notifikasi';
   }
@@ -323,14 +330,20 @@ class _DetailInfoCard extends StatelessWidget {
             .toLowerCase();
     if (value.contains('approved') ||
         value.contains('disetujui') ||
-        value.contains('success')) return 'Disetujui';
+        value.contains('success')) {
+      return 'Disetujui';
+    }
     if (value.contains('rejected') ||
         value.contains('ditolak') ||
-        value.contains('error')) return 'Ditolak';
+        value.contains('error')) {
+      return 'Ditolak';
+    }
     if (value.contains('pending') ||
         value.contains('menunggu') ||
         value.contains('review') ||
-        value.contains('warning')) return 'Menunggu';
+        value.contains('warning')) {
+      return 'Menunggu';
+    }
     return notification.read ? 'Sudah dibaca' : 'Belum dibaca';
   }
 }
@@ -372,14 +385,18 @@ class _InformationBox extends StatelessWidget {
 
   static String _infoText(String refType) {
     final type = refType.toLowerCase();
-    if (type.contains('schedule') || type.contains('jadwal'))
+    if (type.contains('schedule') || type.contains('jadwal')) {
       return 'Silakan cek detail jadwal untuk melihat perubahan jam kerja atau shift terbaru.';
-    if (type.contains('attendance') || type.contains('qr'))
+    }
+    if (type.contains('attendance') || type.contains('qr')) {
       return 'Silakan cek riwayat presensi untuk melihat detail validasi dan bukti presensi.';
-    if (type.contains('correction') || type.contains('koreksi'))
+    }
+    if (type.contains('correction') || type.contains('koreksi')) {
       return 'Silakan cek detail koreksi untuk melihat status review dari admin.';
-    if (type.contains('leave') || type.contains('approval'))
+    }
+    if (type.contains('leave') || type.contains('approval')) {
       return 'Silakan cek detail pengajuan untuk informasi lebih lengkap.';
+    }
     return 'Informasi ini bersifat personal untuk akun Anda.';
   }
 }
@@ -460,48 +477,55 @@ class _NotificationDetailCategory {
     final value =
         '${notification.type} ${notification.refType} ${notification.title} ${notification.displayBody}'
             .toLowerCase();
-    if (value.contains('correction') || value.contains('koreksi'))
+    if (value.contains('correction') || value.contains('koreksi')) {
       return const _NotificationDetailCategory(
           label: 'Koreksi',
           icon: Icons.edit_note_rounded,
           color: AppColors.orange);
-    if (value.contains('schedule') || value.contains('jadwal'))
+    }
+    if (value.contains('schedule') || value.contains('jadwal')) {
       return const _NotificationDetailCategory(
           label: 'Jadwal',
           icon: Icons.calendar_month_rounded,
           color: AppColors.blue);
-    if (value.contains('qr'))
+    }
+    if (value.contains('qr')) {
       return const _NotificationDetailCategory(
           label: 'Presensi',
           icon: Icons.qr_code_2_rounded,
           color: AppColors.purple);
+    }
     if (value.contains('attendance') ||
         value.contains('presensi') ||
-        value.contains('absensi'))
+        value.contains('absensi')) {
       return const _NotificationDetailCategory(
           label: 'Presensi',
           icon: Icons.fact_check_rounded,
           color: AppColors.purple);
+    }
     if (value.contains('system') ||
         value.contains('sistem') ||
         value.contains('user_status') ||
-        value.contains('status_update'))
+        value.contains('status_update')) {
       return const _NotificationDetailCategory(
           label: 'Sistem',
           icon: Icons.settings_rounded,
           color: AppColors.muted);
+    }
     if (value.contains('warning') ||
         value.contains('pending') ||
-        value.contains('menunggu'))
+        value.contains('menunggu')) {
       return const _NotificationDetailCategory(
           label: 'Approval',
           icon: Icons.pending_actions_rounded,
           color: AppColors.orange);
+    }
     if (value.contains('rejected') ||
         value.contains('ditolak') ||
-        value.contains('error'))
+        value.contains('error')) {
       return const _NotificationDetailCategory(
           label: 'Approval', icon: Icons.error_rounded, color: AppColors.red);
+    }
     return const _NotificationDetailCategory(
         label: 'Approval', icon: Icons.check_rounded, color: AppColors.green);
   }

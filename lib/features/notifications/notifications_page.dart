@@ -88,8 +88,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                         await _service.markAllPersonalAsRead(
                                             widget.session, merged);
                                       } finally {
-                                        if (mounted)
+                                        if (mounted) {
                                           setState(() => _markingAll = false);
+                                        }
                                       }
                                     },
                             ),
@@ -197,7 +198,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   bool _matchesFilter(AppNotification item, _NotificationFilter filter) {
     if (filter == _NotificationFilter.all ||
-        filter == _NotificationFilter.unread) return true;
+        filter == _NotificationFilter.unread) {
+      return true;
+    }
     final value =
         '${item.type} ${item.refType} ${item.title} ${item.displayBody}'
             .toLowerCase();
@@ -733,8 +736,11 @@ class _NotificationTile extends StatelessWidget {
     final now = DateTime.now();
     final time =
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    if (date.year == now.year && date.month == now.month && date.day == now.day)
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return time;
+    }
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
   }
 }
