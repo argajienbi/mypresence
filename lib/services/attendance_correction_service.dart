@@ -62,22 +62,24 @@ class AttendanceCorrectionService {
 
     final ts = DateTime.now().millisecondsSinceEpoch;
     final correctionId = 'correction_$ts';
-    final attendance = oldAttendance ?? await getAttendanceMap(session: session, dateKey: normalizedDate) ?? <String, dynamic>{};
+    final attendance = oldAttendance ??
+        await getAttendanceMap(session: session, dateKey: normalizedDate) ??
+        <String, dynamic>{};
 
     String attachmentUrl = '';
     String attachmentPath = '';
     String savedAttachmentName = '';
     if (attachmentFile != null) {
-      savedAttachmentName = attachmentName.isEmpty
-          ? 'correction_$ts.jpg'
-          : attachmentName;
+      savedAttachmentName =
+          attachmentName.isEmpty ? 'correction_$ts.jpg' : attachmentName;
       attachmentPath = FirebasePaths.attendanceCorrectionAttachment(
         session.companyId,
         session.uid,
         correctionId,
         savedAttachmentName,
       );
-      attachmentUrl = await _storage.uploadFile(path: attachmentPath, file: attachmentFile);
+      attachmentUrl =
+          await _storage.uploadFile(path: attachmentPath, file: attachmentFile);
     }
 
     final request = AttendanceCorrectionRequest(
@@ -143,14 +145,37 @@ class AttendanceCorrectionService {
       final rowDate = asString(row['date'], asString(row['tanggal']));
       if (rowDate != dateKey) continue;
       final rowType = asString(row['correction_type']).toLowerCase();
-      if (rowType.isEmpty || rowType != correctionType) continue;
-      if (RequestStatusItem.isRejectedStatus(asString(row['status']))) continue;
-      throw Exception('Sudah ada pengajuan koreksi aktif untuk tanggal dan tipe tersebut.');
+      if (rowType.isEmpty) continue;
+      if (!_isActiveStatus(asString(row['status']))) continue;
+      if (!_isOverlap(correctionType, rowType)) continue;
+      throw Exception(
+          'Sudah ada pengajuan koreksi aktif yang tumpang tindih untuk tanggal tersebut.');
     }
   }
 
   bool _isValidType(String type) {
     return type == 'masuk' || type == 'pulang' || type == 'masuk_pulang';
+  }
+
+  bool _isActiveStatus(String status) {
+    final normalized = RequestStatusItem.normalizeStatus(status);
+    return normalized == 'pending' || normalized == 'approved';
+  }
+
+  bool _isOverlap(String currentType, String existingType) {
+    if (currentType == existingType) return true;
+    if (currentType == 'masuk_pulang') {
+      return existingType == 'masuk' ||
+          existingType == 'pulang' ||
+          existingType == 'masuk_pulang';
+    }
+    if (currentType == 'masuk') {
+      return existingType == 'masuk' || existingType == 'masuk_pulang';
+    }
+    if (currentType == 'pulang') {
+      return existingType == 'pulang' || existingType == 'masuk_pulang';
+    }
+    return false;
   }
 
   bool _needsCheckIn(String type) {

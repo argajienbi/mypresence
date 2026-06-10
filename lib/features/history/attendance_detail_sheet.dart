@@ -7,8 +7,9 @@ import '../../core/models/app_session.dart';
 import '../../core/models/request_status_item.dart';
 import '../../core/utils.dart';
 import '../../services/schedule_service.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/attachment_preview.dart';
+import 'attendance_location_sheet.dart';
 import '../corrections/attendance_correction_form_page.dart';
 import 'history_models.dart';
 
@@ -40,6 +41,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
     final masuk = _nestedMap(attendance['masuk']);
     final pulang = _nestedMap(attendance['pulang']);
     final hasAttendance = masuk != null || pulang != null;
+    final canRequestCorrection = hasAttendance || item.status == 'alpa';
     final hasQr = _isQrRecord(attendance);
     final statusColor = _statusColor(item.status);
     final statusIcon = _statusIcon(item.status);
@@ -141,7 +143,8 @@ class _AttendanceDetailSheet extends StatelessWidget {
                     icon: Icons.check_circle_outline_rounded,
                     color: _statusChipColor(attendance),
                     label: 'Validasi',
-                    value: asString(attendance['validation_status'], asString(attendance['status'], '-')),
+                    value: asString(attendance['validation_status'],
+                        asString(attendance['status'], '-')),
                     badge: asString(attendance['geofence_status'], 'unknown'),
                   ),
                 ],
@@ -164,6 +167,16 @@ class _AttendanceDetailSheet extends StatelessWidget {
                     badge: _groupValue(attendance),
                   ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              _LocationDetailCard(
+                attendance: attendance,
+                onViewLocation: _hasLocation(attendance)
+                    ? () => showAttendanceLocationSheet(
+                          context: context,
+                          attendance: attendance,
+                        )
+                    : null,
               ),
               if (locationWarning.isNotEmpty || qualityWarning.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -242,7 +255,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
                 _QrDetailCard(attendance: attendance),
                 const SizedBox(height: 18),
               ],
-              if (hasAttendance)
+              if (canRequestCorrection)
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
@@ -252,7 +265,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
                           builder: (_) => AttendanceCorrectionFormPage(
                             session: session,
                             initialDate: item.date,
-                            oldAttendance: attendance,
+                            oldAttendance: item.attendanceRow,
                           ),
                         ),
                       );
@@ -314,12 +327,21 @@ class _AttendanceDetailSheet extends StatelessWidget {
   }
 
   bool _hasScheduleInfo(DailySchedule? schedule) {
-    return schedule != null && (schedule.workStart.isNotEmpty || schedule.workEnd.isNotEmpty || schedule.shiftName.isNotEmpty || schedule.timetableName.isNotEmpty);
+    return schedule != null &&
+        (schedule.workStart.isNotEmpty ||
+            schedule.workEnd.isNotEmpty ||
+            schedule.shiftName.isNotEmpty ||
+            schedule.timetableName.isNotEmpty);
   }
 
   bool _hasPhotoInfo(Map<String, dynamic>? row) {
     if (row == null) return false;
     return _photoUrl(row).isNotEmpty || asString(row['photo_path']).isNotEmpty;
+  }
+
+  bool _hasLocation(Map<String, dynamic> attendance) {
+    return asString(attendance['latitude']).isNotEmpty ||
+        asString(attendance['longitude']).isNotEmpty;
   }
 
   bool _isQrRecord(Map<String, dynamic> attendance) {
@@ -502,7 +524,8 @@ class _AttendanceDetailSheet extends StatelessWidget {
   }
 
   Color _statusChipColor(Map<String, dynamic> attendance) {
-    final status = asString(attendance['validation_status'], asString(attendance['status']));
+    final status = asString(
+        attendance['validation_status'], asString(attendance['status']));
     switch (RequestStatusItem.normalizeStatus(status)) {
       case 'approved':
         return AppColors.green;
@@ -532,8 +555,10 @@ class _AttendanceDetailSheet extends StatelessWidget {
   }
 
   String _distanceBadge(Map<String, dynamic> attendance) {
-    final distance = math.max(0, (double.tryParse(asString(attendance['distance_meter'])) ?? 0).round());
-    final radius = math.max(0, (double.tryParse(asString(attendance['radius_meter'])) ?? 0).round());
+    final distance = math.max(0,
+        (double.tryParse(asString(attendance['distance_meter'])) ?? 0).round());
+    final radius = math.max(0,
+        (double.tryParse(asString(attendance['radius_meter'])) ?? 0).round());
     if (distance <= 0 && radius <= 0) return 'Lokasi';
     if (radius <= 0) return '$distance m';
     return '$distance / $radius m';
@@ -886,8 +911,10 @@ class _AttendanceTimeline extends StatelessWidget {
 
   String _clockInSubtitle() {
     if (masuk == null) return 'Belum dilakukan';
-    final status = asString(masuk?['attendance_status'], asString(masuk?['status']));
-    if (status.toLowerCase().contains('late') || status.toLowerCase().contains('telat')) {
+    final status =
+        asString(masuk?['attendance_status'], asString(masuk?['status']));
+    if (status.toLowerCase().contains('late') ||
+        status.toLowerCase().contains('telat')) {
       return 'Clock In tercatat telat';
     }
     return 'Clock In tercatat';
@@ -895,7 +922,8 @@ class _AttendanceTimeline extends StatelessWidget {
 
   String _clockOutSubtitle() {
     if (pulang == null) return 'Belum dilakukan';
-    if (asString(pulang?['early_out']).toLowerCase() == 'true' || pulang?['early_out'] == true) {
+    if (asString(pulang?['early_out']).toLowerCase() == 'true' ||
+        pulang?['early_out'] == true) {
       return 'Clock Out tercatat pulang awal';
     }
     return 'Clock Out tercatat';
@@ -903,14 +931,17 @@ class _AttendanceTimeline extends StatelessWidget {
 
   String _clockInBadge() {
     if (masuk == null) return 'Menunggu';
-    final status = asString(masuk?['attendance_status'], asString(masuk?['status'])).toLowerCase();
+    final status =
+        asString(masuk?['attendance_status'], asString(masuk?['status']))
+            .toLowerCase();
     if (status.contains('late') || status.contains('telat')) return 'Telat';
     return 'Selesai';
   }
 
   String _clockOutBadge() {
     if (pulang == null) return 'Menunggu';
-    if (asString(pulang?['early_out']).toLowerCase() == 'true' || pulang?['early_out'] == true) {
+    if (asString(pulang?['early_out']).toLowerCase() == 'true' ||
+        pulang?['early_out'] == true) {
       return 'Pulang Awal';
     }
     return 'Selesai';
@@ -950,18 +981,24 @@ class _TimelineItem extends StatelessWidget {
             width: 42,
             child: Column(
               children: [
-                if (!isFirst) Expanded(child: Container(width: 2, color: AppColors.line)),
+                if (!isFirst)
+                  Expanded(child: Container(width: 2, color: AppColors.line)),
                 Container(
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
                     color: active ? visualColor : Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: visualColor.withValues(alpha: .55), width: 2),
+                    border: Border.all(
+                        color: visualColor.withValues(alpha: .55), width: 2),
                   ),
-                  child: active ? const Icon(Icons.check_rounded, color: Colors.white, size: 18) : null,
+                  child: active
+                      ? const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 18)
+                      : null,
                 ),
-                if (!isLast) Expanded(child: Container(width: 2, color: AppColors.line)),
+                if (!isLast)
+                  Expanded(child: Container(width: 2, color: AppColors.line)),
               ],
             ),
           ),
@@ -1009,7 +1046,8 @@ class _TimelineItem extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: visualColor.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(999),
@@ -1043,19 +1081,32 @@ class _ScheduleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _InfoLine(label: 'Shift', value: schedule.shiftName.isEmpty ? '-' : schedule.shiftName),
+          _InfoLine(
+              label: 'Shift',
+              value: schedule.shiftName.isEmpty ? '-' : schedule.shiftName),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Timetable', value: schedule.timetableName.isEmpty ? '-' : schedule.timetableName),
+          _InfoLine(
+              label: 'Timetable',
+              value: schedule.timetableName.isEmpty
+                  ? '-'
+                  : schedule.timetableName),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Work start / end', value: _pair(schedule.workStart, schedule.workEnd)),
+          _InfoLine(
+              label: 'Work start / end',
+              value: _pair(schedule.workStart, schedule.workEnd)),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Clock In window', value: _pair(schedule.checkInStart, schedule.checkInEnd)),
+          _InfoLine(
+              label: 'Clock In window',
+              value: _pair(schedule.checkInStart, schedule.checkInEnd)),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Clock Out window', value: _pair(schedule.checkOutStart, schedule.checkOutEnd)),
+          _InfoLine(
+              label: 'Clock Out window',
+              value: _pair(schedule.checkOutStart, schedule.checkOutEnd)),
           const SizedBox(height: 6),
           _InfoLine(
             label: 'Telat / Pulang Awal',
-            value: '${schedule.lateToleranceMinute} / ${schedule.earlyOutToleranceMinute} menit',
+            value:
+                '${schedule.lateToleranceMinute} / ${schedule.earlyOutToleranceMinute} menit',
           ),
           const SizedBox(height: 6),
           _InfoLine(label: 'Schedule source', value: schedule.source),
@@ -1076,7 +1127,6 @@ class _PhotoCard extends StatelessWidget {
   final String photoUrl;
   final String photoPath;
   final String badge;
-  static final StorageService _storage = StorageService();
 
   const _PhotoCard({
     required this.title,
@@ -1132,115 +1182,102 @@ class _PhotoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (photoUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: Image.network(
-                  photoUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: AppColors.bg,
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(color: AppColors.primary),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.bg,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported_outlined, color: AppColors.muted, size: 36),
-                  ),
-                ),
+          AttachmentPreviewTile(
+            photoUrl: photoUrl,
+            photoPath: photoPath,
+            previewTitle: title,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationDetailCard extends StatelessWidget {
+  final Map<String, dynamic> attendance;
+  final VoidCallback? onViewLocation;
+
+  const _LocationDetailCard({
+    required this.attendance,
+    required this.onViewLocation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final latitude = _doubleValue(attendance['latitude']);
+    final longitude = _doubleValue(attendance['longitude']);
+    final distance = _doubleValue(attendance['distance_meter']);
+    final radius = _doubleValue(attendance['radius_meter']);
+    final officeLat = _doubleValue(attendance['office_latitude']);
+    final officeLng = _doubleValue(attendance['office_longitude']);
+    final geofence = asString(attendance['geofence_status'], '-');
+    final riskLevel = asString(attendance['location_risk_level'], '-');
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Detail Lokasi',
+            style: TextStyle(
+              color: AppColors.text,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _InfoLine(label: 'Latitude', value: _formatValue(latitude)),
+          const SizedBox(height: 6),
+          _InfoLine(label: 'Longitude', value: _formatValue(longitude)),
+          const SizedBox(height: 6),
+          _InfoLine(
+              label: 'Distance meter',
+              value: _formatValue(distance, decimals: 0)),
+          const SizedBox(height: 6),
+          _InfoLine(
+              label: 'Radius meter', value: _formatValue(radius, decimals: 0)),
+          const SizedBox(height: 6),
+          _InfoLine(
+            label: 'Office latitude/longitude',
+            value: '${_formatValue(officeLat)}, ${_formatValue(officeLng)}',
+          ),
+          const SizedBox(height: 6),
+          _InfoLine(label: 'Geofence status', value: geofence),
+          const SizedBox(height: 6),
+          _InfoLine(label: 'Location risk level', value: riskLevel),
+          const SizedBox(height: 10),
+          if (onViewLocation != null)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onViewLocation,
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Lihat Lokasi'),
               ),
-            )
-          else if (photoPath.isNotEmpty)
-            FutureBuilder<String>(
-              future: _storage.downloadUrl(photoPath),
-              builder: (context, snapshot) {
-                final resolvedUrl = snapshot.data ?? '';
-                if (resolvedUrl.isNotEmpty) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Image.network(
-                        resolvedUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: AppColors.bg,
-                            alignment: Alignment.center,
-                            child: const CircularProgressIndicator(color: AppColors.primary),
-                          );
-                        },
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.bg,
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.image_not_supported_outlined, color: AppColors.muted, size: 36),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.line),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.photo_library_outlined, color: AppColors.primary, size: 34),
-                      const SizedBox(height: 8),
-                      Text(
-                        snapshot.connectionState == ConnectionState.waiting
-                            ? 'Memuat pratinjau foto...'
-                            : 'Foto tersimpan di storage, pratinjau tidak tersedia',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
             )
           else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.image_not_supported_outlined, color: AppColors.muted, size: 34),
-                  SizedBox(height: 8),
-                  Text(
-                    'Foto belum tersedia',
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+            const Text(
+              'Lokasi tidak tersedia.',
+              style: TextStyle(
+                color: AppColors.muted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
               ),
             ),
         ],
       ),
     );
+  }
+
+  double _doubleValue(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(asString(value)) ?? 0;
+  }
+
+  String _formatValue(double value, {int decimals = 6}) {
+    if (value == 0) return '-';
+    return value.toStringAsFixed(decimals);
   }
 }
 
@@ -1251,8 +1288,10 @@ class _LeaveDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final type = asString(row['type'], asString(row['leave_type'], 'izin')).toLowerCase();
-    final attachment = asString(row['attachment_url'], asString(row['attachment_path']));
+    final type = asString(row['type'], asString(row['leave_type'], 'izin'))
+        .toLowerCase();
+    final attachment =
+        asString(row['attachment_url'], asString(row['attachment_path']));
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -1262,11 +1301,16 @@ class _LeaveDetailCard extends StatelessWidget {
           const SizedBox(height: 6),
           _InfoLine(label: 'Tanggal', value: _leaveDateValue(type)),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Alasan', value: asString(row['reason'], asString(row['alasan'], '-'))),
+          _InfoLine(
+              label: 'Alasan',
+              value: asString(row['reason'], asString(row['alasan'], '-'))),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Lampiran', value: attachment.isNotEmpty ? 'Tersedia' : 'Tidak ada'),
+          _InfoLine(
+              label: 'Lampiran',
+              value: attachment.isNotEmpty ? 'Tersedia' : 'Tidak ada'),
           const SizedBox(height: 6),
-          _InfoLine(label: 'Catatan admin', value: asString(row['admin_note'], '-')),
+          _InfoLine(
+              label: 'Catatan admin', value: asString(row['admin_note'], '-')),
         ],
       ),
     );
@@ -1287,14 +1331,17 @@ class _LeaveDetailCard extends StatelessWidget {
 
   String _leaveDateValue(String type) {
     if (type == 'lembur') {
-      final date = asString(row['overtime_date'], asString(row['date_start'], asString(row['date'], '-')));
+      final date = asString(row['overtime_date'],
+          asString(row['date_start'], asString(row['date'], '-')));
       final start = asString(row['overtime_start_time']);
       final end = asString(row['overtime_end_time']);
       if (start.isEmpty || end.isEmpty) return date;
       return '$date - $start - $end';
     }
-    final start = asString(row['date_start'], asString(row['tanggal_mulai'], asString(row['date'], '-')));
-    final end = asString(row['date_end'], asString(row['tanggal_selesai'], start));
+    final start = asString(row['date_start'],
+        asString(row['tanggal_mulai'], asString(row['date'], '-')));
+    final end =
+        asString(row['date_end'], asString(row['tanggal_selesai'], start));
     if (start == end) return start;
     return '$start - $end';
   }
@@ -1314,12 +1361,14 @@ class _OvertimeDetailCard extends StatelessWidget {
         children: [
           _InfoLine(
             label: 'Tanggal',
-            value: asString(row['overtime_date'], asString(row['date_start'], asString(row['date'], '-'))),
+            value: asString(row['overtime_date'],
+                asString(row['date_start'], asString(row['date'], '-'))),
           ),
           const SizedBox(height: 6),
           _InfoLine(
             label: 'Jam',
-            value: '${asString(row['overtime_start_time'], '-') } - ${asString(row['overtime_end_time'], '-') }',
+            value:
+                '${asString(row['overtime_start_time'], '-')} - ${asString(row['overtime_end_time'], '-')}',
           ),
           const SizedBox(height: 6),
           _InfoLine(
@@ -1378,7 +1427,9 @@ class _QrDetailCard extends StatelessWidget {
     final createdByUid = asString(attendance['created_by_uid']);
     final helperUid = asString(attendance['helper_uid']);
     if (helperUid.isNotEmpty) return helperUid;
-    if (attendance['created_by_qr'] == true) return createdByUid.isEmpty ? '-' : createdByUid;
+    if (attendance['created_by_qr'] == true) {
+      return createdByUid.isEmpty ? '-' : createdByUid;
+    }
     return '-';
   }
 
@@ -1386,7 +1437,9 @@ class _QrDetailCard extends StatelessWidget {
     final createdByName = asString(attendance['created_by_name']);
     final helperName = asString(attendance['helper_name']);
     if (helperName.isNotEmpty) return helperName;
-    if (attendance['created_by_qr'] == true) return createdByName.isEmpty ? '-' : createdByName;
+    if (attendance['created_by_qr'] == true) {
+      return createdByName.isEmpty ? '-' : createdByName;
+    }
     return '-';
   }
 }

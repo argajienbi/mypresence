@@ -25,6 +25,15 @@ class RequestStatusService {
     return items;
   }
 
+  Future<int> countPendingRequests(AppSession session) async {
+    try {
+      final items = await loadRequests(session);
+      return items.where((item) => item.status == 'pending').length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   List<RequestStatusItem> _loadLeaveRequests(
     AppSession session,
     Map<String, dynamic>? root,
@@ -38,6 +47,7 @@ class RequestStatusService {
       if (asString(row['uid']) != session.uid) continue;
 
       final type = _leaveType(row);
+      final typeKey = _leaveTypeKey(row);
       final rawStatus = asString(row['status'], 'pending');
       final status = RequestStatusItem.normalizeStatus(rawStatus);
       final createdAt = _createdAt(row);
@@ -52,6 +62,7 @@ class RequestStatusService {
           id: entry.key,
           kind: RequestStatusKind.leave,
           kindLabel: type,
+          typeKey: typeKey,
           contextLabel: '',
           status: status,
           rawStatus: rawStatus,
@@ -103,9 +114,7 @@ class RequestStatusService {
           : matchesTarget
               ? 'Sebagai Target'
               : 'Sebagai Helper';
-      final note = matchesTarget
-          ? _helperText(row)
-          : _targetText(row);
+      final note = matchesTarget ? _helperText(row) : _targetText(row);
       rows.add(
         RequestStatusItem(
           id: entry.key,
@@ -113,6 +122,7 @@ class RequestStatusService {
               ? RequestStatusKind.qrTarget
               : RequestStatusKind.qrHelper,
           kindLabel: 'QR Titip Absen',
+          typeKey: 'qr',
           contextLabel: contextLabel,
           status: status,
           rawStatus: rawStatus,
@@ -147,7 +157,8 @@ class RequestStatusService {
     for (final entry in map.entries) {
       final value = entry.value;
       if (value is! Map) continue;
-      final request = AttendanceCorrectionRequest.fromMap(entry.key, asMap(value));
+      final request =
+          AttendanceCorrectionRequest.fromMap(entry.key, asMap(value));
       if (request.uid != session.uid) continue;
 
       final status = RequestStatusItem.normalizeStatus(request.status);
@@ -156,13 +167,15 @@ class RequestStatusService {
           id: request.correctionId,
           kind: RequestStatusKind.correction,
           kindLabel: 'Koreksi Presensi',
+          typeKey: 'koreksi',
           contextLabel: '',
           status: status,
           rawStatus: request.status,
           createdAtMillis: request.createdAt,
           createdAtLabel: _formatDateTime(request.createdAt),
           processedAtMillis: _processedAtFromCorrection(request, status),
-          processedAtLabel: _formatDateTime(_processedAtFromCorrection(request, status)),
+          processedAtLabel:
+              _formatDateTime(_processedAtFromCorrection(request, status)),
           targetDateLabel: _dateLabel(request.date),
           note: request.reason,
           adminNote: request.adminNote,
@@ -182,7 +195,8 @@ class RequestStatusService {
   }
 
   String _leaveType(Map<String, dynamic> row) {
-    switch (asString(row['type'], asString(row['leave_type'], 'izin')).toLowerCase()) {
+    switch (asString(row['type'], asString(row['leave_type'], 'izin'))
+        .toLowerCase()) {
       case 'sakit':
         return 'Sakit';
       case 'cuti':
@@ -191,6 +205,20 @@ class RequestStatusService {
         return 'Lembur';
       default:
         return 'Izin';
+    }
+  }
+
+  String _leaveTypeKey(Map<String, dynamic> row) {
+    switch (asString(row['type'], asString(row['leave_type'], 'izin'))
+        .toLowerCase()) {
+      case 'sakit':
+        return 'sakit';
+      case 'cuti':
+        return 'cuti';
+      case 'lembur':
+        return 'lembur';
+      default:
+        return 'izin';
     }
   }
 
@@ -217,7 +245,8 @@ class RequestStatusService {
   }
 
   String _qrDateLabel(Map<String, dynamic> row) {
-    final date = DateTime.tryParse(asString(row['date'], asString(row['tanggal'])));
+    final date =
+        DateTime.tryParse(asString(row['date'], asString(row['tanggal'])));
     final time = asString(row['time'], asString(row['waktu']));
     if (date == null) {
       return time.isEmpty ? '-' : time;
@@ -230,9 +259,11 @@ class RequestStatusService {
   }
 
   String _leaveDateLabel(Map<String, dynamic> row) {
-    final type = asString(row['type'], asString(row['leave_type'], 'izin')).toLowerCase();
+    final type = asString(row['type'], asString(row['leave_type'], 'izin'))
+        .toLowerCase();
     if (type == 'lembur') {
-      final date = _dateLabel(asString(row['overtime_date'], asString(row['date_start'], asString(row['date']))));
+      final date = _dateLabel(asString(row['overtime_date'],
+          asString(row['date_start'], asString(row['date']))));
       final start = asString(row['overtime_start_time']);
       final end = asString(row['overtime_end_time']);
       if (start.isNotEmpty && end.isNotEmpty) {
@@ -241,8 +272,10 @@ class RequestStatusService {
       return date;
     }
 
-    final startRaw = asString(row['date_start'], asString(row['tanggal_mulai'], asString(row['date'])));
-    final endRaw = asString(row['date_end'], asString(row['tanggal_selesai'], startRaw));
+    final startRaw = asString(row['date_start'],
+        asString(row['tanggal_mulai'], asString(row['date'])));
+    final endRaw =
+        asString(row['date_end'], asString(row['tanggal_selesai'], startRaw));
     final start = _dateLabel(startRaw);
     final end = _dateLabel(endRaw);
     if (start == end) {
@@ -252,13 +285,15 @@ class RequestStatusService {
   }
 
   int _createdAt(Map<String, dynamic> row) {
-    return asInt(row['created_at'], asInt(row['timestamp'], asInt(row['updated_at'])));
+    return asInt(
+        row['created_at'], asInt(row['timestamp'], asInt(row['updated_at'])));
   }
 
   int _processedAt(Map<String, dynamic> row, String status) {
     switch (status) {
       case 'approved':
-        return asInt(row['validated_at'], asInt(row['approved_at'], asInt(row['updated_at'])));
+        return asInt(row['validated_at'],
+            asInt(row['approved_at'], asInt(row['updated_at'])));
       case 'rejected':
         return asInt(row['rejected_at'], asInt(row['updated_at']));
       default:
@@ -266,7 +301,8 @@ class RequestStatusService {
     }
   }
 
-  int _processedAtFromCorrection(AttendanceCorrectionRequest request, String status) {
+  int _processedAtFromCorrection(
+      AttendanceCorrectionRequest request, String status) {
     switch (status) {
       case 'approved':
         return request.validatedAt > 0

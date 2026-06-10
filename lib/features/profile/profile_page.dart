@@ -5,6 +5,7 @@ import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/request_status_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_feedback.dart';
@@ -29,13 +30,17 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final ProfileService _profileService = ProfileService();
+  final RequestStatusService _requestStatusService = RequestStatusService();
   bool _uploading = false;
+  late final Future<int> _pendingRequestsFuture;
   late String _photoUrl;
 
   @override
   void initState() {
     super.initState();
     _photoUrl = widget.session.photoUrl;
+    _pendingRequestsFuture =
+        _requestStatusService.countPendingRequests(widget.session);
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -43,8 +48,8 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Logout',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title:
+            const Text('Logout', style: TextStyle(fontWeight: FontWeight.w900)),
         content: const Text('Anda yakin ingin keluar dari akun ini?'),
         actions: [
           TextButton(
@@ -157,17 +162,24 @@ class _ProfilePageState extends State<ProfilePage> {
                           _InfoTile(
                             icon: Icons.business_rounded,
                             title: 'Kantor',
-                            value: widget.session.officeName.isEmpty ? '-' : widget.session.officeName,
+                            value: widget.session.officeName.isEmpty
+                                ? '-'
+                                : widget.session.officeName,
                           ),
                           _InfoTile(
                             icon: Icons.groups_rounded,
                             title: 'Grup',
-                            value: widget.session.groupName.isEmpty ? '-' : widget.session.groupName,
+                            value: widget.session.groupName.isEmpty
+                                ? '-'
+                                : widget.session.groupName,
                           ),
                           FutureBuilder<DailySchedule>(
-                            future: ScheduleService().resolveToday(widget.session),
+                            future:
+                                ScheduleService().resolveToday(widget.session),
                             builder: (context, snapshot) {
-                              final value = snapshot.hasData ? snapshot.data!.periodLabel : 'Memuat jadwal...';
+                              final value = snapshot.hasData
+                                  ? snapshot.data!.periodLabel
+                                  : 'Memuat jadwal...';
                               return _InfoTile(
                                 icon: Icons.event_available_rounded,
                                 title: 'Jadwal Aktif',
@@ -194,42 +206,86 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icons.person_outline,
                             title: 'Data Pribadi',
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => EditProfilePage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      EditProfilePage(session: widget.session)),
                             ),
                           ),
                           _MenuTile(
                             icon: Icons.badge_outlined,
                             title: 'ID / QR Karyawan',
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => EmployeeQrPage(session: widget.session, photoUrl: _photoUrl)),
+                              MaterialPageRoute(
+                                  builder: (_) => EmployeeQrPage(
+                                      session: widget.session,
+                                      photoUrl: _photoUrl)),
                             ),
                           ),
                           _MenuTile(
                             icon: Icons.assignment_turned_in_outlined,
                             title: 'Status Pengajuan',
+                            trailing: FutureBuilder<int>(
+                              future: _pendingRequestsFuture,
+                              builder: (context, snapshot) {
+                                final count = snapshot.data ?? 0;
+                                if (snapshot.connectionState ==
+                                        ConnectionState.waiting ||
+                                    count <= 0) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Container(
+                                  constraints: const BoxConstraints(
+                                      minWidth: 28, minHeight: 28),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppColors.orange.withValues(alpha: .14),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    count > 99 ? '99+' : '$count',
+                                    style: const TextStyle(
+                                      color: AppColors.orange,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => RequestStatusPage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) => RequestStatusPage(
+                                      session: widget.session)),
                             ),
                           ),
                           _MenuTile(
                             icon: Icons.campaign_outlined,
                             title: 'Pengumuman',
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => AnnouncementsPage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) => AnnouncementsPage(
+                                      session: widget.session)),
                             ),
                           ),
                           _MenuTile(
                             icon: Icons.public_rounded,
                             title: 'Website Perusahaan',
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => CompanyWebViewPage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) => CompanyWebViewPage(
+                                      session: widget.session)),
                             ),
                           ),
                           _MenuTile(
                             icon: Icons.help_outline,
                             title: 'Pusat Bantuan',
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => HelpCenterPage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      HelpCenterPage(session: widget.session)),
                             ),
                           ),
                           _MenuTile(
@@ -237,7 +293,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             title: 'Syarat & Ketentuan',
                             showDivider: false,
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => TermsPage(session: widget.session)),
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      TermsPage(session: widget.session)),
                             ),
                           ),
                         ],
@@ -252,11 +310,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     radius: 22,
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: AppColors.muted, size: 21),
+                        Icon(Icons.info_outline,
+                            color: AppColors.muted, size: 21),
                         SizedBox(width: 12),
                         Text(
                           'Versi 1.0.0',
-                          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
@@ -268,12 +329,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       onPressed: () => _logout(context),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.line),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         backgroundColor: Colors.white,
                       ),
                       child: const Text(
                         'Logout',
-                        style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w900),
+                        style: TextStyle(
+                            color: AppColors.red, fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -285,7 +348,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
 }
 
 class _ProfileIdentityCard extends StatelessWidget {
@@ -367,7 +429,8 @@ class _ProfileIdentityCard extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: .10),
                           borderRadius: BorderRadius.circular(20)),
@@ -396,14 +459,15 @@ class _ProfileIdentityCard extends StatelessWidget {
   }
 }
 
-
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text));
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text));
   }
 }
 
@@ -508,6 +572,7 @@ class _InfoTile extends StatelessWidget {
 class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final Widget? trailing;
   final bool showDivider;
   final VoidCallback onTap;
 
@@ -515,6 +580,7 @@ class _MenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.trailing,
     this.showDivider = true,
   });
 
@@ -544,7 +610,15 @@ class _MenuTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, color: AppColors.muted, size: 22),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 10),
+                    trailing!,
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.muted, size: 22),
+                  ] else
+                    const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.muted, size: 22),
                 ],
               ),
             ),

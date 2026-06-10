@@ -6,12 +6,23 @@ import '../../core/models/request_status_item.dart';
 import '../../services/request_status_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/sticky_curve_header.dart';
+import 'request_status_detail_sheet.dart';
 
 enum RequestStatusFilter {
   all,
   pending,
   approved,
   rejected,
+}
+
+enum RequestTypeFilter {
+  all,
+  izin,
+  sakit,
+  cuti,
+  lembur,
+  qr,
+  correction,
 }
 
 class RequestStatusPage extends StatefulWidget {
@@ -28,6 +39,7 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
   bool _loading = true;
   List<RequestStatusItem> _items = [];
   RequestStatusFilter _filter = RequestStatusFilter.all;
+  RequestTypeFilter _typeFilter = RequestTypeFilter.all;
 
   @override
   void initState() {
@@ -50,16 +62,24 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
   }
 
   List<RequestStatusItem> get _filteredItems {
-    switch (_filter) {
-      case RequestStatusFilter.pending:
-        return _items.where((item) => item.status == 'pending').toList(growable: false);
-      case RequestStatusFilter.approved:
-        return _items.where((item) => item.status == 'approved').toList(growable: false);
-      case RequestStatusFilter.rejected:
-        return _items.where((item) => item.status == 'rejected').toList(growable: false);
-      case RequestStatusFilter.all:
-        return List<RequestStatusItem>.from(_items);
-    }
+    return _items.where((item) {
+      final statusMatch = switch (_filter) {
+        RequestStatusFilter.pending => item.status == 'pending',
+        RequestStatusFilter.approved => item.status == 'approved',
+        RequestStatusFilter.rejected => item.status == 'rejected',
+        RequestStatusFilter.all => true,
+      };
+      final typeMatch = switch (_typeFilter) {
+        RequestTypeFilter.all => true,
+        RequestTypeFilter.izin => item.isLeave && item.typeKey == 'izin',
+        RequestTypeFilter.sakit => item.isLeave && item.typeKey == 'sakit',
+        RequestTypeFilter.cuti => item.isLeave && item.typeKey == 'cuti',
+        RequestTypeFilter.lembur => item.isLeave && item.typeKey == 'lembur',
+        RequestTypeFilter.qr => item.isQr,
+        RequestTypeFilter.correction => item.isCorrection,
+      };
+      return statusMatch && typeMatch;
+    }).toList(growable: false);
   }
 
   int _count(RequestStatusFilter filter) {
@@ -78,6 +98,11 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
   void _selectFilter(RequestStatusFilter filter) {
     if (_filter == filter) return;
     setState(() => _filter = filter);
+  }
+
+  void _selectTypeFilter(RequestTypeFilter filter) {
+    if (_typeFilter == filter) return;
+    setState(() => _typeFilter = filter);
   }
 
   @override
@@ -104,8 +129,10 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                 children: [
                   _FilterBar(
                     current: _filter,
+                    currentType: _typeFilter,
                     countOf: _count,
                     onChanged: _selectFilter,
+                    onTypeChanged: _selectTypeFilter,
                   ),
                   const SizedBox(height: 16),
                   if (_loading)
@@ -113,7 +140,8 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                       child: Padding(
                         padding: EdgeInsets.all(22),
                         child: Center(
-                          child: CircularProgressIndicator(color: AppColors.primary),
+                          child: CircularProgressIndicator(
+                              color: AppColors.primary),
                         ),
                       ),
                     )
@@ -123,7 +151,8 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                         padding: EdgeInsets.all(22),
                         child: Column(
                           children: [
-                            Icon(Icons.inbox_rounded, color: AppColors.muted, size: 38),
+                            Icon(Icons.inbox_rounded,
+                                color: AppColors.muted, size: 38),
                             SizedBox(height: 10),
                             Text(
                               'Belum ada pengajuan.',
@@ -151,13 +180,17 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
 
 class _FilterBar extends StatelessWidget {
   final RequestStatusFilter current;
+  final RequestTypeFilter currentType;
   final int Function(RequestStatusFilter filter) countOf;
   final ValueChanged<RequestStatusFilter> onChanged;
+  final ValueChanged<RequestTypeFilter> onTypeChanged;
 
   const _FilterBar({
     required this.current,
+    required this.currentType,
     required this.countOf,
     required this.onChanged,
+    required this.onTypeChanged,
   });
 
   @override
@@ -169,25 +202,72 @@ class _FilterBar extends StatelessWidget {
       _FilterChipData(RequestStatusFilter.rejected, 'Ditolak'),
     ];
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+    final types = [
+      _TypeChipData(RequestTypeFilter.all, 'Semua Jenis'),
+      _TypeChipData(RequestTypeFilter.izin, 'Izin'),
+      _TypeChipData(RequestTypeFilter.sakit, 'Sakit'),
+      _TypeChipData(RequestTypeFilter.cuti, 'Cuti'),
+      _TypeChipData(RequestTypeFilter.lembur, 'Lembur'),
+      _TypeChipData(RequestTypeFilter.qr, 'QR'),
+      _TypeChipData(RequestTypeFilter.correction, 'Koreksi'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final filter in filters)
-          ChoiceChip(
-            label: Text('${filter.label} (${countOf(filter.value)})'),
-            selected: current == filter.value,
-            onSelected: (_) => onChanged(filter.value),
-            labelStyle: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: current == filter.value ? Colors.white : AppColors.text,
-            ),
-            selectedColor: AppColors.primary,
-            backgroundColor: Colors.white,
-            side: BorderSide(
-              color: current == filter.value ? AppColors.primary : AppColors.line,
-            ),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final filter in filters)
+              ChoiceChip(
+                label: Text('${filter.label} (${countOf(filter.value)})'),
+                selected: current == filter.value,
+                onSelected: (_) => onChanged(filter.value),
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color:
+                      current == filter.value ? Colors.white : AppColors.text,
+                ),
+                selectedColor: AppColors.primary,
+                backgroundColor: Colors.white,
+                side: BorderSide(
+                  color: current == filter.value
+                      ? AppColors.primary
+                      : AppColors.line,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var index = 0; index < types.length; index++) ...[
+                ChoiceChip(
+                  label: Text(types[index].label),
+                  selected: currentType == types[index].value,
+                  onSelected: (_) => onTypeChanged(types[index].value),
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: currentType == types[index].value
+                        ? Colors.white
+                        : AppColors.text,
+                  ),
+                  selectedColor: AppColors.primary,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(
+                    color: currentType == types[index].value
+                        ? AppColors.primary
+                        : AppColors.line,
+                  ),
+                ),
+                if (index != types.length - 1) const SizedBox(width: 10),
+              ],
+            ],
           ),
+        ),
       ],
     );
   }
@@ -198,6 +278,13 @@ class _FilterChipData {
   final String label;
 
   const _FilterChipData(this.value, this.label);
+}
+
+class _TypeChipData {
+  final RequestTypeFilter value;
+  final String label;
+
+  const _TypeChipData(this.value, this.label);
 }
 
 class _RequestStatusCard extends StatelessWidget {
@@ -211,96 +298,126 @@ class _RequestStatusCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: AppCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () =>
+              showRequestStatusDetailSheet(context: context, item: item),
+          borderRadius: BorderRadius.circular(24),
+          child: AppCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(_kindIcon(item.kind), color: color),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.kindLabel,
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 4),
-                      if (item.contextLabel.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: .10),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            item.contextLabel,
+                      child: Icon(_kindIcon(item.kind), color: color),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.kindLabel,
                             style: const TextStyle(
-                              fontSize: 10.5,
+                              color: AppColors.text,
+                              fontSize: 15,
                               fontWeight: FontWeight.w900,
-                              color: AppColors.primary,
                             ),
                           ),
+                          const SizedBox(height: 4),
+                          if (item.contextLabel.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: .10),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                item.contextLabel,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        item.statusLabel,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: color,
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                const SizedBox(height: 14),
+                _InfoRow(
+                    label: 'Tanggal pengajuan', value: item.createdAtLabel),
+                const SizedBox(height: 6),
+                _InfoRow(
+                    label: 'Tanggal target',
+                    value: item.targetDateLabel.isEmpty
+                        ? '-'
+                        : item.targetDateLabel),
+                if (item.hasNote) ...[
+                  const SizedBox(height: 6),
+                  _InfoRow(label: 'Keterangan', value: item.note),
+                ],
+                if (item.hasAdminNote) ...[
+                  const SizedBox(height: 6),
+                  _InfoRow(label: 'Catatan admin', value: item.adminNote),
+                ],
+                const SizedBox(height: 6),
+                _InfoRow(
+                  label: item.evidenceLabel,
+                  value: item.hasEvidence
+                      ? '${item.evidenceLabel} tersedia'
+                      : '${item.evidenceLabel} belum tersedia',
+                ),
+                if (item.hasProcessedAt) ...[
+                  const SizedBox(height: 6),
+                  _InfoRow(
+                      label: 'Tanggal diproses', value: item.processedAtLabel),
+                ],
+                const SizedBox(height: 4),
+                const Align(
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    item.statusLabel,
+                    'Tap untuk detail',
                     style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: color,
+                      color: AppColors.primary,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Tanggal pengajuan', value: item.createdAtLabel),
-            const SizedBox(height: 6),
-            _InfoRow(label: 'Tanggal target', value: item.targetDateLabel.isEmpty ? '-' : item.targetDateLabel),
-            if (item.hasNote) ...[
-              const SizedBox(height: 6),
-              _InfoRow(label: 'Keterangan', value: item.note),
-            ],
-            if (item.hasAdminNote) ...[
-              const SizedBox(height: 6),
-              _InfoRow(label: 'Catatan admin', value: item.adminNote),
-            ],
-            const SizedBox(height: 6),
-            _InfoRow(
-              label: item.evidenceLabel,
-              value: item.hasEvidence ? '${item.evidenceLabel} tersedia' : '${item.evidenceLabel} belum tersedia',
-            ),
-            if (item.hasProcessedAt) ...[
-              const SizedBox(height: 6),
-              _InfoRow(label: 'Tanggal diproses', value: item.processedAtLabel),
-            ],
-          ],
+          ),
         ),
       ),
     );

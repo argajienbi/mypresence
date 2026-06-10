@@ -190,7 +190,12 @@ class _AttendanceCorrectionFormPageState
         oldAttendance: _attendanceSnapshot,
       );
       if (!mounted) return;
-      AppToast.success(context, 'Pengajuan koreksi berhasil dikirim.');
+      AppToast.success(
+        context,
+        _hasOldAttendance
+            ? 'Pengajuan koreksi berhasil dikirim.'
+            : 'Pengajuan koreksi berhasil dikirim. Pantau di Status Pengajuan.',
+      );
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -275,18 +280,20 @@ class _AttendanceCorrectionFormPageState
                               _TypeChip(
                                 label: 'Clock In',
                                 selected: _correctionType == 'masuk',
-                                onTap: () => setState(() => _correctionType = 'masuk'),
+                                onTap: () =>
+                                    setState(() => _correctionType = 'masuk'),
                               ),
                               _TypeChip(
                                 label: 'Clock Out',
                                 selected: _correctionType == 'pulang',
-                                onTap: () => setState(() => _correctionType = 'pulang'),
+                                onTap: () =>
+                                    setState(() => _correctionType = 'pulang'),
                               ),
                               _TypeChip(
                                 label: 'Clock In & Clock Out',
                                 selected: _correctionType == 'masuk_pulang',
-                                onTap: () =>
-                                    setState(() => _correctionType = 'masuk_pulang'),
+                                onTap: () => setState(
+                                    () => _correctionType = 'masuk_pulang'),
                               ),
                             ],
                           ),
@@ -325,15 +332,53 @@ class _AttendanceCorrectionFormPageState
                             file: _attachmentFile,
                             fileName: _attachmentName,
                             onCamera: () => _pickAttachment(ImageSource.camera),
-                            onGallery: () => _pickAttachment(ImageSource.gallery),
+                            onGallery: () =>
+                                _pickAttachment(ImageSource.gallery),
                             onRemove: () => setState(() {
                               _attachmentFile = null;
                               _attachmentName = '';
                             }),
                           ),
-                          if (_hasOldAttendance) ...[
+                          if (!_hasOldAttendance) ...[
                             const SizedBox(height: 16),
-                            _OldAttendancePreview(attendance: _attendanceSnapshot!),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: .06),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color:
+                                      AppColors.primary.withValues(alpha: .14),
+                                ),
+                              ),
+                              child: const Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Belum ada data presensi pada tanggal ini. Ajukan koreksi jika Anda lupa absen atau data belum tercatat.',
+                                      style: TextStyle(
+                                        color: AppColors.text,
+                                        fontSize: 12.5,
+                                        height: 1.35,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 16),
+                            _OldAttendancePreview(
+                                attendance: _attendanceSnapshot!),
                           ],
                           const SizedBox(height: 18),
                           SizedBox(
@@ -558,14 +603,17 @@ class _OldAttendancePreview extends StatelessWidget {
     return asString(row['time'], asString(row['waktu'], '--:--'));
   }
 
-  String _methodValue(Map<String, dynamic>? masuk, Map<String, dynamic>? pulang) {
-    final method = asString(masuk?['method'], asString(pulang?['method'])).toLowerCase();
+  String _methodValue(
+      Map<String, dynamic>? masuk, Map<String, dynamic>? pulang) {
+    final method =
+        asString(masuk?['method'], asString(pulang?['method'])).toLowerCase();
     if (method == 'qr') return 'QR';
     if (method == 'selfie') return 'Selfie';
     return '-';
   }
 
-  String _statusValue(Map<String, dynamic>? masuk, Map<String, dynamic>? pulang) {
+  String _statusValue(
+      Map<String, dynamic>? masuk, Map<String, dynamic>? pulang) {
     return asString(
       masuk?['attendance_status'],
       asString(

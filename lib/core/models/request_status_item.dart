@@ -9,6 +9,7 @@ class RequestStatusItem {
   final String id;
   final RequestStatusKind kind;
   final String kindLabel;
+  final String typeKey;
   final String contextLabel;
   final String status;
   final String rawStatus;
@@ -33,6 +34,7 @@ class RequestStatusItem {
     required this.id,
     required this.kind,
     required this.kindLabel,
+    required this.typeKey,
     required this.contextLabel,
     required this.status,
     required this.rawStatus,
@@ -56,9 +58,13 @@ class RequestStatusItem {
 
   bool get hasNote => note.trim().isNotEmpty;
   bool get hasAdminNote => adminNote.trim().isNotEmpty;
-  bool get hasEvidence => evidenceUrl.trim().isNotEmpty || evidencePath.trim().isNotEmpty;
+  bool get hasEvidence =>
+      evidenceUrl.trim().isNotEmpty || evidencePath.trim().isNotEmpty;
   bool get hasProcessedAt => processedAtMillis > 0;
-  bool get isQr => kind == RequestStatusKind.qrTarget || kind == RequestStatusKind.qrHelper;
+  bool get isQr =>
+      kind == RequestStatusKind.qrTarget || kind == RequestStatusKind.qrHelper;
+  bool get isLeave => kind == RequestStatusKind.leave;
+  bool get isCorrection => kind == RequestStatusKind.correction;
 
   String get statusLabel {
     switch (status) {

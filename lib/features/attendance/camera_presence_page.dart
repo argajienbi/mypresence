@@ -17,13 +17,15 @@ class CameraPresencePage extends StatefulWidget {
   final AppSession session;
   final String actionType;
 
-  const CameraPresencePage({super.key, required this.session, required this.actionType});
+  const CameraPresencePage(
+      {super.key, required this.session, required this.actionType});
 
   @override
   State<CameraPresencePage> createState() => _CameraPresencePageState();
 }
 
-class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBindingObserver {
+class _CameraPresencePageState extends State<CameraPresencePage>
+    with WidgetsBindingObserver {
   final AttendanceService _attendance = AttendanceService();
   final PhotoQualityService _photoQualityService = PhotoQualityService();
   CameraController? _controller;
@@ -42,7 +44,11 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
   bool get _controllerReady => _controller?.value.isInitialized == true;
 
   bool get _isBusy =>
-      _initializing || _submitting || _capturing || _captureLocked || _cameraTransitioning;
+      _initializing ||
+      _submitting ||
+      _capturing ||
+      _captureLocked ||
+      _cameraTransitioning;
 
   bool _isCameraThrottled() {
     final last = _lastCameraActionAt;
@@ -82,14 +88,16 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
 
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       unawaited(_disposeCameraController());
     } else if (state == AppLifecycleState.resumed && _photo == null) {
       _initCamera(lens: _lens);
     }
   }
 
-  Future<void> _initCamera({CameraLensDirection lens = CameraLensDirection.front}) async {
+  Future<void> _initCamera(
+      {CameraLensDirection lens = CameraLensDirection.front}) async {
     if (_cameraTransitioning || _submitting) return;
     _cameraTransitioning = true;
     if (mounted) {
@@ -155,16 +163,28 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
     }
 
     _lastCameraActionAt = DateTime.now();
-    final next = _lens == CameraLensDirection.front ? CameraLensDirection.back : CameraLensDirection.front;
+    final next = _lens == CameraLensDirection.front
+        ? CameraLensDirection.back
+        : CameraLensDirection.front;
     await _initCamera(lens: next);
   }
 
   Future<void> _capture() async {
-    if (_capturing || _submitting || _captureLocked || _initializing || _cameraTransitioning || _isCameraThrottled()) return;
+    if (_capturing ||
+        _submitting ||
+        _captureLocked ||
+        _initializing ||
+        _cameraTransitioning ||
+        _isCameraThrottled()) {
+      return;
+    }
 
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized || controller.value.isTakingPicture) {
-      AppToast.error(context, 'Kamera belum siap. Jangan tekan tombol berulang.');
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        controller.value.isTakingPicture) {
+      AppToast.error(
+          context, 'Kamera belum siap. Jangan tekan tombol berulang.');
       return;
     }
 
@@ -216,7 +236,14 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
   }
 
   Future<void> _retake() async {
-    if (_capturing || _submitting || _captureLocked || _initializing || _cameraTransitioning || _isCameraThrottled()) return;
+    if (_capturing ||
+        _submitting ||
+        _captureLocked ||
+        _initializing ||
+        _cameraTransitioning ||
+        _isCameraThrottled()) {
+      return;
+    }
     _lastCameraActionAt = DateTime.now();
     setState(() {
       _photo = null;
@@ -251,7 +278,10 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
       );
       if (!mounted) return;
       if (result.hasWarnings) {
-        AppToast.info(context, '${result.warnings.join(' ')} Presensi berhasil dikirim.');
+        AppToast.info(
+          context,
+          'Presensi berhasil dikirim dengan catatan validasi. ${result.warnings.join(' ')}',
+        );
       } else {
         AppToast.success(context, 'Presensi berhasil dikirim.');
       }
@@ -267,14 +297,18 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
 
   Widget _cameraPreview() {
     if (_photo != null) {
-      return Image.file(_photo!, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+      return Image.file(_photo!,
+          fit: BoxFit.cover, width: double.infinity, height: double.infinity);
     }
 
     final controller = _controller;
-    if (_initializing || controller == null || !controller.value.isInitialized) {
+    if (_initializing ||
+        controller == null ||
+        !controller.value.isInitialized) {
       return Container(
         color: const Color(0xFF1E293B),
-        child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        child:
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
@@ -301,7 +335,8 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.actionType == 'pulang' ? 'Absen Pulang' : 'Absen Masuk';
+    final title =
+        widget.actionType == 'pulang' ? 'Absen Pulang' : 'Absen Masuk';
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     const bottomSheetHeight = 176.0;
     final topInset = MediaQuery.of(context).padding.top;
@@ -338,10 +373,14 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
                     width: 196,
                     height: 258,
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF8ED5F6), width: 3),
+                      border:
+                          Border.all(color: const Color(0xFF8ED5F6), width: 3),
                       borderRadius: BorderRadius.circular(150),
                       boxShadow: [
-                        BoxShadow(color: const Color(0xFF8ED5F6).withValues(alpha: .30), blurRadius: 24),
+                        BoxShadow(
+                            color:
+                                const Color(0xFF8ED5F6).withValues(alpha: .30),
+                            blurRadius: 24),
                       ],
                     ),
                   ),
@@ -361,6 +400,7 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
               child: _CameraBottomSheet(
                 officeName: widget.session.officeName,
                 photoTaken: _photo != null,
+                photoQuality: _photoQuality,
                 canInteract: !_isBusy,
                 canSubmit: _photo == null ? _controllerReady : true,
                 capturing: _capturing,
@@ -380,7 +420,8 @@ class _TopCameraHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onSwitch;
 
-  const _TopCameraHeader({required this.title, required this.onBack, required this.onSwitch});
+  const _TopCameraHeader(
+      {required this.title, required this.onBack, required this.onSwitch});
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +454,8 @@ class _TopCameraHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              _GlassIconButton(icon: Icons.cameraswitch_rounded, onTap: onSwitch),
+              _GlassIconButton(
+                  icon: Icons.cameraswitch_rounded, onTap: onSwitch),
             ],
           ),
         ),
@@ -439,13 +481,17 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.face_retouching_natural_rounded, color: AppColors.green, size: 18),
+          const Icon(Icons.face_retouching_natural_rounded,
+              color: AppColors.green, size: 18),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               status,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5),
             ),
           ),
         ],
@@ -457,6 +503,7 @@ class _StatusPill extends StatelessWidget {
 class _CameraBottomSheet extends StatelessWidget {
   final String officeName;
   final bool photoTaken;
+  final PhotoQualityCheckResult? photoQuality;
   final bool canInteract;
   final bool canSubmit;
   final bool capturing;
@@ -466,6 +513,7 @@ class _CameraBottomSheet extends StatelessWidget {
   const _CameraBottomSheet({
     required this.officeName,
     required this.photoTaken,
+    required this.photoQuality,
     required this.canInteract,
     required this.canSubmit,
     required this.capturing,
@@ -475,6 +523,7 @@ class _CameraBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasWarning = photoQuality?.hasWarning == true;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
       decoration: const BoxDecoration(
@@ -491,22 +540,61 @@ class _CameraBottomSheet extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on_rounded, color: AppColors.green),
+                      const Icon(Icons.location_on_rounded,
+                          color: AppColors.green),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           officeName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.text),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(AppDate.time(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text)),
+                Text(AppDate.time(),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text)),
               ],
             ),
+            if (hasWarning) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: AppColors.orange.withValues(alpha: .18)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        color: AppColors.orange, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        photoQuality?.message ?? '',
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -516,23 +604,31 @@ class _CameraBottomSheet extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: canInteract ? onSwitchOrRetake : null,
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.text,
-                        side: const BorderSide(color: AppColors.line),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: hasWarning
+                            ? AppColors.orange.withValues(alpha: .10)
+                            : Colors.white,
+                        foregroundColor:
+                            hasWarning ? AppColors.orange : AppColors.text,
+                        side: BorderSide(
+                            color:
+                                hasWarning ? AppColors.orange : AppColors.line),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                       ),
                       icon: Icon(
-                        photoTaken ? Icons.refresh_rounded : Icons.cameraswitch_rounded,
-                        color: AppColors.text,
+                        photoTaken
+                            ? Icons.refresh_rounded
+                            : Icons.cameraswitch_rounded,
+                        color: hasWarning ? AppColors.orange : AppColors.text,
                         size: 18,
                       ),
                       label: Text(
                         photoTaken ? 'Ulangi Foto' : 'Ganti Kamera',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.text,
+                        style: TextStyle(
+                          color: hasWarning ? AppColors.orange : AppColors.text,
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
                         ),
@@ -550,13 +646,19 @@ class _CameraBottomSheet extends StatelessWidget {
                     height: 74,
                     decoration: BoxDecoration(
                       color: photoTaken
-                          ? (canInteract ? AppColors.green : AppColors.green.withValues(alpha: .35))
-                          : (canInteract ? AppColors.primary : AppColors.primary.withValues(alpha: .35)),
+                          ? (canInteract
+                              ? AppColors.green
+                              : AppColors.green.withValues(alpha: .35))
+                          : (canInteract
+                              ? AppColors.primary
+                              : AppColors.primary.withValues(alpha: .35)),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 5),
                       boxShadow: [
                         BoxShadow(
-                          color: (photoTaken ? AppColors.green : AppColors.primary).withValues(alpha: .32),
+                          color:
+                              (photoTaken ? AppColors.green : AppColors.primary)
+                                  .withValues(alpha: .32),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -565,9 +667,12 @@ class _CameraBottomSheet extends StatelessWidget {
                     child: capturing
                         ? const Padding(
                             padding: EdgeInsets.all(21),
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 3))
                         : Icon(
-                            photoTaken ? Icons.cloud_upload_rounded : Icons.camera_alt_rounded,
+                            photoTaken
+                                ? Icons.cloud_upload_rounded
+                                : Icons.camera_alt_rounded,
                             color: Colors.white,
                             size: 33),
                   ),
@@ -578,9 +683,14 @@ class _CameraBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              photoTaken ? 'Periksa hasil foto, lalu kirim presensi.' : 'Pastikan wajah berada di tengah oval.',
+              photoTaken
+                  ? 'Periksa hasil foto, lalu kirim presensi.'
+                  : 'Pastikan wajah berada di tengah oval.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -604,11 +714,14 @@ class _GlassIconButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: onTap == null ? Colors.white.withValues(alpha: .10) : Colors.white.withValues(alpha: .18),
+          color: onTap == null
+              ? Colors.white.withValues(alpha: .10)
+              : Colors.white.withValues(alpha: .18),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.white.withValues(alpha: .22)),
         ),
-        child: Icon(icon, color: onTap == null ? Colors.white54 : Colors.white, size: 22),
+        child: Icon(icon,
+            color: onTap == null ? Colors.white54 : Colors.white, size: 22),
       ),
     );
   }
