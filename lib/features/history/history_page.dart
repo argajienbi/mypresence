@@ -295,6 +295,10 @@ class _HistoryPageState extends State<HistoryPage> {
       return schedule.source == 'none' ? 'tanpa_data' : 'libur';
     }
 
+    final canEvaluateAlpa =
+        _checkInStartMinute(schedule) != null && _checkInEndMinute(schedule) != null;
+    if (!canEvaluateAlpa) return 'jadwal';
+
     if (dateKey.compareTo(todayKey) > 0) return 'jadwal';
     if (dateKey == todayKey) {
       return _checkInWindowClosed(schedule, DateTime.now()) ? 'alpa' : 'jadwal';
@@ -327,17 +331,37 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
+  int? _checkInStartMinute(DailySchedule schedule) {
+    final checkInStart = _minutesOfDay(schedule.checkInStart);
+    if (checkInStart >= 0) return checkInStart;
+
+    final workStart = _minutesOfDay(schedule.workStart);
+    if (workStart >= 0) return workStart;
+
+    return null;
+  }
+
+  int? _checkInEndMinute(DailySchedule schedule) {
+    final checkInEnd = _minutesOfDay(schedule.checkInEnd);
+    if (checkInEnd >= 0) return checkInEnd;
+
+    final workStart = _minutesOfDay(schedule.workStart);
+    if (workStart >= 0) {
+      const minutesPerDay = 24 * 60;
+      return (workStart + schedule.lateToleranceMinute) % minutesPerDay;
+    }
+
+    final fallback = _minutesOfDay(schedule.checkInStart);
+    if (fallback >= 0) return fallback;
+
+    return null;
+  }
+
   bool _checkInWindowClosed(DailySchedule schedule, DateTime now) {
-    final endMinute = _minutesOfDay(
-      schedule.checkInEnd.isNotEmpty
-          ? schedule.checkInEnd
-          : schedule.workStart.isNotEmpty
-              ? schedule.workStart
-              : schedule.checkInStart,
-    );
-    if (endMinute < 0) return false;
-    final nowMinute = now.hour * 60 + now.minute;
-    return nowMinute > endMinute;
+    final startMinute = _checkInStartMinute(schedule);
+    final endMinute = _checkInEndMinute(schedule);
+    if (startMinute == null || endMinute == null) return false;
+    return !_isTimeInWindow(now, startMinute, endMinute);
   }
 
   static bool _isLate(Map<dynamic, dynamic> masuk) {
@@ -352,6 +376,14 @@ class _HistoryPageState extends State<HistoryPage> {
     final minute = int.tryParse(parts[1]);
     if (hour == null || minute == null) return -1;
     return hour * 60 + minute;
+  }
+
+  static bool _isTimeInWindow(DateTime dateTime, int startMinute, int endMinute) {
+    final current = dateTime.hour * 60 + dateTime.minute;
+    if (startMinute <= endMinute) {
+      return current >= startMinute && current <= endMinute;
+    }
+    return current >= startMinute || current <= endMinute;
   }
 
   static Color _statusColor(String status) {
@@ -512,15 +544,21 @@ class _HistoryPageState extends State<HistoryPage> {
                     )
                   else
                     ...visibleDailyStatuses.map(_DailyHistoryItem.new),
+                  if (_leaveRows.isNotEmpty || _overtimeRows.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const _SectionNote(
+                      'Detail ini hanya arsip pengajuan, status harian tetap terlihat di Daftar Presensi.',
+                    ),
+                  ],
                   if (_leaveRows.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const _SectionTitle('Pengajuan Disetujui'),
+                    const SizedBox(height: 10),
+                    const _SectionTitle('Detail Pengajuan Disetujui'),
                     const SizedBox(height: 10),
                     ..._leaveRows.map(_LeaveHistoryItem.new),
                   ],
                   if (_overtimeRows.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const _SectionTitle('Lembur Disetujui'),
+                    const SizedBox(height: 10),
+                    const _SectionTitle('Detail Lembur Disetujui'),
                     const SizedBox(height: 10),
                     ..._overtimeRows.map(_OvertimeHistoryItem.new),
                   ],
@@ -546,6 +584,25 @@ class _SectionTitle extends StatelessWidget {
         fontSize: 18,
         fontWeight: FontWeight.w900,
         color: AppColors.text,
+      ),
+    );
+  }
+}
+
+class _SectionNote extends StatelessWidget {
+  final String text;
+
+  const _SectionNote(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: AppColors.muted,
+        height: 1.4,
       ),
     );
   }
