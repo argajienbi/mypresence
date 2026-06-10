@@ -25,8 +25,24 @@ String friendlyError(Object error) {
   }
 
   final raw = error.toString().replaceFirst('Exception: ', '');
-  if (raw.toLowerCase().contains('permission')) return 'Akses data ditolak. Cek akun atau hubungi admin.';
-  if (raw.toLowerCase().contains('firebase')) return 'Terjadi kendala layanan. Coba lagi.';
-  if (raw.toLowerCase().contains('credential')) return 'Email atau password tidak sesuai.';
+  final lower = raw.toLowerCase();
+  if (lower.contains('cameraexception') ||
+      lower.contains('illegalargumentexception') ||
+      lower.contains('surface combination') ||
+      lower.contains('use cases') ||
+      lower.contains('camera device') ||
+      lower.contains('camera is closed') ||
+      lower.contains('already in use')) {
+    if (lower.contains('surface combination') ||
+        lower.contains('use cases') ||
+        lower.contains('illegalargumentexception') ||
+        lower.contains('already in use')) {
+      return 'Kamera sedang memproses. Tunggu sebentar lalu coba lagi.';
+    }
+    return 'Kamera belum siap. Jangan tekan tombol berulang.';
+  }
+  if (lower.contains('permission')) return 'Akses data ditolak. Cek akun atau hubungi admin.';
+  if (lower.contains('firebase')) return 'Terjadi kendala layanan. Coba lagi.';
+  if (lower.contains('credential')) return 'Email atau password tidak sesuai.';
   return raw.isEmpty ? 'Terjadi kendala. Coba lagi.' : raw;
 }

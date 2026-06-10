@@ -237,6 +237,8 @@ class LeaveService {
   Future<List<Map<String, dynamic>>> getMonthlyRequests({required AppSession session, required DateTime month}) async {
     final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
     final rows = <Map<String, dynamic>>[];
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = DateTime(month.year, month.month + 1, 0);
     for (final entry in root.entries) {
       final value = entry.value;
       if (value is! Map) continue;
@@ -246,7 +248,9 @@ class LeaveService {
       final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
       if (type == 'lembur') continue;
       final start = DateTime.tryParse((map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
-      if (start == null || start.year != month.year || start.month != month.month) continue;
+      final end = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      if (start == null || end == null) continue;
+      if (!_dateRangeOverlap(monthStart, monthEnd, start, end)) continue;
       rows.add({'request_id': entry.key, ...map});
     }
     rows.sort((a, b) => (b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
@@ -256,6 +260,8 @@ class LeaveService {
   Future<List<Map<String, dynamic>>> getMonthlyApprovedOvertime({required AppSession session, required DateTime month}) async {
     final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
     final rows = <Map<String, dynamic>>[];
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = DateTime(month.year, month.month + 1, 0);
     for (final entry in root.entries) {
       final value = entry.value;
       if (value is! Map) continue;
@@ -264,8 +270,10 @@ class LeaveService {
       if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
       final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
       if (type != 'lembur') continue;
-      final date = DateTime.tryParse((map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
-      if (date == null || date.year != month.year || date.month != month.month) continue;
+      final dateStart = DateTime.tryParse((map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final dateEnd = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      if (dateStart == null || dateEnd == null) continue;
+      if (!_dateRangeOverlap(monthStart, monthEnd, dateStart, dateEnd)) continue;
       rows.add({'request_id': entry.key, ...map});
     }
     rows.sort((a, b) => (b['overtime_date'] ?? b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['overtime_date'] ?? a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));

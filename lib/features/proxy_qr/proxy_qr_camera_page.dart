@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -37,11 +38,34 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
   bool _initializing = true;
   bool _submitting = false;
   bool _capturing = false;
+  bool _captureLocked = false;
+  bool _cameraTransitioning = false;
+  DateTime? _lastCameraActionAt;
   String _status = 'Membuka kamera...';
 
   String get _targetName => asString(widget.target['nama_lengkap'], '-');
   String get _targetNip => asString(widget.target['nip'], '-');
   String get _actionLabel => widget.actionType == 'pulang' ? 'Pulang' : 'Masuk';
+  bool get _controllerReady => _controller?.value.isInitialized == true;
+  bool get _isBusy =>
+      _initializing || _submitting || _capturing || _captureLocked || _cameraTransitioning;
+
+  bool _isCameraThrottled() {
+    final last = _lastCameraActionAt;
+    if (last == null) return false;
+    return DateTime.now().difference(last) < const Duration(milliseconds: 900);
+  }
+
+  Future<void> _disposeCameraController() async {
+    final controller = _controller;
+    _controller = null;
+    if (controller == null) return;
+    try {
+      await controller.dispose();
+    } catch (_) {
+      // Ignore dispose race during lifecycle changes.
+    }
+  }
 
   @override
   void initState() {
@@ -54,7 +78,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller?.dispose();
+    unawaited(_disposeCameraController());
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     super.dispose();
   }
@@ -66,7 +90,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
 
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
-      controller.dispose();
+      unawaited(_disposeCameraController());
     } else if (state == AppLifecycleState.resumed && _photo == null) {
       _initCamera(lens: _lens);
     }
@@ -74,6 +98,8 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
 
   Future<void> _initCamera(
       {CameraLensDirection lens = CameraLensDirection.front}) async {
+    if (_cameraTransitioning || _submitting) return;
+    _cameraTransitioning = true;
     if (mounted) {
       setState(() {
         _initializing = true;
@@ -82,6 +108,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
       });
     }
 
+    CameraController? newController;
     try {
       _cameras = await availableCameras();
       if (_cameras.isEmpty) throw Exception('Kamera tidak ditemukan.');
@@ -91,39 +118,51 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
         orElse: () => _cameras.first,
       );
 
-      await _controller?.dispose();
-      final controller = CameraController(
+      await _disposeCameraController();
+      newController = CameraController(
         selected,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
 
-      await controller.initialize();
-      await controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      await newController.initialize();
+      await newController.lockCaptureOrientation(DeviceOrientation.portraitUp);
 
-      if (!mounted) return;
+      if (!mounted) {
+        await newController.dispose();
+        return;
+      }
       setState(() {
-        _controller = controller;
+        _controller = newController;
         _initializing = false;
         _status = 'Posisikan wajah di dalam oval';
       });
     } catch (e) {
+      if (newController != null) {
+        try {
+          await newController.dispose();
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _initializing = false;
         _status = friendlyError(e);
       });
       AppToast.error(context, friendlyError(e));
+    } finally {
+      _cameraTransitioning = false;
     }
   }
 
   Future<void> _switchCamera() async {
+    if (_isBusy || _isCameraThrottled()) return;
     if (_photo != null) {
       await _retake();
       return;
     }
 
+    _lastCameraActionAt = DateTime.now();
     final next = _lens == CameraLensDirection.front
         ? CameraLensDirection.back
         : CameraLensDirection.front;
@@ -131,15 +170,17 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
   }
 
   Future<void> _capture() async {
-    if (_capturing || _submitting) return;
+    if (_capturing || _submitting || _captureLocked || _initializing || _cameraTransitioning || _isCameraThrottled()) return;
 
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
-      AppToast.error(context, 'Kamera belum siap.');
+    if (controller == null || !controller.value.isInitialized || controller.value.isTakingPicture) {
+      AppToast.error(context, 'Kamera belum siap. Jangan tekan tombol berulang.');
       return;
     }
 
+    _lastCameraActionAt = DateTime.now();
     setState(() {
+      _captureLocked = true;
       _capturing = true;
       _status = 'Mengambil foto...';
     });
@@ -153,14 +194,25 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
       });
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(context, friendlyError(e));
-      setState(() => _status = 'Gagal mengambil foto.');
+      final message = friendlyError(e);
+      AppToast.error(context, message);
+      setState(() => _status = message);
     } finally {
-      if (mounted) setState(() => _capturing = false);
+      if (mounted) {
+        setState(() {
+          _capturing = false;
+          _captureLocked = false;
+        });
+      } else {
+        _capturing = false;
+        _captureLocked = false;
+      }
     }
   }
 
   Future<void> _retake() async {
+    if (_capturing || _submitting || _captureLocked || _initializing || _cameraTransitioning || _isCameraThrottled()) return;
+    _lastCameraActionAt = DateTime.now();
     setState(() {
       _photo = null;
       _status = 'Posisikan wajah di dalam oval';
@@ -176,6 +228,8 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
       AppToast.error(context, 'Ambil foto terlebih dahulu.');
       return;
     }
+
+    if (_submitting || _cameraTransitioning) return;
 
     setState(() {
       _submitting = true;
@@ -245,7 +299,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
         ? 'Foto Bukti Pulang'
         : 'Foto Bukti Masuk';
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const bottomSheetHeight = 260.0;
+    const bottomSheetHeight = 248.0;
     final topInset = MediaQuery.of(context).padding.top;
     final guideTop = topInset + 96.0;
 
@@ -266,8 +320,8 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
               child: _TopCameraHeader(
                 title: title,
                 subtitle: _targetName,
-                onBack: () => Navigator.of(context).pop(),
-                onSwitch: _switchCamera,
+                onBack: _isBusy ? null : () => Navigator.of(context).pop(),
+                onSwitch: _isBusy ? null : _switchCamera,
               ),
             ),
             Positioned(
@@ -311,6 +365,8 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
                 targetNip: _targetNip,
                 actionLabel: _actionLabel,
                 photoTaken: _photo != null,
+                canInteract: !_isBusy,
+                canSubmit: _photo == null ? _controllerReady : true,
                 capturing: _capturing,
                 onSwitchOrRetake: _photo == null ? _switchCamera : _retake,
                 onCaptureOrSubmit: _photo == null ? _capture : _submit,
@@ -326,8 +382,8 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
 class _TopCameraHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  final VoidCallback onBack;
-  final VoidCallback onSwitch;
+  final VoidCallback? onBack;
+  final VoidCallback? onSwitch;
 
   const _TopCameraHeader({
     required this.title,
@@ -434,6 +490,8 @@ class _CameraBottomSheet extends StatelessWidget {
   final String targetNip;
   final String actionLabel;
   final bool photoTaken;
+  final bool canInteract;
+  final bool canSubmit;
   final bool capturing;
   final VoidCallback onSwitchOrRetake;
   final VoidCallback onCaptureOrSubmit;
@@ -444,6 +502,8 @@ class _CameraBottomSheet extends StatelessWidget {
     required this.targetNip,
     required this.actionLabel,
     required this.photoTaken,
+    required this.canInteract,
+    required this.canSubmit,
     required this.capturing,
     required this.onSwitchOrRetake,
     required this.onCaptureOrSubmit,
@@ -554,35 +614,47 @@ class _CameraBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 84,
-                  child: TextButton.icon(
-                    onPressed: onSwitchOrRetake,
-                    icon: Icon(
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: canInteract ? onSwitchOrRetake : null,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.line),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      icon: Icon(
                         photoTaken
                             ? Icons.refresh_rounded
                             : Icons.cameraswitch_rounded,
                         color: AppColors.text,
-                        size: 19),
-                    label: Text(photoTaken ? 'Ulangi' : 'Ganti',
-                        style: const TextStyle(
-                            color: AppColors.text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12)),
+                        size: 18),
+                      label: Text(photoTaken ? 'Ulangi Foto' : 'Ganti Kamera',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: AppColors.text,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12)),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 InkWell(
                   borderRadius: BorderRadius.circular(42),
-                  onTap: onCaptureOrSubmit,
+                  onTap: canInteract && canSubmit ? onCaptureOrSubmit : null,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     width: 74,
                     height: 74,
                     decoration: BoxDecoration(
-                      color: photoTaken ? AppColors.green : AppColors.primary,
+                      color: photoTaken
+                          ? (canInteract ? AppColors.green : AppColors.green.withValues(alpha: .35))
+                          : (canInteract ? AppColors.primary : AppColors.primary.withValues(alpha: .35)),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 5),
                       boxShadow: [
@@ -609,7 +681,7 @@ class _CameraBottomSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const SizedBox(width: 84),
+                const Expanded(child: SizedBox.shrink()),
               ],
             ),
             const SizedBox(height: 6),
@@ -632,7 +704,7 @@ class _CameraBottomSheet extends StatelessWidget {
 
 class _GlassIconButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _GlassIconButton({required this.icon, required this.onTap});
 
@@ -645,11 +717,11 @@ class _GlassIconButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .18),
+          color: onTap == null ? Colors.white.withValues(alpha: .10) : Colors.white.withValues(alpha: .18),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.white.withValues(alpha: .22)),
         ),
-        child: Icon(icon, color: Colors.white, size: 22),
+        child: Icon(icon, color: onTap == null ? Colors.white54 : Colors.white, size: 22),
       ),
     );
   }

@@ -14,6 +14,8 @@ import '../announcements/announcements_page.dart';
 import '../company_webview/company_webview_page.dart';
 import 'edit_profile_page.dart';
 import 'employee_qr_page.dart';
+import 'help_center_page.dart';
+import 'terms_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final AppSession session;
@@ -218,13 +220,17 @@ class _ProfilePageState extends State<ProfilePage> {
                           _MenuTile(
                             icon: Icons.help_outline,
                             title: 'Pusat Bantuan',
-                            onTap: () {},
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => HelpCenterPage(session: widget.session)),
+                            ),
                           ),
                           _MenuTile(
                             icon: Icons.description_outlined,
                             title: 'Syarat & Ketentuan',
                             showDivider: false,
-                            onTap: () {},
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => TermsPage(session: widget.session)),
+                            ),
                           ),
                         ],
                       ),

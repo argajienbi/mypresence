@@ -16,7 +16,7 @@ class MyPresensiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'MYPRESENSI',
+        title: 'MYPRESENCE',
         theme: AppTheme.light(),
         initialRoute: SplashPage.routeName,
         routes: {

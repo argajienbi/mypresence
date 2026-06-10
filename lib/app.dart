@@ -9,7 +9,7 @@ class MyPresensiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MYPRESNSI',
+      title: 'MYPRESENCE',
       debugShowCheckedModeBanner: false,
       navigatorKey: appNavigatorKey,
       theme: AppTheme.light(),

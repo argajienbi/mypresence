@@ -5,8 +5,8 @@ import '../core/models/app_session.dart';
 import '../core/utils.dart';
 import 'location_service.dart';
 import 'rtdb_service.dart';
-import 'storage_service.dart';
 import 'schedule_service.dart';
+import 'storage_service.dart';
 
 class ParsedEmployeeQr {
   final String companyId;
@@ -23,15 +23,18 @@ class ParsedEmployeeQr {
 class QrService {
   final RtdbService _rtdb = RtdbService();
   final LocationService _location = LocationService();
-  final StorageService _storage = StorageService();
   final ScheduleService _schedule = ScheduleService();
+  final StorageService _storage = StorageService();
 
   String employeeQrPayload(AppSession session, String qrToken) =>
-      'MYPRESNSI_EMPLOYEE_QR|${session.companyId}|${session.uid}|${session.nip}|$qrToken';
+      'MYPRESENCE_EMPLOYEE_QR|${session.companyId}|${session.uid}|${session.nip}|$qrToken';
 
   ParsedEmployeeQr parse(String raw) {
     final parts = raw.split('|');
-    if (parts.length != 5 || parts[0] != 'MYPRESNSI_EMPLOYEE_QR') {
+    const legacyPrefix = 'MYPRESNSI_EMPLOYEE_QR';
+    const currentPrefix = 'MYPRESENCE_EMPLOYEE_QR';
+    if (parts.length != 5 ||
+        (parts[0] != legacyPrefix && parts[0] != currentPrefix)) {
       throw Exception('Format QR tidak valid.');
     }
     return ParsedEmployeeQr(
@@ -68,6 +71,17 @@ class QrService {
     if (asString(target['status_akun']) != 'active') {
       throw Exception('Target belum aktif.');
     }
+    final targetOfficeId = asString(target['office_id']);
+    if (targetOfficeId.isEmpty) {
+      throw Exception('Data kantor target belum lengkap. Hubungi admin.');
+    }
+    final helperOfficeId = asString(helperSession.officeId);
+    if (helperOfficeId.isEmpty) {
+      throw Exception('Data kantor akun Anda belum lengkap. Hubungi admin.');
+    }
+    if (targetOfficeId != helperOfficeId) {
+      throw Exception('QR hanya bisa digunakan oleh karyawan di kantor yang sama.');
+    }
     if (asString(target['qr_token']) != qr.token ||
         target['qr_active'] != true) {
       throw Exception('QR token tidak valid/tidak aktif.');
@@ -96,6 +110,13 @@ class QrService {
       throw Exception('Target QR tidak valid.');
     }
 
+    DailySchedule? helperSchedule;
+    try {
+      helperSchedule = await _schedule.resolveToday(helperSession, now: now);
+    } catch (_) {
+      helperSchedule = null;
+    }
+
     final loc = await _location.currentLocation();
     final distance = _location.distanceMeter(
       fromLat: loc.latitude,
@@ -109,12 +130,19 @@ class QrService {
       throw Exception(
           'Anda berada di luar radius kantor (${distance.toStringAsFixed(0)} m dari kantor).');
     }
-
-    final schedule = await _schedule.resolveToday(helperSession, now: now);
     final photoPath = FirebasePaths.qrAttendancePhoto(
         helperSession.companyId, targetUid, dateKey, actionType, ts);
     final photoUrl =
         await _storage.uploadFile(path: photoPath, file: photoFile);
+
+    final targetOfficeId = asString(target['office_id'], helperSession.officeId);
+    final targetOfficeName = asString(target['office_name'], helperSession.officeName);
+    final targetDepartmentId = asString(target['department_id']);
+    final targetDepartmentName = asString(target['department_name']);
+    final targetSubDepartmentId = asString(target['sub_department_id']);
+    final targetSubDepartmentName = asString(target['sub_department_name']);
+    final targetGroupId = asString(target['group_id']);
+    final targetGroupName = asString(target['group_name']);
 
     final payload = {
       'request_id': requestId,
@@ -123,13 +151,25 @@ class QrService {
       'target_name': asString(target['nama_lengkap']),
       'target_nip': asString(target['nip']),
       'target_position': asString(target['position']),
-      'target_office_id': asString(target['office_id']),
-      'target_department_id': asString(target['department_id']),
-      'target_sub_department_id': asString(target['sub_department_id']),
-      'target_group_id': asString(target['group_id']),
+      'target_office_id': targetOfficeId,
+      'target_office_name': targetOfficeName,
+      'target_department_id': targetDepartmentId,
+      'target_department_name': targetDepartmentName,
+      'target_sub_department_id': targetSubDepartmentId,
+      'target_sub_department_name': targetSubDepartmentName,
+      'target_group_id': targetGroupId,
+      'target_group_name': targetGroupName,
       'helper_uid': helperSession.uid,
       'helper_name': helperSession.displayName,
       'helper_nip': helperSession.nip,
+      'helper_office_id': helperSession.officeId,
+      'helper_office_name': helperSession.officeName,
+      'helper_department_id': helperSession.departmentId,
+      'helper_department_name': helperSession.departmentName,
+      'helper_sub_department_id': helperSession.subDepartmentId,
+      'helper_sub_department_name': helperSession.subDepartmentName,
+      'helper_group_id': helperSession.groupId,
+      'helper_group_name': helperSession.groupName,
       'date': dateKey,
       'tanggal': dateKey,
       'time': time,
@@ -141,6 +181,36 @@ class QrService {
       'status': 'pending',
       'attendance_status': 'pending_admin',
       'validation_status': 'pending_admin',
+      'schedule_source': 'pending_admin_resolution',
+      'schedule_ready': false,
+      'assignment_id': '',
+      'assignment_start_date': '',
+      'assignment_end_date': '',
+      'shift_id': '',
+      'shift_name': '',
+      'timetable_id': '',
+      'timetable_name': '',
+      'work_start': '',
+      'work_end': '',
+      'check_in_start': '',
+      'check_in_end': '',
+      'check_out_start': '',
+      'check_out_end': '',
+      'late_tolerance_minute': 0,
+      'early_out_tolerance_minute': 0,
+      'crosses_midnight': false,
+      'overtime_flag': false,
+      'overtime_schedule_id': '',
+      'is_holiday_work': false,
+      'helper_schedule_source': helperSchedule?.source ?? '',
+      'helper_schedule_ready': helperSchedule?.scheduleReady ?? false,
+      'helper_assignment_id': helperSchedule?.assignmentId ?? '',
+      'helper_assignment_start_date': helperSchedule?.assignmentStartDate ?? '',
+      'helper_assignment_end_date': helperSchedule?.assignmentEndDate ?? '',
+      'helper_shift_id': helperSchedule?.shiftId ?? '',
+      'helper_shift_name': helperSchedule?.shiftName ?? '',
+      'helper_timetable_id': helperSchedule?.timetableId ?? '',
+      'helper_timetable_name': helperSchedule?.timetableName ?? '',
       'photo_url': photoUrl,
       'photo_path': photoPath,
       'latitude': loc.latitude,
@@ -153,10 +223,12 @@ class QrService {
       'geofence_status': geofenceStatus,
       'office_id': helperSession.officeId,
       'office_name': helperSession.officeName,
-      'department_id': asString(target['department_id']),
-      'sub_department_id': asString(target['sub_department_id']),
-      'group_id': asString(target['group_id']),
-      ...schedule.toAttendancePayload(),
+      'department_id': targetDepartmentId,
+      'department_name': targetDepartmentName,
+      'sub_department_id': targetSubDepartmentId,
+      'sub_department_name': targetSubDepartmentName,
+      'group_id': targetGroupId,
+      'group_name': targetGroupName,
       'admin_uid': '',
       'admin_name': '',
       'admin_note': '',
