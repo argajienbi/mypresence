@@ -1,11 +1,11 @@
-# PATCH.md - MYPRESENCE Flutter App Feature Roadmap
+# PATCH.md - MYPRESENCE Flutter App Polish Batch
 
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
 Peran Codex: implementer teknis Flutter app.
 Peran ChatGPT: orkestrator dan reviewer.
 
-Tujuan patch ini adalah menambahkan fitur baru secara bertahap tanpa merusak fitur yang sudah berjalan.
+Tujuan patch ini adalah menyempurnakan fitur yang sudah dibuat pada batch sebelumnya, bukan membongkar ulang aplikasi. Jangan refactor besar, jangan rename package, dan jangan build.
 
 ---
 
@@ -61,519 +61,454 @@ Build akan dilakukan manual oleh user.
 
 1. Jangan refactor besar.
 2. Jangan menghapus flow login, splash, home, attendance selfie, QR attendance, leave, schedule, history, profile, notification, atau camera yang sudah berjalan.
-3. Jangan mengganti struktur database yang sudah dipakai tanpa alasan kuat.
-4. Jika membuat path baru, gunakan helper di `lib/core/firebase_paths.dart`.
-5. Jika membuat service baru, pisahkan logic Firebase dari widget UI.
-6. Jika membuat halaman baru, pastikan navigasi dari halaman terkait jelas dan tidak merusak navigation lama.
-7. Jangan menambahkan dependency baru kecuali benar-benar diperlukan.
-8. Semua fitur write harus bersifat request/pending jika butuh admin approval. Mobile app tidak boleh langsung mengubah data final yang seharusnya divalidasi admin.
-9. Semua fitur baru harus tetap aman jika data lama belum punya field baru.
-10. Validasi akhir cukup `flutter analyze`.
+3. Jangan mengubah data final attendance langsung dari mobile selain flow selfie/QR request yang sudah ada.
+4. Semua koreksi presensi tetap berupa request `pending` untuk admin.
+5. Semua fitur baru harus aman untuk data lama yang field-nya belum lengkap.
+6. Jangan menambah dependency baru kecuali benar-benar diperlukan.
+7. Jika menambah UI baru, gunakan style/theme yang sudah ada.
+8. Semua error harus memakai `friendlyError`, `AppToast`, atau UI pesan ramah yang sudah dipakai project.
+9. Validasi akhir cukup `flutter analyze`.
 
 ---
 
-# Urutan fitur tambahan yang harus dikerjakan
+# Target patch kali ini
 
-Kerjakan sesuai urutan berikut:
+Kerjakan 7 poin berikut dalam satu batch:
 
 ```text
-1. Status Pengajuan Terpadu
-2. Detail Presensi di History
-3. Koreksi Presensi
-4. Flag Lokasi Mencurigakan
-5. Validasi Kualitas Foto
+1. Koreksi Presensi dari ALPA dan duplikat overlap
+2. Detail Status Pengajuan
+3. Preview foto/lampiran
+4. Lihat lokasi dari detail presensi
+5. Warning lokasi/foto lebih jelas
+6. Badge pending pengajuan
+7. Filter jenis pengajuan
 ```
-
-Jangan lompat ke fitur berikutnya jika fitur sebelumnya belum stabil.
 
 ---
 
-# PATCH-FEATURE-01 - Status Pengajuan Terpadu
+# PATCH-POLISH-01 - Koreksi Presensi dari ALPA dan duplikat overlap
 
-## Tujuan
+## Masalah
 
-Tambahkan halaman untuk melihat semua status pengajuan user dalam satu tempat.
-
-Fitur ini bersifat read-only untuk data existing, sehingga aman dikerjakan pertama.
-
-## Data yang perlu dibaca
-
-Gunakan data dari:
+Saat ini tombol `Ajukan Koreksi` hanya muncul jika item History punya attendance record. Padahal user paling sering butuh koreksi untuk kasus:
 
 ```text
-leave_requests/{companyId}
-qr_attendance_requests/{companyId}
-attendance_corrections/{companyId} // jika belum ada, siapkan struktur kosong/opsional untuk fitur berikutnya
+ALPA
+lupa absen masuk
+lupa absen pulang
+hari kerja tanpa data presensi
 ```
 
-Filter semua data berdasarkan user login:
-
-```text
-uid == session.uid
-target_uid == session.uid untuk QR attendance
-helper_uid == session.uid jika ingin menampilkan request yang user bantu scan
-```
-
-## File target yang mungkin perlu dibuat
-
-```text
-lib/features/requests/request_status_page.dart
-lib/services/request_status_service.dart
-lib/core/models/request_status_item.dart
-```
-
-Boleh gunakan nama lain yang konsisten dengan struktur project.
-
-## Navigasi
-
-Tambahkan akses dari salah satu lokasi berikut, pilih yang paling aman:
-
-```text
-Profile menu
-Home quick menu
-```
-
-Rekomendasi: tambahkan dari Profile menu agar tidak membuat Home terlalu penuh.
-
-## UI minimal
-
-Halaman `Status Pengajuan` harus punya tab/filter:
-
-```text
-Semua
-Pending
-Disetujui
-Ditolak
-```
-
-Setiap item menampilkan:
-
-```text
-Jenis pengajuan: Izin / Sakit / Cuti / Lembur / QR Titip Absen / Koreksi Presensi
-Tanggal pengajuan
-Tanggal target / rentang tanggal
-Status
-Catatan admin jika ada
-Lampiran jika ada
-Tanggal diproses jika ada
-```
-
-## Status mapping
-
-Normalisasi status:
-
-```text
-pending / pending_admin / processing -> Pending
-approved / validated -> Disetujui
-rejected -> Ditolak
-```
-
-## QR attendance
-
-Untuk QR attendance, tampilkan dua konteks:
-
-```text
-Sebagai Target: user yang dibantu absen
-Sebagai Helper: user yang scan QR orang lain
-```
-
-Jika item QR punya `photo_url` atau `photo_path`, tampilkan indikator:
-
-```text
-Foto bukti tersedia
-```
-
-Jika belum ada foto:
-
-```text
-Foto bukti belum tersedia
-```
-
-## Empty state
-
-Jika tidak ada data:
-
-```text
-Belum ada pengajuan.
-```
-
-## Acceptance criteria
-
-- User bisa membuka halaman Status Pengajuan.
-- Izin/sakit/cuti/lembur tampil dari `leave_requests`.
-- QR titip absen tampil dari `qr_attendance_requests`.
-- Data lama tanpa field baru tidak menyebabkan crash.
-- Filter status berjalan.
-- Tidak ada write ke database dari fitur ini.
-- `flutter analyze` pass.
-
----
-
-# PATCH-FEATURE-02 - Detail Presensi di History
-
-## Tujuan
-
-Tambahkan detail presensi saat user menekan item di halaman History/Riwayat.
-
-Fitur ini read-only dan tidak boleh mengubah data attendance.
+Selain itu, validasi duplikat koreksi harus lebih kuat untuk tipe yang saling tumpang tindih.
 
 ## File target
 
 ```text
-lib/features/history/history_page.dart
 lib/features/history/attendance_detail_sheet.dart
-```
-
-Boleh membuat widget sheet baru agar `history_page.dart` tidak semakin besar.
-
-## Data yang ditampilkan
-
-Untuk item presensi yang punya attendance record, tampilkan:
-
-```text
-Tanggal
-Status: Hadir / Telat / Alpa / Izin / Sakit / Cuti / Lembur / Jadwal
-Jam masuk
-Jam pulang
-Foto masuk jika ada
-Foto pulang jika ada
-Metode: selfie / qr
-Source: mobile_app / admin_web
-Lokasi latitude/longitude
-Jarak dari kantor
-Radius kantor
-Status geofence
-Office name / department / group
-Jadwal saat itu
-Shift name
-Timetable name
-Work start / work end
-Check in window
-Check out window
-Telat / pulang awal jika ada
-```
-
-Untuk item QR, tampilkan tambahan:
-
-```text
-QR Helper UID
-QR Helper Name
-Proxy Request ID / QR Request ID
-```
-
-Untuk item ALPA, tampilkan:
-
-```text
-Tidak ada presensi dan tidak ada keterangan pada hari kerja ini.
-```
-
-Untuk item izin/sakit/cuti, tampilkan:
-
-```text
-Jenis pengajuan
-Alasan
-Status approval
-Catatan admin jika ada
-Lampiran jika ada
-```
-
-## Lokasi
-
-Jika ada latitude/longitude, tampilkan tombol:
-
-```text
-Lihat Lokasi
-```
-
-Aksi minimal boleh membuka Google Maps external URL atau halaman WebView map yang sudah ada. Jangan menambahkan map logic berat jika belum perlu.
-
-## Foto
-
-Jika `photo_url` ada, tampilkan preview gambar.
-Jika hanya `photo_path` ada, gunakan StorageService/get URL jika helper tersedia.
-Jika tidak ada foto, tampilkan:
-
-```text
-Foto tidak tersedia.
-```
-
-## Acceptance criteria
-
-- Tap item History membuka detail.
-- Detail tidak crash untuk item ALPA, JADWAL, LIBUR, IZIN, SAKIT, CUTI, dan attendance biasa.
-- Foto tampil jika tersedia.
-- Lokasi bisa dilihat jika tersedia.
-- Tidak ada write database.
-- `flutter analyze` pass.
-
----
-
-# PATCH-FEATURE-03 - Koreksi Presensi
-
-## Tujuan
-
-Tambahkan fitur agar user bisa mengajukan koreksi presensi tanpa langsung mengubah data attendance final.
-
-Mobile app hanya membuat request. Admin yang approve/reject dari dashboard.
-
-## Data path
-
-Tambahkan helper path jika belum ada:
-
-```text
-attendance_corrections/{companyId}/{correctionId}
-```
-
-Gunakan format ID:
-
-```text
-correction_{timestamp}
-```
-
-## File target yang mungkin perlu dibuat
-
-```text
 lib/features/corrections/attendance_correction_form_page.dart
 lib/services/attendance_correction_service.dart
 lib/core/models/attendance_correction_request.dart
 ```
 
-## Akses fitur
+## Instruksi implementasi
 
-Tambahkan dari:
-
-```text
-History detail -> Ajukan Koreksi
-```
-
-Opsional, juga dari Profile/Status Pengajuan nanti.
-
-## Form minimal
-
-Field form:
+1. Tampilkan tombol `Ajukan Koreksi` juga untuk item `ALPA` atau hari kerja yang tidak punya attendance record.
+2. Form koreksi harus bisa dibuka dengan `oldAttendance == null` atau map kosong.
+3. Jika item ALPA dibuka dari History, kirim `initialDate` sesuai tanggal item.
+4. Jika `oldAttendance` kosong, tampilkan info:
 
 ```text
-Tanggal
-Tipe koreksi: Masuk / Pulang / Masuk & Pulang
-Jam masuk yang diajukan
-Jam pulang yang diajukan
-Alasan koreksi
-Lampiran opsional
-Data presensi lama jika ada
+Belum ada data presensi pada tanggal ini. Ajukan koreksi jika Anda lupa absen atau data belum tercatat.
 ```
 
-Validasi:
-
-```text
-Tanggal wajib
-Tipe koreksi wajib
-Minimal satu jam diajukan sesuai tipe
-Alasan wajib
-Tidak boleh membuat koreksi duplikat aktif untuk tanggal dan tipe yang sama
-```
-
-Status awal:
+5. Setelah submit koreksi dari ALPA atau tanpa attendance, arahkan user ke halaman `Status Pengajuan` atau tampilkan instruksi jelas bahwa request bisa dipantau di Status Pengajuan.
+6. Jangan mengubah attendance final dari mobile.
+7. Semua request koreksi tetap status awal:
 
 ```text
 pending
 ```
 
-Payload minimal:
+## Duplikat overlap
+
+Perbaiki `_ensureNoActiveRequest` agar tipe koreksi yang overlap dianggap konflik.
+
+Aturan overlap:
 
 ```text
-correction_id
-company_id
-uid
-user_name
-nip
-date
-correction_type
-requested_check_in
-requested_check_out
-reason
-attachment_url
-attachment_path
-old_attendance_snapshot
-status
-admin_note
-approved_by
-approved_by_name
-approved_at
-rejected_by
-rejected_by_name
-rejected_at
-office_id
-office_name
-department_id
-department_name
-sub_department_id
-sub_department_name
-group_id
-group_name
-created_at
-updated_at
-source: mobile_app
+masuk konflik dengan masuk dan masuk_pulang
+pulang konflik dengan pulang dan masuk_pulang
+masuk_pulang konflik dengan masuk, pulang, dan masuk_pulang
 ```
 
-## Setelah submit
-
-Setelah berhasil submit:
+Status yang dianggap aktif:
 
 ```text
-Tampilkan toast sukses
-Arahkan ke Status Pengajuan atau kembali ke History detail
+pending
+pending_admin
+processing
+approved
+validated
 ```
+
+Status `rejected`, `declined`, `cancelled` tidak dianggap aktif.
 
 ## Acceptance criteria
 
-- User bisa membuat request koreksi.
-- Request tersimpan ke `attendance_corrections/{companyId}/{correctionId}`.
-- Attendance final tidak berubah dari mobile app.
-- Duplikat pending/approved untuk tanggal dan tipe yang sama dicegah.
-- Status Pengajuan Terpadu membaca koreksi presensi jika path sudah ada.
+- Item ALPA di History bisa membuka form koreksi.
+- Form koreksi tetap aman walau `oldAttendance` kosong.
+- User bisa submit request koreksi dari tanggal ALPA.
+- Duplikat overlap dicegah.
+- Attendance final tidak berubah dari mobile.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-FEATURE-04 - Flag Lokasi Mencurigakan
+# PATCH-POLISH-02 - Detail Status Pengajuan
 
-## Tujuan
+## Masalah
 
-Tambahkan audit flag untuk lokasi yang kurang akurat atau mencurigakan saat absen.
-
-Fitur ini jangan langsung memblokir semua presensi. Simpan flag agar admin bisa menilai.
+Halaman `Status Pengajuan` sudah ada, tetapi card masih ringkas. User perlu bisa tap item untuk melihat detail lengkap.
 
 ## File target
 
 ```text
-lib/services/location_service.dart
-lib/services/attendance_service.dart
-lib/services/qr_service.dart
-lib/features/attendance/camera_presence_page.dart jika perlu warning UI
-lib/features/proxy_qr/proxy_qr_camera_page.dart jika perlu warning UI
+lib/features/requests/request_status_page.dart
+lib/features/requests/request_status_detail_sheet.dart
+lib/core/models/request_status_item.dart
+lib/services/request_status_service.dart
 ```
 
-## Field audit yang ditambahkan ke attendance selfie dan QR request
+Boleh membuat `request_status_detail_sheet.dart` agar file page tidak terlalu besar.
 
-Tambahkan field:
+## Instruksi implementasi
+
+1. Setiap card `Status Pengajuan` bisa ditekan.
+2. Saat ditekan, buka bottom sheet/detail page.
+3. Detail harus menampilkan data umum:
 
 ```text
-location_accuracy
-location_accuracy_warning
-mock_location_detected
-location_mock_warning
-location_risk_level
-location_warning
+Jenis pengajuan
+Status normalisasi
+Status asli/raw status
+Tanggal pengajuan
+Tanggal target/rentang tanggal
+Tanggal diproses jika ada
+Catatan user/alasan
+Catatan admin
+Lampiran/foto bukti jika ada
 ```
 
-Jika data provider tersedia, tambahkan:
+4. Untuk QR tampilkan:
 
 ```text
-location_provider
+Sebagai Target / Sebagai Helper
+Target name / target uid
+Helper name / helper uid
+Action type: masuk/pulang
+Photo evidence status
 ```
 
-## Aturan awal
-
-Gunakan aturan ringan:
+5. Untuk Koreksi Presensi tampilkan:
 
 ```text
-accuracy > 50 meter -> warning
-accuracy > 100 meter -> high warning
-mock location detected -> high warning
+Tanggal koreksi
+Tipe koreksi
+Jam masuk yang diajukan
+Jam pulang yang diajukan
+Data presensi lama jika ada
+Lampiran jika ada
+Admin note jika ada
 ```
 
-Jangan langsung blokir presensi jika user masih dalam radius, kecuali app memang sudah menolak di luar radius seperti sekarang.
-
-## Pesan UI
-
-Jika akurasi buruk:
+6. Untuk Izin/Sakit/Cuti/Lembur tampilkan:
 
 ```text
-Akurasi lokasi kurang stabil. Data presensi akan diberi tanda untuk validasi admin.
+Jenis pengajuan
+Tanggal mulai/selesai
+Alasan
+Lampiran
+Status approval
 ```
 
-Jika mock location terdeteksi:
-
-```text
-Lokasi perangkat terdeteksi mencurigakan. Data presensi akan diberi tanda untuk validasi admin.
-```
+7. Jika data lama tidak lengkap, tampilkan `-`, jangan crash.
 
 ## Acceptance criteria
 
-- Attendance selfie menyimpan flag lokasi.
-- QR request menyimpan flag lokasi.
-- Jika lokasi normal, risk level `normal` atau kosong.
-- Jika akurasi buruk, risk level naik dan warning tersimpan.
-- Tidak merusak validasi radius yang sudah ada.
+- Tap card membuka detail.
+- Detail tampil untuk leave, QR target/helper, dan koreksi.
+- Data lama yang kosong tidak crash.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-FEATURE-05 - Validasi Kualitas Foto
+# PATCH-POLISH-03 - Preview foto/lampiran
 
-## Tujuan
+## Masalah
 
-Tambahkan validasi kualitas foto dasar sebelum upload presensi.
+Status Pengajuan dan Detail Presensi sudah mengetahui `photo_url`, `photo_path`, `attachment_url`, atau `attachment_path`, tetapi user perlu preview yang jelas.
 
-Tahap ini tidak perlu face recognition atau liveness. Fokus ke validasi ringan agar tidak membuat user gagal absen karena algoritma terlalu agresif.
+## File target
+
+```text
+lib/features/history/attendance_detail_sheet.dart
+lib/features/requests/request_status_detail_sheet.dart
+lib/services/storage_service.dart
+```
+
+Boleh membuat reusable widget:
+
+```text
+lib/widgets/attachment_preview.dart
+lib/widgets/photo_preview_sheet.dart
+```
+
+## Instruksi implementasi
+
+1. Jika ada `photo_url` atau `attachment_url`, tampilkan thumbnail atau tombol `Lihat Foto`.
+2. Jika hanya ada Storage path, gunakan `StorageService.downloadUrl(path)`.
+3. Saat user menekan preview, tampilkan fullscreen/bottom sheet preview gambar.
+4. Jika URL gagal diambil, tampilkan:
+
+```text
+Foto/lampiran belum bisa dimuat.
+```
+
+5. Jangan crash saat URL kosong, path kosong, atau Storage gagal.
+6. Jangan menambah dependency image viewer baru jika Flutter bawaan cukup.
+7. Preview berlaku untuk:
+
+```text
+Foto presensi masuk/pulang
+Foto QR titip absen
+Lampiran izin/sakit/cuti/lembur
+Lampiran koreksi presensi
+```
+
+## Acceptance criteria
+
+- Foto presensi bisa dibuka preview besar.
+- Foto QR bisa dibuka dari Status Pengajuan detail.
+- Lampiran pengajuan bisa dibuka dari Status Pengajuan detail.
+- Data kosong/gagal load tidak crash.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-POLISH-04 - Lihat lokasi dari detail presensi
+
+## Masalah
+
+Detail Presensi sudah menampilkan koordinat, jarak, radius, dan flag lokasi. User perlu tombol untuk membuka lokasi.
+
+## File target
+
+```text
+lib/features/history/attendance_detail_sheet.dart
+lib/features/company_webview/company_webview_page.dart jika reusable
+assets/maps.html jika memang perlu dan sudah ada
+```
+
+## Instruksi implementasi
+
+1. Tambahkan tombol:
+
+```text
+Lihat Lokasi
+```
+
+pada Detail Presensi jika latitude dan longitude tersedia.
+
+2. Opsi implementasi aman:
+
+```text
+A. Buka URL Google Maps eksternal dengan latitude/longitude
+B. Atau buka WebView map internal jika project sudah punya helper map yang aman
+```
+
+Pilih yang paling minim risiko.
+
+3. Jika membuka URL eksternal butuh dependency baru, jangan tambahkan dulu. Gunakan WebView internal jika sudah tersedia.
+4. Jika tidak ada koordinat, tampilkan:
+
+```text
+Lokasi tidak tersedia.
+```
+
+5. Detail lokasi harus menampilkan:
+
+```text
+Latitude
+Longitude
+Distance meter
+Radius meter
+Office latitude/longitude jika tersedia
+Geofence status
+Location risk level
+```
+
+## Acceptance criteria
+
+- Tombol Lihat Lokasi muncul jika koordinat tersedia.
+- Tidak crash jika koordinat kosong.
+- User bisa melihat lokasi dari detail presensi.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-POLISH-05 - Warning lokasi/foto lebih jelas
+
+## Masalah
+
+Flag lokasi dan kualitas foto sudah disimpan, tapi warning perlu lebih terlihat di UI agar user paham data akan divalidasi admin.
 
 ## File target
 
 ```text
 lib/features/attendance/camera_presence_page.dart
 lib/features/proxy_qr/proxy_qr_camera_page.dart
-lib/services/photo_quality_service.dart
+lib/features/history/attendance_detail_sheet.dart
+lib/services/attendance_service.dart
+lib/services/qr_service.dart
+lib/core/models/presence_submission_result.dart
 ```
 
-## Validasi dasar
+## Instruksi implementasi
 
-Cek minimal:
-
-```text
-file exists
-file size > 0
-file size tidak terlalu kecil
-image bisa dibaca
-resolusi minimal masuk akal
-```
-
-Jangan menambahkan dependency baru jika validasi dasar bisa dilakukan dengan API/Dart yang sudah ada.
-
-## UX
-
-Jika foto tidak valid, tampilkan pesan:
-
-```text
-Foto belum valid. Silakan ulangi foto.
-```
-
-Jika kualitas meragukan tapi masih bisa dipakai, tampilkan warning:
+1. Pada preview foto, jika `photoQuality.status == warning`, tampilkan warning card kecil:
 
 ```text
 Foto terlihat kurang jelas. Anda tetap bisa mengirim, tetapi admin mungkin perlu validasi tambahan.
 ```
 
-Gunakan mode warning dulu, bukan blokir keras, kecuali file benar-benar kosong/rusak.
-
-## Field audit tambahan
-
-Simpan ke attendance/QR request jika tersedia:
+2. Tombol `Ulangi Foto` harus lebih terlihat saat kualitas foto warning.
+3. Setelah submit attendance/QR, jika result punya warning lokasi/foto, tampilkan ringkasan:
 
 ```text
-photo_quality_status
-photo_quality_warning
-photo_file_size
-photo_width
-photo_height
+Presensi berhasil dikirim dengan catatan validasi.
+```
+
+Lalu tampilkan detail warning di toast/snackbar/bottom sheet ringan.
+
+4. Jika lokasi akurasi buruk atau mock location terdeteksi, tampilkan warning sebelum/sesudah submit sesuai data yang tersedia.
+5. Jangan blokir lokasi warning selama user masih dalam radius, kecuali flow lama memang sudah menolak di luar radius.
+6. Jangan blokir foto warning. Blokir hanya jika foto invalid/rusak.
+7. Pastikan raw exception tidak tampil ke user.
+
+## Acceptance criteria
+
+- Warning foto terlihat sebelum submit.
+- Warning lokasi/foto terlihat setelah submit jika ada.
+- Foto warning tetap bisa dikirim.
+- Foto invalid tetap ditolak.
+- Lokasi warning tidak merusak geofence lama.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-POLISH-06 - Badge pending pengajuan
+
+## Masalah
+
+User perlu tahu kalau ada pengajuan yang masih pending tanpa membuka halaman Status Pengajuan.
+
+## File target
+
+```text
+lib/features/profile/profile_page.dart
+lib/features/home/home_page.dart jika ingin shortcut di Home
+lib/services/request_status_service.dart
+```
+
+## Instruksi implementasi
+
+1. Tambahkan method di `RequestStatusService` untuk menghitung jumlah pending user:
+
+```text
+pending leave + pending QR + pending correction
+```
+
+2. Di Profile menu `Status Pengajuan`, tampilkan badge kecil jika pending > 0:
+
+```text
+Status Pengajuan    3 pending
+```
+
+atau badge bulat angka:
+
+```text
+3
+```
+
+3. Jangan membuat Profile jadi lambat. Gunakan FutureBuilder ringan atau load async terpisah.
+4. Jika service gagal membaca data, jangan crash dan jangan tampilkan badge.
+5. Opsional: tambahkan shortcut kecil di Home, tetapi jangan membuat Home terlalu ramai.
+
+## Acceptance criteria
+
+- Badge pending muncul di Profile jika ada pending.
+- Badge tidak muncul jika 0 atau gagal load.
+- Tidak mengganggu menu Profile lain.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-POLISH-07 - Filter jenis pengajuan
+
+## Masalah
+
+Status Pengajuan baru punya filter status. User juga perlu filter berdasarkan jenis pengajuan.
+
+## File target
+
+```text
+lib/features/requests/request_status_page.dart
+lib/core/models/request_status_item.dart
+```
+
+## Instruksi implementasi
+
+Tambahkan filter jenis:
+
+```text
+Semua Jenis
+Izin
+Sakit
+Cuti
+Lembur
+QR
+Koreksi
+```
+
+Catatan:
+
+- `RequestStatusKind.leave` perlu dibedakan dari `kindLabel` atau field type agar izin/sakit/cuti/lembur bisa difilter.
+- QR target/helper masuk filter `QR`.
+- Correction masuk filter `Koreksi`.
+
+UI boleh berupa horizontal chips di bawah filter status.
+
+Filter final adalah gabungan:
+
+```text
+filter status AND filter jenis
+```
+
+Contoh:
+
+```text
+Pending + QR = hanya QR pending
+Disetujui + Cuti = hanya cuti disetujui
+Semua + Semua Jenis = semua item
 ```
 
 ## Acceptance criteria
 
-- File kosong/rusak tidak diupload.
-- Foto valid tetap bisa dikirim.
-- Foto meragukan diberi warning, bukan langsung ditolak keras.
-- Attendance selfie dan QR photo flow tetap berjalan.
-- Tidak ada raw exception ke user.
+- Filter status lama tetap jalan.
+- Filter jenis berjalan.
+- Kombinasi filter status + jenis berjalan.
+- Empty state menyesuaikan filter.
 - `flutter analyze` pass.
 
 ---
@@ -610,11 +545,13 @@ Jangan menulis hasil build karena build tidak diminta.
 ## Urutan pengerjaan final
 
 ```text
-1. Status Pengajuan Terpadu
-2. Detail Presensi di History
-3. Koreksi Presensi
-4. Flag Lokasi Mencurigakan
-5. Validasi Kualitas Foto
-6. flutter analyze
-7. Laporan akhir
+1. Koreksi Presensi dari ALPA dan duplikat overlap
+2. Detail Status Pengajuan
+3. Preview foto/lampiran
+4. Lihat lokasi dari detail presensi
+5. Warning lokasi/foto lebih jelas
+6. Badge pending pengajuan
+7. Filter jenis pengajuan
+8. flutter analyze
+9. Laporan akhir
 ```
