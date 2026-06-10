@@ -18,7 +18,7 @@ Tujuan patch:
 - Header lama `MY PRESENCE` dan `Aplikasi Presensi Karyawan` dihapus.
 - Header baru memakai foto profil user, greeting dinamis, tanggal, dan lonceng notifikasi.
 - Card lokasi dan radius tetap dipertahankan.
-- Tombol Check-In / Check-Out diganti teks menjadi Clock In / Clock Out.
+- Tombol presensi diganti teks menjadi Clock In / Clock Out.
 - Status dan Detail Jadwal dipindahkan ke Menu Cepat.
 - Menu Cepat diubah menjadi horizontal scroll.
 - Notifikasi dihapus dari Menu Cepat karena pindah ke icon lonceng header.
@@ -311,8 +311,8 @@ lib/features/home/widgets/radius_card.dart
 Tombol lama:
 
 ```txt
-Check-In
-Check-Out
+Clock In
+Clock Out
 ```
 
 Diganti menjadi:

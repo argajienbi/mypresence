@@ -73,7 +73,7 @@ class AttendanceSegmentButton extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _SegmentHalf(
-                      title: 'Check-In',
+                      title: 'Clock In',
                       subtitle: '(Masuk)',
                       icon: checkInDone ? Icons.check_rounded : Icons.fingerprint_rounded,
                       color: leftColor,
@@ -86,7 +86,7 @@ class AttendanceSegmentButton extends StatelessWidget {
                   Container(width: 2.5, color: Colors.white),
                   Expanded(
                     child: _SegmentHalf(
-                      title: 'Check-Out',
+                      title: 'Clock Out',
                       subtitle: '(Pulang)',
                       icon: checkOutDone ? Icons.check_rounded : Icons.fingerprint_rounded,
                       color: rightColor,

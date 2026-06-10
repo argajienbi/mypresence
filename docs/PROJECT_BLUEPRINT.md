@@ -18,7 +18,7 @@ MyPresence adalah aplikasi presensi karyawan berbasis Flutter + Firebase dengan 
 
 Fitur utama:
 
-- Presensi check-in / check-out menggunakan GPS dan selfie.
+- Presensi clock in / clock out menggunakan GPS dan selfie.
 - Validasi radius kantor.
 - Jadwal kerja rutin, jadwal khusus, hari libur, dan jadwal lembur.
 - Pengajuan izin, sakit, cuti, lembur.
@@ -56,7 +56,7 @@ Status terakhir setelah revisi:
 ```text
 Header MY PRESENCE
 RadiusCard
-Tombol Check-In / Check-Out
+Tombol Clock In / Clock Out
 Tile Status + Detail Jadwal
 Menu Cepat
 ```
@@ -411,7 +411,7 @@ Flow:
 3. Admin memilih karyawan yang masuk grup.
 4. Admin memilih satu atau lebih tanggal lembur dari kalender.
 5. Admin mengatur jam kerja lembur.
-6. Admin mengatur jendela check-in dan check-out.
+6. Admin mengatur jendela clock in dan clock out.
 7. Data otomatis menjadi sumber jadwal karyawan pada tanggal yang dipilih.
 ```
 
@@ -819,7 +819,7 @@ npm run build
   - nama grup
   - pilih karyawan
   - pilih tanggal satu atau banyak
-  - set jam kerja/check-in/check-out
+  - set jam kerja/clock in/clock out
 - Jangan pakai date_start/date_end/pilihan hari di UI.
 
 ---
@@ -834,7 +834,7 @@ Build APK release harus berhasil.
 Test device asli:
 - login
 - radius
-- check-in/out
+- clock in/out
 - jadwal reguler
 - jadwal khusus
 - jadwal lembur hari libur

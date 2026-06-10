@@ -336,8 +336,8 @@ class _SelectedScheduleCard extends StatelessWidget {
                       spacing: 10,
                       runSpacing: 4,
                       children: [
-                        _MiniScheduleInfo(label: 'Check-in', value: checkIn),
-                        _MiniScheduleInfo(label: 'Check-out', value: checkOut),
+                        _MiniScheduleInfo(label: 'Clock In', value: checkIn),
+                        _MiniScheduleInfo(label: 'Clock Out', value: checkOut),
                         _MiniScheduleInfo(label: 'Sumber', value: source),
                       ],
                     ),

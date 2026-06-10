@@ -503,11 +503,11 @@ class _TimeLineCard extends StatelessWidget {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.line)),
       child: Row(
         children: [
-          Expanded(child: _TimeBox(icon: Icons.login_rounded, color: AppColors.green, label: 'Check-in', value: checkIn, status: status.label)),
+          Expanded(child: _TimeBox(icon: Icons.login_rounded, color: AppColors.green, label: 'Clock In', value: checkIn, status: status.label)),
           _Connector(),
           Expanded(child: _TimeBox(icon: Icons.access_time_rounded, color: AppColors.blue, label: 'Jam Kerja', value: workTime, status: status.label)),
           _Connector(),
-          Expanded(child: _TimeBox(icon: Icons.logout_rounded, color: AppColors.purple, label: 'Check-out', value: checkOut, status: status.label)),
+          Expanded(child: _TimeBox(icon: Icons.logout_rounded, color: AppColors.purple, label: 'Clock Out', value: checkOut, status: status.label)),
         ],
       ),
     );

@@ -176,7 +176,7 @@ Logic saat ini sudah bagus untuk mayoritas kasus:
 ```text
 hari kerja lampau tanpa presensi/keterangan -> ALPA
 hari masa depan -> JADWAL
-hari ini -> ALPA jika check-in window sudah lewat
+hari ini -> ALPA jika clock in window sudah lewat
 ```
 
 Namun perlu dicek ulang edge-case:
@@ -207,21 +207,21 @@ checkInStart jika hanya itu yang ada
 
 3. Jika semua jam kosong/tidak valid, jangan otomatis `ALPA`. Return `JADWAL` atau `TANPA DATA` sesuai konteks.
 4. Untuk `crossesMidnight == true`, jangan asal membandingkan menit hari yang sama.
-5. Jika check-in window lintas hari, gunakan helper window yang mampu menangani:
+5. Jika clock in window lintas hari, gunakan helper window yang mampu menangani:
 
 ```text
 startMinute <= endMinute -> normal
 startMinute > endMinute -> window melewati tengah malam
 ```
 
-6. Untuk hari ini, `ALPA` hanya boleh muncul jika waktu sekarang sudah benar-benar melewati akhir window check-in.
+6. Untuk hari ini, `ALPA` hanya boleh muncul jika waktu sekarang sudah benar-benar melewati akhir window clock in.
 7. Jangan ubah logic validasi absen di `ScheduleService.validateAction()` kecuali memang harus dibuat helper reusable.
 
 ## Acceptance criteria
 
 - Tanggal masa depan tidak pernah jadi `ALPA`.
 - Hari ini sebelum/jelang window absen tidak jadi `ALPA`.
-- Hari ini setelah window check-in lewat bisa jadi `ALPA` jika tidak ada presensi/keterangan.
+- Hari ini setelah window clock in lewat bisa jadi `ALPA` jika tidak ada presensi/keterangan.
 - Shift lintas hari tidak salah ditandai `ALPA` sebelum waktunya.
 - Jika jam jadwal tidak lengkap, jangan tandai user sebagai `ALPA`.
 - `flutter analyze` pass.
