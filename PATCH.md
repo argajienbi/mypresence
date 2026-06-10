@@ -73,7 +73,7 @@ Build akan dilakukan manual oleh user.
 
 # Target patch kali ini
 
-Kerjakan 7 poin berikut dalam satu batch:
+Kerjakan poin berikut dalam satu batch:
 
 ```text
 1. Koreksi Presensi dari ALPA dan duplikat overlap
@@ -83,6 +83,7 @@ Kerjakan 7 poin berikut dalam satu batch:
 5. Warning lokasi/foto lebih jelas
 6. Badge pending pengajuan
 7. Filter jenis pengajuan
+8. Fix Detail Presensi agar lokasi dibaca dari nested masuk/pulang
 ```
 
 ---
@@ -513,6 +514,130 @@ Semua + Semua Jenis = semua item
 
 ---
 
+# PATCH-POLISH-08 - Fix Detail Presensi: lokasi harus dibaca dari nested `masuk/pulang`
+
+## Masalah
+
+Pada halaman `Detail Presensi`, bagian `Detail Lokasi` bisa tampil kosong walaupun data lokasi sebenarnya ada.
+
+Penyebabnya: field lokasi disimpan di node aksi:
+
+```text
+attendance/{companyId}/{uid}/{date}/masuk
+attendance/{companyId}/{uid}/{date}/pulang
+```
+
+Namun UI detail membaca lokasi dari root harian:
+
+```text
+attendance/{companyId}/{uid}/{date}
+```
+
+Akibatnya field berikut tampil `-`:
+
+```text
+Latitude
+Longitude
+Distance meter
+Radius meter
+Office latitude/longitude
+Geofence status
+Location risk level
+```
+
+Padahal data ada di nested `masuk` atau `pulang`.
+
+## File target
+
+```text
+lib/features/history/attendance_detail_sheet.dart
+```
+
+Boleh membuat helper kecil di file yang sama. Jangan refactor besar.
+
+## Instruksi implementasi
+
+1. Ambil nested record:
+
+```dart
+final masuk = _nestedMap(attendance['masuk']);
+final pulang = _nestedMap(attendance['pulang']);
+```
+
+2. Buat helper untuk memilih record utama:
+
+```dart
+Map<String, dynamic> _primaryAttendanceRecord(
+  Map<String, dynamic> attendance,
+  Map<String, dynamic>? masuk,
+  Map<String, dynamic>? pulang,
+) {
+  return masuk ?? pulang ?? attendance;
+}
+```
+
+3. Gunakan `primaryRecord` untuk field berikut:
+
+```text
+latitude
+longitude
+accuracy
+location_accuracy
+distance_meter
+radius_meter
+office_latitude
+office_longitude
+geofence_status
+location_risk_level
+location_warning
+location_mock_warning
+location_accuracy_warning
+mock_location_detected
+location_mock_detected
+office_id
+office_name
+department_id
+department_name
+sub_department_id
+sub_department_name
+group_id
+group_name
+validation_status
+status
+source
+method
+photo_quality_status
+photo_quality_warning
+```
+
+4. Helper UI seperti `_locationValue`, `_distanceBadge`, `_locationColor`, `_officeValue`, `_groupValue`, `_statusChipColor`, `_sourceLabel`, dan `_methodLabel` harus membaca dari record yang benar.
+5. Jika `masuk` dan `pulang` sama-sama ada, default tampilan ringkas boleh memakai `masuk` sebagai lokasi utama.
+6. Tambahkan section detail yang lebih jelas jika memungkinkan:
+
+```text
+Detail Lokasi Clock In
+Detail Lokasi Clock Out
+```
+
+Jika tidak sempat, minimal pastikan lokasi utama tidak kosong bila data ada di `masuk`.
+
+7. Untuk record lama yang memang tidak punya lokasi, tetap tampilkan `Lokasi tidak tersedia.` dan jangan crash.
+8. Tombol `Lihat Lokasi` harus memakai koordinat dari record yang benar.
+9. Jangan mengubah struktur data RTDB.
+10. Jangan mengubah `AttendanceService.submitSelfieAttendance`, karena penyimpanan nested `masuk/pulang` sudah benar.
+
+## Acceptance criteria
+
+- Detail Presensi untuk data baru menampilkan latitude/longitude dari `masuk` atau `pulang`.
+- Distance meter, radius meter, geofence status, dan location risk level tidak kosong jika data ada.
+- Unit kerja mengambil data dari nested record jika root kosong.
+- Validasi dan method/source tidak salah kosong jika field ada di nested record.
+- Jika hanya `pulang` yang ada, lokasi memakai data `pulang`.
+- Jika data lama tidak punya lokasi, UI tetap aman dan menampilkan `Lokasi tidak tersedia.`
+- `flutter analyze` pass.
+
+---
+
 # Laporan akhir Codex
 
 Setelah selesai, Codex wajib menulis laporan:
@@ -552,6 +677,7 @@ Jangan menulis hasil build karena build tidak diminta.
 5. Warning lokasi/foto lebih jelas
 6. Badge pending pengajuan
 7. Filter jenis pengajuan
-8. flutter analyze
-9. Laporan akhir
+8. Fix Detail Presensi agar lokasi membaca nested masuk/pulang
+9. flutter analyze
+10. Laporan akhir
 ```
