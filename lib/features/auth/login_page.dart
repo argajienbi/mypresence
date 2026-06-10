@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
         await PushNotificationService.registerDeviceToken(session)
             .timeout(const Duration(seconds: 10));
       } catch (e) {
-        debugPrint('Gagal register FCM token: $e');
+        debugPrint('Gagal register token notifikasi: $e');
       }
 
       if (!mounted) return;
@@ -84,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Masukkan email akun kamu. Link reset password akan dikirim melalui Firebase Auth.'),
+            const Text('Masukkan email akun kamu. Link reset password akan dikirim ke email yang terdaftar.'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,

@@ -64,7 +64,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         backgroundColor: AppColors.bg,
         body: StickyCurvePage(
           title: 'Data Pribadi',
-          subtitle: 'Mengacu ke /users dan /company_users RTDB',
+          subtitle: 'Perubahan data pribadi akan tersimpan di akun perusahaan Anda.',
           icon: Icons.badge_rounded,
           overlapTop: 132,
           trailing: SourceRoundButton(icon: Icons.close_rounded, onTap: () => Navigator.pop(context)),
@@ -107,7 +107,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: AppColors.header.withValues(alpha: .70), borderRadius: BorderRadius.circular(16)),
-                    child: const Text('Company, jabatan, office, department, group, dan NIP hanya dapat diubah admin.', style: AppText.subtitle),
+                    child: const Text('Data perusahaan, jabatan, kantor, departemen, grup, dan NIP hanya dapat diubah admin.', style: AppText.subtitle),
                   ),
                 ],
               ),

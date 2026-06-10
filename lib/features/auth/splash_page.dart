@@ -133,7 +133,7 @@ class _SplashPageState extends State<SplashPage>
       await PushNotificationService.registerDeviceToken(resolvedSession)
           .timeout(const Duration(seconds: 5));
     } catch (e) {
-      debugPrint('Gagal register FCM token dari splash: $e');
+      debugPrint('Gagal register token notifikasi dari splash: $e');
     }
 
     await _safeNavigate(() => MainShell(session: resolvedSession));
