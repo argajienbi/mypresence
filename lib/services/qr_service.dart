@@ -2,9 +2,11 @@ import 'dart:io';
 
 import '../core/firebase_paths.dart';
 import '../core/models/app_session.dart';
+import '../core/models/presence_submission_result.dart';
 import '../core/utils.dart';
 import 'location_service.dart';
 import 'rtdb_service.dart';
+import 'photo_quality_service.dart';
 import 'schedule_service.dart';
 import 'storage_service.dart';
 
@@ -25,6 +27,7 @@ class QrService {
   final LocationService _location = LocationService();
   final ScheduleService _schedule = ScheduleService();
   final StorageService _storage = StorageService();
+  final PhotoQualityService _photoQuality = PhotoQualityService();
 
   String employeeQrPayload(AppSession session, String qrToken) =>
       'MYPRESENCE_EMPLOYEE_QR|${session.companyId}|${session.uid}|${session.nip}|$qrToken';
@@ -90,11 +93,12 @@ class QrService {
     return target;
   }
 
-  Future<void> createProxyRequest({
+  Future<PresenceSubmissionResult> createProxyRequest({
     required AppSession helperSession,
     required Map<String, dynamic> target,
     required String actionType,
     required File photoFile,
+    PhotoQualityCheckResult? photoQuality,
   }) async {
     if (actionType != 'masuk' && actionType != 'pulang') {
       throw Exception('Jenis aksi tidak valid.');
@@ -108,6 +112,11 @@ class QrService {
     final targetUid = asString(target['uid']);
     if (targetUid.isEmpty) {
       throw Exception('Target QR tidak valid.');
+    }
+
+    final photoQualityResult = photoQuality ?? await _photoQuality.validate(photoFile);
+    if (!photoQualityResult.isValid) {
+      throw Exception(photoQualityResult.message);
     }
 
     DailySchedule? helperSchedule;
@@ -130,6 +139,7 @@ class QrService {
       throw Exception(
           'Anda berada di luar radius kantor (${distance.toStringAsFixed(0)} m dari kantor).');
     }
+    final locationAssessment = _location.assessLocation(loc);
     final photoPath = FirebasePaths.qrAttendancePhoto(
         helperSession.companyId, targetUid, dateKey, actionType, ts);
     final photoUrl =
@@ -213,14 +223,27 @@ class QrService {
       'helper_timetable_name': helperSchedule?.timetableName ?? '',
       'photo_url': photoUrl,
       'photo_path': photoPath,
+      'photo_quality_status': photoQualityResult.status,
+      'photo_quality_warning': photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      'photo_file_size': photoQualityResult.fileSize,
+      'photo_width': photoQualityResult.width,
+      'photo_height': photoQualityResult.height,
       'latitude': loc.latitude,
       'longitude': loc.longitude,
       'accuracy': loc.accuracy,
+      'location_accuracy': loc.accuracy,
       'office_latitude': helperSession.officeLatitude,
       'office_longitude': helperSession.officeLongitude,
       'distance_meter': distance,
       'radius_meter': helperSession.officeRadiusMeter,
       'geofence_status': geofenceStatus,
+      'mock_location_detected': loc.isMocked,
+      'location_mock_detected': loc.isMocked,
+      'location_mock_warning': locationAssessment.mockWarningMessage,
+      'location_accuracy_warning': locationAssessment.accuracyWarning,
+      'location_risk_level': locationAssessment.riskLevel,
+      'location_warning': locationAssessment.warningMessage,
+      'location_provider': 'geolocator',
       'office_id': helperSession.officeId,
       'office_name': helperSession.officeName,
       'department_id': targetDepartmentId,
@@ -248,5 +271,18 @@ class QrService {
     };
     await _rtdb.set(
         FirebasePaths.qrRequest(helperSession.companyId, requestId), payload);
+
+    return PresenceSubmissionResult(
+      photoQualityStatus: photoQualityResult.status,
+      photoQualityWarning: photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      photoFileSize: photoQualityResult.fileSize,
+      photoWidth: photoQualityResult.width,
+      photoHeight: photoQualityResult.height,
+      locationRiskLevel: locationAssessment.riskLevel,
+      locationWarning: locationAssessment.warningMessage,
+      locationAccuracy: loc.accuracy,
+      distanceMeter: distance,
+      locationMockDetected: loc.isMocked,
+    );
   }
 }

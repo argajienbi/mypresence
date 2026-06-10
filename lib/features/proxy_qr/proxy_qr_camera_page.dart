@@ -10,6 +10,7 @@ import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/qr_service.dart';
+import '../../services/photo_quality_service.dart';
 import '../../widgets/app_feedback.dart';
 
 class ProxyQrCameraPage extends StatefulWidget {
@@ -31,10 +32,12 @@ class ProxyQrCameraPage extends StatefulWidget {
 class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
     with WidgetsBindingObserver {
   final QrService _qr = QrService();
+  final PhotoQualityService _photoQualityService = PhotoQualityService();
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   CameraLensDirection _lens = CameraLensDirection.front;
   File? _photo;
+  PhotoQualityCheckResult? _photoQuality;
   bool _initializing = true;
   bool _submitting = false;
   bool _capturing = false;
@@ -188,9 +191,24 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
     try {
       final file = await controller.takePicture();
       if (!mounted) return;
+      final captured = File(file.path);
+      final quality = await _photoQualityService.validate(captured);
+      if (!mounted) return;
+      if (!quality.isValid) {
+        AppToast.error(context, quality.message);
+        setState(() {
+          _photo = null;
+          _photoQuality = null;
+          _status = quality.message;
+        });
+        return;
+      }
       setState(() {
-        _photo = File(file.path);
-        _status = 'Foto berhasil diambil. Periksa hasilnya.';
+        _photo = captured;
+        _photoQuality = quality;
+        _status = quality.hasWarning
+            ? quality.message
+            : 'Foto berhasil diambil. Periksa hasilnya.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -215,6 +233,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
     _lastCameraActionAt = DateTime.now();
     setState(() {
       _photo = null;
+      _photoQuality = null;
       _status = 'Posisikan wajah di dalam oval';
     });
 
@@ -237,14 +256,19 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
     });
 
     try {
-      await _qr.createProxyRequest(
+      final result = await _qr.createProxyRequest(
         helperSession: widget.session,
         target: widget.target,
         actionType: widget.actionType,
         photoFile: _photo!,
+        photoQuality: _photoQuality,
       );
       if (!mounted) return;
-      AppToast.success(context, 'Request QR dikirim. Menunggu validasi admin.');
+      if (result.hasWarnings) {
+        AppToast.info(context, '${result.warnings.join(' ')} Request QR dikirim. Menunggu validasi admin.');
+      } else {
+        AppToast.success(context, 'Request QR dikirim. Menunggu validasi admin.');
+      }
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

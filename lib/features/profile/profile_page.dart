@@ -9,6 +9,7 @@ import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_feedback.dart';
 import '../../widgets/sticky_curve_header.dart';
+import '../requests/request_status_page.dart';
 import '../auth/login_page.dart';
 import '../announcements/announcements_page.dart';
 import '../company_webview/company_webview_page.dart';
@@ -201,6 +202,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             title: 'ID / QR Karyawan',
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => EmployeeQrPage(session: widget.session, photoUrl: _photoUrl)),
+                            ),
+                          ),
+                          _MenuTile(
+                            icon: Icons.assignment_turned_in_outlined,
+                            title: 'Status Pengajuan',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => RequestStatusPage(session: widget.session)),
                             ),
                           ),
                           _MenuTile(

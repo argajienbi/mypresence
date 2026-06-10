@@ -61,7 +61,7 @@ class TodayStatusCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(status, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w900, color: AppColors.text)),
                 const SizedBox(height: 4),
-                Text('Masuk $checkIn • Pulang $checkOut', style: const TextStyle(fontSize: 12.5, color: AppColors.text, fontWeight: FontWeight.w800)),
+                Text('Masuk $checkIn - Pulang $checkOut', style: const TextStyle(fontSize: 12.5, color: AppColors.text, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 3),
                 Text(helper, style: const TextStyle(fontSize: 11.8, color: AppColors.muted, fontWeight: FontWeight.w700)),
               ],

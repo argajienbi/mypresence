@@ -10,6 +10,7 @@ import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/attendance_service.dart';
+import '../../services/photo_quality_service.dart';
 import '../../widgets/app_feedback.dart';
 
 class CameraPresencePage extends StatefulWidget {
@@ -24,10 +25,12 @@ class CameraPresencePage extends StatefulWidget {
 
 class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBindingObserver {
   final AttendanceService _attendance = AttendanceService();
+  final PhotoQualityService _photoQualityService = PhotoQualityService();
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   CameraLensDirection _lens = CameraLensDirection.front;
   File? _photo;
+  PhotoQualityCheckResult? _photoQuality;
   bool _initializing = true;
   bool _submitting = false;
   bool _capturing = false;
@@ -175,9 +178,24 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
     try {
       final file = await controller.takePicture();
       if (!mounted) return;
+      final captured = File(file.path);
+      final quality = await _photoQualityService.validate(captured);
+      if (!mounted) return;
+      if (!quality.isValid) {
+        AppToast.error(context, quality.message);
+        setState(() {
+          _photo = null;
+          _photoQuality = null;
+          _status = quality.message;
+        });
+        return;
+      }
       setState(() {
-        _photo = File(file.path);
-        _status = 'Foto berhasil diambil. Periksa hasilnya.';
+        _photo = captured;
+        _photoQuality = quality;
+        _status = quality.hasWarning
+            ? quality.message
+            : 'Foto berhasil diambil. Periksa hasilnya.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -202,6 +220,7 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
     _lastCameraActionAt = DateTime.now();
     setState(() {
       _photo = null;
+      _photoQuality = null;
       _status = 'Posisikan wajah di dalam oval';
     });
 
@@ -224,13 +243,18 @@ class _CameraPresencePageState extends State<CameraPresencePage> with WidgetsBin
     });
 
     try {
-      await _attendance.submitSelfieAttendance(
+      final result = await _attendance.submitSelfieAttendance(
         session: widget.session,
         actionType: widget.actionType,
         photoFile: _photo!,
+        photoQuality: _photoQuality,
       );
       if (!mounted) return;
-      AppToast.success(context, 'Presensi berhasil dikirim.');
+      if (result.hasWarnings) {
+        AppToast.info(context, '${result.warnings.join(' ')} Presensi berhasil dikirim.');
+      } else {
+        AppToast.success(context, 'Presensi berhasil dikirim.');
+      }
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

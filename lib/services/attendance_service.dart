@@ -2,9 +2,11 @@ import 'dart:io';
 
 import '../core/firebase_paths.dart';
 import '../core/models/app_session.dart';
+import '../core/models/presence_submission_result.dart';
 import '../core/utils.dart';
 import 'location_service.dart';
 import 'rtdb_service.dart';
+import 'photo_quality_service.dart';
 import 'storage_service.dart';
 import 'schedule_service.dart';
 import '../models/attendance_record.dart';
@@ -13,9 +15,15 @@ class AttendanceService {
   final RtdbService _rtdb = RtdbService();
   final StorageService _storage = StorageService();
   final LocationService _location = LocationService();
+  final PhotoQualityService _photoQuality = PhotoQualityService();
   final ScheduleService _schedule = ScheduleService();
 
-  Future<void> submitSelfieAttendance({required AppSession session, required String actionType, required File photoFile}) async {
+  Future<PresenceSubmissionResult> submitSelfieAttendance({
+    required AppSession session,
+    required String actionType,
+    required File photoFile,
+    PhotoQualityCheckResult? photoQuality,
+  }) async {
     final now = DateTime.now();
     final date = AppDate.dateKey(now);
     final time = AppDate.time(now);
@@ -27,12 +35,18 @@ class AttendanceService {
       throw Exception(window.message);
     }
 
+    final photoQualityResult = photoQuality ?? await _photoQuality.validate(photoFile);
+    if (!photoQualityResult.isValid) {
+      throw Exception(photoQualityResult.message);
+    }
+
     final loc = await _location.currentLocation();
     final distance = _location.distanceMeter(fromLat: loc.latitude, fromLng: loc.longitude, toLat: session.officeLatitude, toLng: session.officeLongitude);
     final inside = distance <= session.officeRadiusMeter;
     if (!inside) {
       throw Exception('Anda berada di luar radius kantor (${distance.toStringAsFixed(0)} m dari kantor).');
     }
+    final locationAssessment = _location.assessLocation(loc);
 
     final photoPath = FirebasePaths.attendancePhoto(session.companyId, session.uid, date, actionType, ts);
     final photoUrl = await _storage.uploadFile(path: photoPath, file: photoFile);
@@ -57,14 +71,27 @@ class AttendanceService {
       'early_out': window.earlyOut,
       'photo_url': photoUrl,
       'photo_path': photoPath,
+      'photo_quality_status': photoQualityResult.status,
+      'photo_quality_warning': photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      'photo_file_size': photoQualityResult.fileSize,
+      'photo_width': photoQualityResult.width,
+      'photo_height': photoQualityResult.height,
       'latitude': loc.latitude,
       'longitude': loc.longitude,
       'accuracy': loc.accuracy,
+      'location_accuracy': loc.accuracy,
       'distance_meter': distance,
       'radius_meter': session.officeRadiusMeter,
       'office_latitude': session.officeLatitude,
       'office_longitude': session.officeLongitude,
       'geofence_status': 'inside',
+      'mock_location_detected': loc.isMocked,
+      'location_mock_detected': loc.isMocked,
+      'location_mock_warning': locationAssessment.mockWarningMessage,
+      'location_accuracy_warning': locationAssessment.accuracyWarning,
+      'location_risk_level': locationAssessment.riskLevel,
+      'location_warning': locationAssessment.warningMessage,
+      'location_provider': 'geolocator',
       'office_id': session.officeId,
       'office_name': session.officeName,
       'department_id': session.departmentId,
@@ -84,6 +111,19 @@ class AttendanceService {
     };
 
     await _rtdb.set(FirebasePaths.attendanceRecord(session.companyId, session.uid, date, actionType), payload);
+
+    return PresenceSubmissionResult(
+      photoQualityStatus: photoQualityResult.status,
+      photoQualityWarning: photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      photoFileSize: photoQualityResult.fileSize,
+      photoWidth: photoQualityResult.width,
+      photoHeight: photoQualityResult.height,
+      locationRiskLevel: locationAssessment.riskLevel,
+      locationWarning: locationAssessment.warningMessage,
+      locationAccuracy: loc.accuracy,
+      distanceMeter: distance,
+      locationMockDetected: loc.isMocked,
+    );
   }
 
   Future<Map<String, dynamic>?> todayAttendance(AppSession session) => _rtdb.getMap(FirebasePaths.attendanceDate(session.companyId, session.uid, AppDate.dateKey()));

@@ -8,4 +8,14 @@ class StorageService {
     await ref.putFile(file);
     return ref.getDownloadURL();
   }
+
+  Future<String> downloadUrl(String path) async {
+    try {
+      if (path.trim().isEmpty) return '';
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      return await _storage.ref(path).getDownloadURL();
+    } catch (_) {
+      return '';
+    }
+  }
 }

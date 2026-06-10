@@ -8,6 +8,8 @@ import '../../services/leave_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/sticky_curve_header.dart';
+import 'attendance_detail_sheet.dart';
+import 'history_models.dart';
 
 class HistoryPage extends StatefulWidget {
   final AppSession session;
@@ -171,6 +173,14 @@ class _HistoryPageState extends State<HistoryPage> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _DateListSheet(title: title, dates: dates, color: color),
+    );
+  }
+
+  void _showAttendanceDetail(DailyHistoryStatus item) {
+    showAttendanceDetailSheet(
+      context: context,
+      session: widget.session,
+      item: item,
     );
   }
 
@@ -543,7 +553,12 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                     )
                   else
-                    ...visibleDailyStatuses.map(_DailyHistoryItem.new),
+                    ...visibleDailyStatuses.map(
+                      (item) => _DailyHistoryItem(
+                        item,
+                        onTap: () => _showAttendanceDetail(item),
+                      ),
+                    ),
                   if (_leaveRows.isNotEmpty || _overtimeRows.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     const _SectionNote(
@@ -821,8 +836,9 @@ class _SummaryCard extends StatelessWidget {
 
 class _DailyHistoryItem extends StatelessWidget {
   final DailyHistoryStatus item;
+  final VoidCallback onTap;
 
-  const _DailyHistoryItem(this.item);
+  const _DailyHistoryItem(this.item, {required this.onTap});
 
   String _timeOf(Map<String, dynamic>? row, String key) {
     if (row == null) return '--:--';
@@ -899,73 +915,80 @@ class _DailyHistoryItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: AppCard(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppDate.dayDate(item.date),
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                    ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: AppCard(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    _subtitle(),
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  if (secondary != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      secondary,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: item.status == 'telat' ? AppColors.orange : AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                badge,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: color,
+                  child: Icon(icon, color: color),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppDate.dayDate(item.date),
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        _subtitle(),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      if (secondary != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          secondary,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: item.status == 'telat' ? AppColors.orange : AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1509,24 +1532,4 @@ class _DateListSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-class DailyHistoryStatus {
-  final DateTime date;
-  final String dateKey;
-  final String status;
-  final Map<String, dynamic>? attendanceRow;
-  final Map<String, dynamic>? leaveRow;
-  final DailySchedule? schedule;
-  final Map<String, dynamic>? overtimeRow;
-
-  const DailyHistoryStatus({
-    required this.date,
-    required this.dateKey,
-    required this.status,
-    required this.attendanceRow,
-    required this.leaveRow,
-    required this.schedule,
-    required this.overtimeRow,
-  });
 }

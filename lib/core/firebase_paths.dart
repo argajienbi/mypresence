@@ -78,5 +78,6 @@ class FirebasePaths {
   static String attendancePhoto(String companyId, String uid, String date, String actionType, int ts) => 'attendance_photos/$companyId/$uid/$date/${actionType}_$ts.jpg';
   static String qrAttendancePhoto(String companyId, String targetUid, String date, String actionType, int ts) => 'attendance_photos/$companyId/$targetUid/$date/qr_${actionType}_$ts.jpg';
   static String leaveAttachment(String companyId, String uid, String requestId, String fileName) => 'leave_attachments/$companyId/$uid/$requestId/$fileName';
+  static String attendanceCorrectionAttachment(String companyId, String uid, String correctionId, String fileName) => 'attendance_correction_attachments/$companyId/$uid/$correctionId/$fileName';
   static String profilePhoto(String companyId, String uid, int ts) => 'profile_photos/$companyId/$uid/$ts.jpg';
 }
