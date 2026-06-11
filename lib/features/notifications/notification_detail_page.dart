@@ -98,11 +98,10 @@ class NotificationDetailPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () => NotificationRouter.openReference(
+                        onPressed: () => NotificationRouter.openFromNotification(
                           context,
                           session,
-                          notification.refType,
-                          notification.refId,
+                          notification,
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -128,6 +127,9 @@ class NotificationDetailPage extends StatelessWidget {
 
   static String _referenceButtonLabel(String refType) {
     final type = refType.toLowerCase();
+    if (type.contains('attendance_reminder') || type.contains('reminder')) {
+      return 'Buka Beranda';
+    }
     if (type.contains('leave') || type.contains('approval')) {
       return 'Lihat Detail Pengajuan';
     }
@@ -310,6 +312,9 @@ class _DetailInfoCard extends StatelessWidget {
 
   static String _referenceLabel(String refType) {
     final type = refType.toLowerCase();
+    if (type.contains('attendance_reminder') || type.contains('reminder')) {
+      return 'Pengingat Absen';
+    }
     if (type.contains('leave') || type.contains('approval')) return 'Pengajuan';
     if (type.contains('correction') || type.contains('koreksi')) {
       return 'Koreksi Presensi';
@@ -385,6 +390,9 @@ class _InformationBox extends StatelessWidget {
 
   static String _infoText(String refType) {
     final type = refType.toLowerCase();
+    if (type.contains('attendance_reminder') || type.contains('reminder')) {
+      return 'Silakan buka Home untuk melihat jadwal dan melakukan absen sesuai waktu yang sudah ditentukan.';
+    }
     if (type.contains('schedule') || type.contains('jadwal')) {
       return 'Silakan cek detail jadwal untuk melihat perubahan jam kerja atau shift terbaru.';
     }
@@ -477,6 +485,12 @@ class _NotificationDetailCategory {
     final value =
         '${notification.type} ${notification.refType} ${notification.title} ${notification.displayBody}'
             .toLowerCase();
+    if (value.contains('attendance_reminder') || value.contains('reminder')) {
+      return const _NotificationDetailCategory(
+          label: 'Pengingat',
+          icon: Icons.alarm_rounded,
+          color: AppColors.blue);
+    }
     if (value.contains('correction') || value.contains('koreksi')) {
       return const _NotificationDetailCategory(
           label: 'Koreksi',

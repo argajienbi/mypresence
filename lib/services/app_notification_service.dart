@@ -192,6 +192,8 @@ class AppNotificationService {
     return value.contains('approval') ||
         value.contains('approved') ||
         value.contains('rejected') ||
+        value.contains('disetujui') ||
+        value.contains('ditolak') ||
         value.contains('pending') ||
         value.contains('leave') ||
         value.contains('izin') ||
@@ -206,6 +208,9 @@ class AppNotificationService {
         value.contains('attendance') ||
         value.contains('presensi') ||
         value.contains('absensi') ||
+        value.contains('attendance_reminder') ||
+        value.contains('reminder') ||
+        value.contains('pengingat') ||
         value.contains('qr') ||
         value.contains('status_update') ||
         value.contains('status update') ||

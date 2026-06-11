@@ -166,12 +166,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _scheduleAttendanceReminders() async {
-    if (_approvedLeaveToday != null) return;
     await AttendanceReminderService.scheduleToday(
       session: widget.session,
       schedule: _schedule,
       hasIn: hasIn,
       hasOut: hasOut,
+      hasApprovedLeave: _approvedLeaveToday != null,
     );
   }
 
@@ -368,21 +368,6 @@ class _HomePageState extends State<HomePage> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(18, 188, 18, 128),
               children: [
-                if (_approvedLeaveToday != null) ...[
-                  _ApprovedLeaveBanner(
-                    type: _leaveTypeLabel(
-                      (_approvedLeaveToday!['type'] ??
-                              _approvedLeaveToday!['leave_type'] ??
-                              '')
-                          .toString(),
-                    ),
-                    reason: (_approvedLeaveToday!['reason'] ??
-                            _approvedLeaveToday!['alasan'] ??
-                            '')
-                        .toString(),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
@@ -455,7 +440,9 @@ class _HomePageState extends State<HomePage> {
                     final rtdbItems = rtdbSnapshot.data ?? const <AppNotification>[];
                     final allItems = _notificationService.mergeInbox(firestoreItems, rtdbItems);
                     final unreadCount = allItems
-                        .where((item) => !item.read && _isImportantNotification(item.refType))
+                        .where((item) =>
+                            !item.read &&
+                            _notificationService.isPersonalNotification(item))
                         .length;
 
                     return HomeStickyProfileHeader(
@@ -472,25 +459,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  bool _isImportantNotification(String refType) {
-    final value = refType.toLowerCase();
-
-    if (value.contains('announcement') || value.contains('pengumuman')) {
-      return false;
-    }
-
-    return value.contains('approval') ||
-        value.contains('leave') ||
-        value.contains('izin') ||
-        value.contains('cuti') ||
-        value.contains('sakit') ||
-        value.contains('schedule') ||
-        value.contains('jadwal') ||
-        value.contains('attendance') ||
-        value.contains('presensi') ||
-        value.contains('system');
   }
 
   String _workTime(DailySchedule? schedule) {
@@ -519,68 +487,5 @@ class _HomePageState extends State<HomePage> {
       default:
         return 'Izin';
     }
-  }
-}
-
-class _ApprovedLeaveBanner extends StatelessWidget {
-  final String type;
-  final String reason;
-
-  const _ApprovedLeaveBanner({required this.type, required this.reason});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.green.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.green.withValues(alpha: .24)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.green.withValues(alpha: .15),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(Icons.verified_rounded, color: AppColors.green),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$type Disetujui Hari Ini',
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  reason.trim().isEmpty
-                      ? 'Absen tidak wajib dilakukan karena pengajuan sudah disetujui admin.'
-                      : reason,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

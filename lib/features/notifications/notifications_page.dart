@@ -209,11 +209,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return value.contains('approval') ||
             value.contains('approved') ||
             value.contains('rejected') ||
+            value.contains('disetujui') ||
+            value.contains('ditolak') ||
+            value.contains('pending') ||
+            value.contains('menunggu') ||
             value.contains('leave') ||
             value.contains('izin') ||
             value.contains('cuti') ||
             value.contains('sakit') ||
-            value.contains('lembur');
+            value.contains('lembur') ||
+            value.contains('overtime');
       case _NotificationFilter.schedule:
         return value.contains('schedule') || value.contains('jadwal');
       case _NotificationFilter.correction:
@@ -222,7 +227,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return value.contains('attendance') ||
             value.contains('presensi') ||
             value.contains('absensi') ||
-            value.contains('qr');
+            value.contains('qr') ||
+            value.contains('reminder') ||
+            value.contains('pengingat');
       case _NotificationFilter.system:
         return value.contains('system') ||
             value.contains('sistem') ||
@@ -762,6 +769,13 @@ class _NotificationCategory {
     final value =
         '${item.type} ${item.refType} ${item.title} ${item.displayBody}'
             .toLowerCase();
+    if (value.contains('attendance_reminder') || value.contains('reminder')) {
+      return const _NotificationCategory(
+          label: 'Pengingat',
+          icon: Icons.alarm_rounded,
+          metaIcon: Icons.alarm_rounded,
+          color: AppColors.blue);
+    }
     if (value.contains('correction') || value.contains('koreksi')) {
       return const _NotificationCategory(
           label: 'Koreksi',

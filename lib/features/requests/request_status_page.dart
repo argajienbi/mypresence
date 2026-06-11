@@ -27,8 +27,17 @@ enum RequestTypeFilter {
 
 class RequestStatusPage extends StatefulWidget {
   final AppSession session;
+  final RequestStatusFilter? initialStatus;
+  final RequestTypeFilter? initialType;
+  final String? highlightRefId;
 
-  const RequestStatusPage({super.key, required this.session});
+  const RequestStatusPage({
+    super.key,
+    required this.session,
+    this.initialStatus,
+    this.initialType,
+    this.highlightRefId,
+  });
 
   @override
   State<RequestStatusPage> createState() => _RequestStatusPageState();
@@ -38,12 +47,15 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
   final RequestStatusService _service = RequestStatusService();
   bool _loading = true;
   List<RequestStatusItem> _items = [];
-  RequestStatusFilter _filter = RequestStatusFilter.all;
-  RequestTypeFilter _typeFilter = RequestTypeFilter.all;
+  late RequestStatusFilter _filter;
+  late RequestTypeFilter _typeFilter;
+  bool _openedHighlightDetail = false;
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialStatus ?? RequestStatusFilter.all;
+    _typeFilter = widget.initialType ?? RequestTypeFilter.all;
     _load();
   }
 
@@ -53,12 +65,34 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
       final items = await _service.loadRequests(widget.session);
       if (!mounted) return;
       setState(() => _items = items);
+      _maybeOpenHighlightedDetail();
     } catch (_) {
       if (!mounted) return;
       setState(() => _items = []);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _maybeOpenHighlightedDetail() {
+    final refId = widget.highlightRefId?.trim() ?? '';
+    if (refId.isEmpty || _openedHighlightDetail) return;
+
+    RequestStatusItem? match;
+    for (final item in _items) {
+      if (item.id == refId) {
+        match = item;
+        break;
+      }
+    }
+
+    if (match == null) return;
+    _openedHighlightDetail = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showRequestStatusDetailSheet(context: context, item: match!);
+    });
   }
 
   List<RequestStatusItem> get _filteredItems {

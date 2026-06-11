@@ -17,92 +17,125 @@ class AttendanceReminderService {
     required DailySchedule? schedule,
     required bool hasIn,
     required bool hasOut,
+    required bool hasApprovedLeave,
   }) async {
     final now = DateTime.now();
     final dayKey = AppDate.dateKey(now);
     final daySeed = int.tryParse(dayKey.replaceAll('-', '')) ?? now.day;
-    final checkInId = _checkInBaseId + (daySeed % 10000);
-    final checkOutId = _checkOutBaseId + (daySeed % 10000);
 
-    await LocalNotificationService.cancel(checkInId);
-    await LocalNotificationService.cancel(checkOutId);
-
-    if (schedule == null || !schedule.isWorkday || schedule.isHoliday) {
-      await _clearReminderInbox(session, dayKey, 'check_in');
-      await _clearReminderInbox(session, dayKey, 'check_out');
+    if (schedule == null || !schedule.isWorkday || schedule.isHoliday || hasApprovedLeave) {
+      await _clearReminderGroup(session, dayKey, daySeed, 'check_in');
+      await _clearReminderGroup(session, dayKey, daySeed, 'check_out');
       return;
     }
 
     if (!hasIn) {
-      final workStart = _todayAt(schedule.workStart.isNotEmpty ? schedule.workStart : schedule.checkInStart);
+      final workStart = _todayAt(
+        schedule.workStart.isNotEmpty ? schedule.workStart : schedule.checkInStart,
+      );
       if (workStart != null) {
-        final reminderAt = workStart.subtract(const Duration(minutes: 10));
-        if (reminderAt.isAfter(now)) {
-          final body = 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.';
-          final payload = _payload(
-            dateKey: dayKey,
-            action: 'check_in',
-            title: 'Jangan lupa absen masuk',
-            body: body,
-            scheduledAt: reminderAt,
-          );
-          await _upsertReminderInbox(session, payload);
-          await LocalNotificationService.scheduleOnce(
-            id: checkInId,
-            title: payload['title'].toString(),
-            body: payload['body'].toString(),
-            scheduledAt: reminderAt,
-            payload: payload,
-          );
-        } else {
-          await _clearReminderInbox(session, dayKey, 'check_in');
-        }
+        await _scheduleReminder(
+          session: session,
+          dayKey: dayKey,
+          daySeed: daySeed,
+          action: 'check_in',
+          stage: 'pre',
+          title: 'Jangan lupa absen masuk',
+          body: 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.',
+          scheduledAt: workStart.subtract(const Duration(minutes: 10)),
+        );
+        await _scheduleReminder(
+          session: session,
+          dayKey: dayKey,
+          daySeed: daySeed,
+          action: 'check_in',
+          stage: 'now',
+          title: 'Waktunya absen masuk',
+          body: 'Silakan absen masuk sesuai jadwal hari ini.',
+          scheduledAt: workStart,
+        );
       }
     } else {
-      await _clearReminderInbox(session, dayKey, 'check_in');
+      await _clearReminderGroup(session, dayKey, daySeed, 'check_in');
     }
 
     if (!hasOut) {
-      final workEnd = _todayAt(schedule.workEnd.isNotEmpty ? schedule.workEnd : schedule.checkOutEnd);
-      final adjustedEnd = schedule.crossesMidnight && workEnd != null && workEnd.isBefore(now)
+      final workEnd = _todayAt(
+        schedule.workEnd.isNotEmpty ? schedule.workEnd : schedule.checkOutEnd,
+      );
+      final adjustedEnd = schedule.crossesMidnight &&
+              workEnd != null &&
+              workEnd.isBefore(now)
           ? workEnd.add(const Duration(days: 1))
           : workEnd;
       if (adjustedEnd != null) {
-        final reminderAt = adjustedEnd.subtract(const Duration(minutes: 10));
-        if (reminderAt.isAfter(now)) {
-          final body = 'Jangan lupa melakukan Clock Out sebelum pulang.';
-          final payload = _payload(
-            dateKey: dayKey,
-            action: 'check_out',
-            title: 'Jangan lupa absen pulang',
-            body: body,
-            scheduledAt: reminderAt,
-          );
-          await _upsertReminderInbox(session, payload);
-          await LocalNotificationService.scheduleOnce(
-            id: checkOutId,
-            title: payload['title'].toString(),
-            body: payload['body'].toString(),
-            scheduledAt: reminderAt,
-            payload: payload,
-          );
-        } else {
-          await _clearReminderInbox(session, dayKey, 'check_out');
-        }
+        await _scheduleReminder(
+          session: session,
+          dayKey: dayKey,
+          daySeed: daySeed,
+          action: 'check_out',
+          stage: 'pre',
+          title: 'Jangan lupa absen pulang',
+          body: 'Jangan lupa melakukan Clock Out sebelum jam selesai.',
+          scheduledAt: adjustedEnd.subtract(const Duration(minutes: 10)),
+        );
+        await _scheduleReminder(
+          session: session,
+          dayKey: dayKey,
+          daySeed: daySeed,
+          action: 'check_out',
+          stage: 'now',
+          title: 'Waktunya absen pulang',
+          body: 'Silakan absen pulang sesuai jadwal hari ini.',
+          scheduledAt: adjustedEnd,
+        );
       }
     } else {
-      await _clearReminderInbox(session, dayKey, 'check_out');
+      await _clearReminderGroup(session, dayKey, daySeed, 'check_out');
     }
+  }
+
+  static Future<void> _scheduleReminder({
+    required AppSession session,
+    required String dayKey,
+    required int daySeed,
+    required String action,
+    required String stage,
+    required String title,
+    required String body,
+    required DateTime scheduledAt,
+  }) async {
+    final id = _scheduledNotificationId(daySeed, action, stage);
+    final payload = _payload(
+      dateKey: dayKey,
+      action: action,
+      stage: stage,
+      title: title,
+      body: body,
+      scheduledAt: scheduledAt,
+    );
+    await _upsertReminderInbox(session, payload);
+    if (!scheduledAt.isAfter(DateTime.now())) {
+      return;
+    }
+    await LocalNotificationService.scheduleOnce(
+      id: id,
+      title: payload['title'].toString(),
+      body: payload['body'].toString(),
+      scheduledAt: scheduledAt,
+      payload: payload,
+    );
   }
 
   static Map<String, dynamic> _payload({
     required String dateKey,
     required String action,
+    required String stage,
     required String title,
     required String body,
     required DateTime scheduledAt,
   }) {
-    final id = _reminderId(dateKey, action);
+    final id = _reminderId(dateKey, action, stage);
     return {
       'id': id,
       'notification_id': id,
@@ -114,6 +147,7 @@ class AttendanceReminderService {
       'ref_id': id,
       'related_id': id,
       'reminder_action': action,
+      'reminder_stage': stage,
       'created_at': scheduledAt.millisecondsSinceEpoch,
       'scheduled_at': scheduledAt.millisecondsSinceEpoch,
       'created_date': dateKey,
@@ -133,20 +167,49 @@ class AttendanceReminderService {
     Map<String, dynamic> payload,
   ) async {
     final id = payload['notification_id'].toString();
-    await _database.ref('notifications/${session.uid}/$id').set({
+    final ref = _database.ref('notifications/${session.uid}/$id');
+    final existing = await ref.get();
+    final existingValue = existing.value;
+    final existingRead = existingValue is Map
+        ? _asBool(existingValue['read']) || _asBool(existingValue['is_read'])
+        : false;
+    final existingReadAt = existingValue is Map
+        ? existingValue['read_at'] ?? existingValue['readAt']
+        : null;
+
+    await ref.set({
       ...payload,
+      'read': existingRead,
+      'is_read': existingRead,
+      if (existingReadAt != null) 'read_at': existingReadAt,
       'company_id': session.companyId,
       'uid': session.uid,
       'updated_at': DateTime.now().millisecondsSinceEpoch,
     }).catchError((_) {});
   }
 
-  static Future<void> _clearReminderInbox(
+  static Future<void> _clearReminderGroup(
     AppSession session,
-    String dateKey,
+    String dayKey,
+    int daySeed,
     String action,
   ) async {
-    final id = _reminderId(dateKey, action);
+    for (final stage in const ['pre', 'now']) {
+      await _clearReminderEntry(session, dayKey, daySeed, action, stage);
+    }
+  }
+
+  static Future<void> _clearReminderEntry(
+    AppSession session,
+    String dayKey,
+    int daySeed,
+    String action,
+    String stage,
+  ) async {
+    final id = _reminderId(dayKey, action, stage);
+    await LocalNotificationService.cancel(
+      _scheduledNotificationId(daySeed, action, stage),
+    );
     await _database.ref('notifications/${session.uid}/$id').update({
       'read': true,
       'is_read': true,
@@ -155,7 +218,18 @@ class AttendanceReminderService {
     }).catchError((_) {});
   }
 
-  static String _reminderId(String dateKey, String action) => 'attendance_reminder_${dateKey}_$action';
+  static String _reminderId(String dateKey, String action, String stage) =>
+      'attendance_reminder_${dateKey}_${action}_$stage';
+
+  static int _scheduledNotificationId(
+    int daySeed,
+    String action,
+    String stage,
+  ) {
+    final base = action == 'check_in' ? _checkInBaseId : _checkOutBaseId;
+    final variant = stage == 'now' ? 1 : 0;
+    return base + (daySeed % 10000) * 10 + variant;
+  }
 
   static DateTime? _todayAt(String value) {
     final parts = value.split(':');
@@ -167,5 +241,14 @@ class AttendanceReminderService {
     return DateTime(now.year, now.month, now.day, hour, minute);
   }
 
-  static String _shortTime(DateTime value) => '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  static String _shortTime(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+  static bool _asBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
+  }
 }
