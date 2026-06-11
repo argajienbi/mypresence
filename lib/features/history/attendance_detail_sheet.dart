@@ -40,15 +40,17 @@ class _AttendanceDetailSheet extends StatelessWidget {
     final attendance = item.attendanceRow ?? <String, dynamic>{};
     final masuk = _nestedMap(attendance['masuk']);
     final pulang = _nestedMap(attendance['pulang']);
+    final primaryAttendance =
+        _primaryAttendanceRecord(attendance, masuk, pulang);
     final hasAttendance = masuk != null || pulang != null;
     final canRequestCorrection = hasAttendance || item.status == 'alpa';
-    final hasQr = _isQrRecord(attendance);
+    final hasQr = _isQrRecord(primaryAttendance);
     final statusColor = _statusColor(item.status);
     final statusIcon = _statusIcon(item.status);
     final statusLabel = _statusLabel(item.status);
     final statusMessage = _statusMessage(item.status);
-    final locationWarning = _locationWarning(attendance, masuk, pulang);
-    final qualityWarning = _qualityWarning(attendance, masuk, pulang);
+    final locationWarning = _locationWarning(primaryAttendance, masuk, pulang);
+    final qualityWarning = _qualityWarning(primaryAttendance, masuk, pulang);
 
     return SafeArea(
       child: Container(
@@ -136,16 +138,17 @@ class _AttendanceDetailSheet extends StatelessWidget {
                     icon: Icons.badge_outlined,
                     color: AppColors.primary,
                     label: 'Metode',
-                    value: _methodLabel(attendance, masuk, pulang),
-                    badge: _sourceLabel(attendance),
+                    value: _methodLabel(primaryAttendance, masuk, pulang),
+                    badge: _sourceLabel(primaryAttendance),
                   ),
                   _MiniInfoCard(
                     icon: Icons.check_circle_outline_rounded,
-                    color: _statusChipColor(attendance),
+                    color: _statusChipColor(primaryAttendance),
                     label: 'Validasi',
-                    value: asString(attendance['validation_status'],
-                        asString(attendance['status'], '-')),
-                    badge: asString(attendance['geofence_status'], 'unknown'),
+                    value: asString(primaryAttendance['validation_status'],
+                        asString(primaryAttendance['status'], '-')),
+                    badge: asString(
+                        primaryAttendance['geofence_status'], 'unknown'),
                   ),
                 ],
               ),
@@ -154,27 +157,28 @@ class _AttendanceDetailSheet extends StatelessWidget {
                 children: [
                   _MiniInfoCard(
                     icon: Icons.location_on_rounded,
-                    color: _locationColor(attendance),
+                    color: _locationColor(primaryAttendance),
                     label: 'Lokasi',
-                    value: _locationValue(attendance),
-                    badge: _distanceBadge(attendance),
+                    value: _locationValue(primaryAttendance),
+                    badge: _distanceBadge(primaryAttendance),
                   ),
                   _MiniInfoCard(
                     icon: Icons.business_rounded,
                     color: AppColors.blue,
                     label: 'Unit Kerja',
-                    value: _officeValue(attendance),
-                    badge: _groupValue(attendance),
+                    value: _officeValue(primaryAttendance),
+                    badge: _groupValue(primaryAttendance),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
               _LocationDetailCard(
-                attendance: attendance,
-                onViewLocation: _hasLocation(attendance)
+                title: 'Detail Lokasi Utama',
+                attendance: primaryAttendance,
+                onViewLocation: _hasLocation(primaryAttendance)
                     ? () => showAttendanceLocationSheet(
                           context: context,
-                          attendance: attendance,
+                          attendance: primaryAttendance,
                         )
                     : null,
               ),
@@ -208,6 +212,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
                     photoUrl: _photoUrl(masuk),
                     photoPath: _photoPath(masuk),
                     badge: _photoBadge(masuk),
+                    warningMessage: _photoWarning(masuk),
                   ),
                 if (_hasPhotoInfo(masuk) && _hasPhotoInfo(pulang))
                   const SizedBox(height: 10),
@@ -218,6 +223,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
                     photoUrl: _photoUrl(pulang),
                     photoPath: _photoPath(pulang),
                     badge: _photoBadge(pulang),
+                    warningMessage: _photoWarning(pulang),
                   ),
               ],
               const SizedBox(height: 18),
@@ -316,6 +322,14 @@ class _AttendanceDetailSheet extends StatelessWidget {
   Map<String, dynamic>? _nestedMap(dynamic value) {
     if (value is! Map) return null;
     return value.map((key, val) => MapEntry(key.toString(), val));
+  }
+
+  Map<String, dynamic> _primaryAttendanceRecord(
+    Map<String, dynamic> attendance,
+    Map<String, dynamic>? masuk,
+    Map<String, dynamic>? pulang,
+  ) {
+    return masuk ?? pulang ?? attendance;
   }
 
   bool _hasLeaveInfo(Map<String, dynamic>? row) {
@@ -518,9 +532,11 @@ class _AttendanceDetailSheet extends StatelessWidget {
   }
 
   String _sourceLabel(Map<String, dynamic> attendance) {
-    final source = asString(attendance['source'], 'mobile_app').toLowerCase();
-    if (source.isNotEmpty) return source;
-    return 'mobile_app';
+    final source = asString(attendance['source'], 'mobile_app').trim();
+    if (source.isEmpty) return 'mobile_app';
+    if (source == 'mobile_app') return 'Mobile App';
+    if (source == 'web_app') return 'Web App';
+    return source.replaceAll('_', ' ');
   }
 
   Color _statusChipColor(Map<String, dynamic> attendance) {
@@ -567,9 +583,13 @@ class _AttendanceDetailSheet extends StatelessWidget {
   String _officeValue(Map<String, dynamic> attendance) {
     final office = asString(attendance['office_name']);
     final department = asString(attendance['department_name']);
-    if (office.isEmpty && department.isEmpty) return '-';
-    if (department.isEmpty) return office;
-    return '$office - $department';
+    final subDepartment = asString(attendance['sub_department_name']);
+    final parts = <String>[];
+    if (office.isNotEmpty) parts.add(office);
+    if (department.isNotEmpty) parts.add(department);
+    if (subDepartment.isNotEmpty) parts.add(subDepartment);
+    if (parts.isEmpty) return '-';
+    return parts.join(' - ');
   }
 
   String _groupValue(Map<String, dynamic> attendance) {
@@ -609,6 +629,19 @@ class _AttendanceDetailSheet extends StatelessWidget {
     if (nestedIn.isNotEmpty) return nestedIn;
     final nestedOut = asString(pulang?['photo_quality_warning']);
     if (nestedOut.isNotEmpty) return nestedOut;
+    return '';
+  }
+
+  String _photoWarning(Map<String, dynamic>? row) {
+    if (row == null) return '';
+    final warning = asString(row['photo_quality_warning']);
+    if (warning.isNotEmpty) return warning;
+
+    final status = asString(row['photo_quality_status']).toLowerCase();
+    if (status == 'warning') {
+      return 'Foto terlihat kurang jelas. Anda tetap bisa mengirim, tetapi admin mungkin perlu validasi tambahan.';
+    }
+
     return '';
   }
 }
@@ -1127,6 +1160,7 @@ class _PhotoCard extends StatelessWidget {
   final String photoUrl;
   final String photoPath;
   final String badge;
+  final String warningMessage;
 
   const _PhotoCard({
     required this.title,
@@ -1134,6 +1168,7 @@ class _PhotoCard extends StatelessWidget {
     required this.photoUrl,
     required this.photoPath,
     required this.badge,
+    required this.warningMessage,
   });
 
   @override
@@ -1186,6 +1221,7 @@ class _PhotoCard extends StatelessWidget {
             photoUrl: photoUrl,
             photoPath: photoPath,
             previewTitle: title,
+            warningMessage: warningMessage,
           ),
         ],
       ),
@@ -1194,10 +1230,12 @@ class _PhotoCard extends StatelessWidget {
 }
 
 class _LocationDetailCard extends StatelessWidget {
+  final String title;
   final Map<String, dynamic> attendance;
   final VoidCallback? onViewLocation;
 
   const _LocationDetailCard({
+    this.title = 'Detail Lokasi',
     required this.attendance,
     required this.onViewLocation,
   });
@@ -1218,9 +1256,9 @@ class _LocationDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Detail Lokasi',
-            style: TextStyle(
+          Text(
+            title,
+            style: const TextStyle(
               color: AppColors.text,
               fontSize: 15,
               fontWeight: FontWeight.w900,

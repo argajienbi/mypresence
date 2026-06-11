@@ -9,6 +9,9 @@ class AttachmentPreviewTile extends StatelessWidget {
   final String buttonLabel;
   final String previewTitle;
   final String emptyLabel;
+  final String warningMessage;
+  final String warningTitle;
+  final IconData warningIcon;
 
   static final StorageService _storage = StorageService();
 
@@ -19,10 +22,15 @@ class AttachmentPreviewTile extends StatelessWidget {
     this.buttonLabel = 'Lihat Foto',
     this.previewTitle = 'Preview',
     this.emptyLabel = 'Foto/lampiran belum bisa dimuat.',
+    this.warningMessage = '',
+    this.warningTitle = 'Perhatian',
+    this.warningIcon = Icons.info_outline_rounded,
   });
 
   bool get _hasSource =>
       photoUrl.trim().isNotEmpty || photoPath.trim().isNotEmpty;
+
+  bool get _hasWarning => warningMessage.trim().isNotEmpty;
 
   Future<String> _resolveUrl() async {
     final url = photoUrl.trim();
@@ -32,97 +40,117 @@ class AttachmentPreviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasSource) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Text(
-          emptyLabel,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
-    }
-
-    return FutureBuilder<String>(
-      future: _resolveUrl(),
-      builder: (context, snapshot) {
-        final resolvedUrl = snapshot.data ?? '';
-        if (resolvedUrl.isNotEmpty) {
-          return InkWell(
-            onTap: () => showAttachmentPreviewSheet(
-              context: context,
-              photoUrl: resolvedUrl,
-              title: previewTitle,
-              emptyLabel: emptyLabel,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: Image.network(
-                  resolvedUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: AppColors.bg,
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(
-                          color: AppColors.primary),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.bg,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported_outlined,
-                        color: AppColors.muted, size: 36),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
+    final content = !_hasSource
+        ? Container(
             width: double.infinity,
-            height: 140,
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             decoration: BoxDecoration(
               color: AppColors.bg,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: AppColors.line),
             ),
-            alignment: Alignment.center,
-            child: const CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-
-        return SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => showAttachmentPreviewSheet(
-              context: context,
-              photoUrl: photoUrl,
-              photoPath: photoPath,
-              title: previewTitle,
-              emptyLabel: emptyLabel,
+            child: Text(
+              emptyLabel,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            icon: const Icon(Icons.open_in_full_rounded),
-            label: Text(buttonLabel),
-          ),
-        );
-      },
+          )
+        : FutureBuilder<String>(
+            future: _resolveUrl(),
+            builder: (context, snapshot) {
+              final resolvedUrl = snapshot.data ?? '';
+              if (resolvedUrl.isNotEmpty) {
+                return InkWell(
+                  onTap: () => showAttachmentPreviewSheet(
+                    context: context,
+                    photoUrl: resolvedUrl,
+                    title: previewTitle,
+                    emptyLabel: emptyLabel,
+                    warningMessage: warningMessage,
+                    warningTitle: warningTitle,
+                    warningIcon: warningIcon,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: Image.network(
+                        resolvedUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: AppColors.bg,
+                            alignment: Alignment.center,
+                            child: const CircularProgressIndicator(
+                                color: AppColors.primary),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.bg,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: AppColors.muted, size: 36),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  width: double.infinity,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: AppColors.bg,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.line),
+                  ),
+                  alignment: Alignment.center,
+                  child:
+                      const CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+
+              return SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => showAttachmentPreviewSheet(
+                    context: context,
+                    photoUrl: photoUrl,
+                    photoPath: photoPath,
+                    title: previewTitle,
+                    emptyLabel: emptyLabel,
+                    warningMessage: warningMessage,
+                    warningTitle: warningTitle,
+                    warningIcon: warningIcon,
+                  ),
+                  icon: const Icon(Icons.open_in_full_rounded),
+                  label: Text(buttonLabel),
+                ),
+              );
+            },
+          );
+
+    if (!_hasWarning) return content;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PreviewWarningCard(
+          title: warningTitle,
+          message: warningMessage,
+          icon: warningIcon,
+        ),
+        const SizedBox(height: 10),
+        content,
+      ],
     );
   }
 }
@@ -133,6 +161,9 @@ Future<void> showAttachmentPreviewSheet({
   String photoUrl = '',
   String photoPath = '',
   String emptyLabel = 'Foto/lampiran belum bisa dimuat.',
+  String warningMessage = '',
+  String warningTitle = 'Perhatian',
+  IconData warningIcon = Icons.info_outline_rounded,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -143,6 +174,9 @@ Future<void> showAttachmentPreviewSheet({
       photoUrl: photoUrl,
       photoPath: photoPath,
       emptyLabel: emptyLabel,
+      warningMessage: warningMessage,
+      warningTitle: warningTitle,
+      warningIcon: warningIcon,
     ),
   );
 }
@@ -152,6 +186,9 @@ class _AttachmentPreviewSheet extends StatelessWidget {
   final String photoUrl;
   final String photoPath;
   final String emptyLabel;
+  final String warningMessage;
+  final String warningTitle;
+  final IconData warningIcon;
 
   static final StorageService _storage = StorageService();
 
@@ -160,7 +197,12 @@ class _AttachmentPreviewSheet extends StatelessWidget {
     required this.photoUrl,
     required this.photoPath,
     required this.emptyLabel,
+    required this.warningMessage,
+    required this.warningTitle,
+    required this.warningIcon,
   });
+
+  bool get _hasWarning => warningMessage.trim().isNotEmpty;
 
   Future<String> _resolveUrl() async {
     final url = photoUrl.trim();
@@ -213,6 +255,17 @@ class _AttachmentPreviewSheet extends StatelessWidget {
                   ],
                 ),
               ),
+              if (_hasWarning) ...[
+                const SizedBox(height: 2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: _PreviewWarningCard(
+                    title: warningTitle,
+                    message: warningMessage,
+                    icon: warningIcon,
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Expanded(
                 child: Padding(
@@ -295,6 +348,63 @@ class _AttachmentPreviewSheet extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PreviewWarningCard extends StatelessWidget {
+  final String title;
+  final String message;
+  final IconData icon;
+
+  const _PreviewWarningCard({
+    required this.title,
+    required this.message,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.orange.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.orange.withValues(alpha: .18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.orange, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.orange,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -108,6 +108,9 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
   @override
   Widget build(BuildContext context) {
     final filteredItems = _filteredItems;
+    final emptyMessage = _items.isEmpty
+        ? 'Belum ada pengajuan.'
+        : 'Tidak ada pengajuan yang cocok dengan filter saat ini.';
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -146,18 +149,18 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                       ),
                     )
                   else if (filteredItems.isEmpty)
-                    const AppCard(
+                    AppCard(
                       child: Padding(
-                        padding: EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(22),
                         child: Column(
                           children: [
-                            Icon(Icons.inbox_rounded,
+                            const Icon(Icons.inbox_rounded,
                                 color: AppColors.muted, size: 38),
-                            SizedBox(height: 10),
+                            const SizedBox(height: 10),
                             Text(
-                              'Belum ada pengajuan.',
+                              emptyMessage,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.muted,
                                 fontWeight: FontWeight.w800,
                               ),

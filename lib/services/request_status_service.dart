@@ -27,11 +27,80 @@ class RequestStatusService {
 
   Future<int> countPendingRequests(AppSession session) async {
     try {
-      final items = await loadRequests(session);
-      return items.where((item) => item.status == 'pending').length;
+      final results = await Future.wait([
+        _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)),
+        _rtdb.getMap(FirebasePaths.qrRequests(session.companyId)),
+        _rtdb.getMap(FirebasePaths.attendanceCorrections(session.companyId)),
+      ]);
+
+      return _countPendingLeaveRequests(session, results[0]) +
+          _countPendingQrRequests(session, results[1]) +
+          _countPendingCorrections(session, results[2]);
     } catch (_) {
       return 0;
     }
+  }
+
+  int _countPendingLeaveRequests(
+    AppSession session,
+    Map<String, dynamic>? root,
+  ) {
+    var count = 0;
+    for (final entry in (root ?? const <String, dynamic>{}).entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final row = asMap(value);
+      if (asString(row['uid']) != session.uid) continue;
+      if (RequestStatusItem.normalizeStatus(
+              asString(row['status'], 'pending')) !=
+          'pending') {
+        continue;
+      }
+      count++;
+    }
+    return count;
+  }
+
+  int _countPendingQrRequests(
+    AppSession session,
+    Map<String, dynamic>? root,
+  ) {
+    var count = 0;
+    for (final entry in (root ?? const <String, dynamic>{}).entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final row = asMap(value);
+      final targetUid = asString(row['target_uid']);
+      final helperUid = asString(row['helper_uid']);
+      if (targetUid != session.uid && helperUid != session.uid) continue;
+      if (RequestStatusItem.normalizeStatus(
+              asString(row['status'], 'pending')) !=
+          'pending') {
+        continue;
+      }
+      count++;
+    }
+    return count;
+  }
+
+  int _countPendingCorrections(
+    AppSession session,
+    Map<String, dynamic>? root,
+  ) {
+    var count = 0;
+    for (final entry in (root ?? const <String, dynamic>{}).entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final row = asMap(value);
+      if (asString(row['uid']) != session.uid) continue;
+      if (RequestStatusItem.normalizeStatus(
+              asString(row['status'], 'pending')) !=
+          'pending') {
+        continue;
+      }
+      count++;
+    }
+    return count;
   }
 
   List<RequestStatusItem> _loadLeaveRequests(

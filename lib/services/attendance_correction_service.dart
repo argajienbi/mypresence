@@ -159,7 +159,12 @@ class AttendanceCorrectionService {
 
   bool _isActiveStatus(String status) {
     final normalized = RequestStatusItem.normalizeStatus(status);
-    return normalized == 'pending' || normalized == 'approved';
+    final raw = status.trim().toLowerCase();
+    return normalized == 'pending' ||
+        normalized == 'approved' ||
+        raw == 'pending_admin' ||
+        raw == 'processing' ||
+        raw == 'validated';
   }
 
   bool _isOverlap(String currentType, String existingType) {
