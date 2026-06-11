@@ -1,19 +1,19 @@
-# PATCH.md - MYPRESENCE Focused Home/Profile Polish
+# PATCH.md - MYPRESENCE Notification & Attendance Reminder Polish
 
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
-Fokus patch ini hanya sisa catatan perubahan terbaru. Poin 1-7 dari patch sebelumnya sudah dianggap selesai dan **jangan disentuh lagi** kecuali ada error compile langsung.
+Patch sebelumnya untuk single attendance card, refresh foto profil, back behavior, dan maps card sudah dianggap selesai. Jangan sentuh lagi kecuali ada error compile langsung.
 
-Fokus perubahan sekarang:
+Fokus patch ini hanya:
 
 ```text
-1. Redesign tombol absen menjadi single dynamic attendance card compact.
-2. Foto profil di Home harus langsung update setelah ganti foto dari kamera/galeri.
-3. Behavior tombol back: dari Riwayat/Profile kembali ke Home, popup keluar hanya saat back dari Home.
-4. Card Maps/Lokasi & Radius Absensi bisa diklik dan preview maps dibuat lebih wide/tidak terasa terpotong.
+1. Hapus banner approval cuti/izin/sakit dari Home.
+2. Pastikan approval pengajuan muncul di icon bell sebagai notifikasi singkat.
+3. Pastikan klik notifikasi approval mengarah ke Status Pengajuan/detail pengajuan yang relevan.
+4. Audit dan validasi trigger notifikasi status bar saat sudah/waktunya absen sesuai jadwal.
 ```
 
-Jangan mengerjakan fitur lain. Jangan refactor besar. Jangan mengubah package, Firebase config, struktur RTDB, schedule resolver, kamera absen, history 7 hari, popup logout, atau upload foto yang sudah selesai. Kita sedang merapikan sisa UX, bukan membuka festival bug baru.
+Jangan mengubah package, Firebase config, struktur RTDB utama, logic absensi yang sudah berjalan, kamera, history 7 hari, maps card, atau single attendance card. Kita sedang merapikan distribusi notifikasi, bukan mengadakan migrasi peradaban kecil-kecilan.
 
 ---
 
@@ -39,15 +39,12 @@ android/app/google-services.json
 lib/firebase_options.dart
 Firebase project config
 package name
-RTDB path
-AttendanceService submit path
-ScheduleService logic utama
-LeaveService
-QR approval/request logic
 CameraPresencePage behavior yang sudah diperbaiki
 ProxyQrCameraPage behavior yang sudah diperbaiki
-HistoryPage logic 7 hari yang sudah diperbaiki
 PhotoQualityService compress/resize yang sudah berjalan
+HistoryPage logic 7 hari yang sudah berjalan
+ClockAttendanceCard single dynamic card yang sudah berjalan
+RadiusCard clickable/detail lokasi yang sudah berjalan
 ```
 
 ---
@@ -69,410 +66,345 @@ flutter run
 flutter install
 ```
 
-Build akan dilakukan manual oleh user.
+Build dan test notifikasi di device akan dilakukan manual oleh user.
 
 ---
 
-# PATCH-01 - Single Dynamic Attendance Card Compact
+# PATCH-01 - Hapus Banner Approved Leave dari Home
 
 ## Masalah
 
-Tombol absen saat ini masih memakai dua tombol berdampingan `Clock In` dan `Clock Out`. Hasil 3D/elevated sebelumnya belum sesuai, ada teks terpotong dan icon kurang cocok.
+Saat pengajuan cuti/izin/sakit disetujui hari ini, Home menampilkan banner besar seperti:
 
-Aplikasi ini memakai selfie camera, bukan fingerprint. Jadi jangan gunakan icon fingerprint sebagai icon utama.
+```text
+Cuti Disetujui Hari Ini
+Cuti tahunan
+```
+
+User ingin informasi approval seperti ini muncul di icon bell/notifikasi dan halaman Status Pengajuan, bukan sebagai banner besar di Home.
 
 ## File target utama
 
 ```text
-lib/features/home/widgets/clock_attendance_card.dart
+lib/features/home/home_page.dart
 ```
 
-Boleh ubah `home_page.dart` hanya jika perlu mengirim jam masuk/jam pulang ke widget. Jangan ubah logic `_openAttendance()`.
+## Instruksi implementasi
 
-## Target desain
-
-Ubah menjadi **satu card absen dinamis** yang compact dan tidak terlalu besar.
-
-Bukan lagi:
+1. Hapus tampilan `_ApprovedLeaveBanner` dari body Home.
+2. Jangan tampilkan banner approval cuti/izin/sakit/lembur di Home.
+3. Home tetap fokus pada:
 
 ```text
-[Clock In] [Clock Out]
+- Lokasi & Radius Absensi
+- Tombol Absen
+- Menu Cepat
+- Pengumuman
 ```
 
-Menjadi:
+4. Jangan hapus logic `_approvedLeaveToday` sepenuhnya jika masih dipakai untuk validasi absensi.
+5. Logic validasi tetap:
 
 ```text
-[ Single Dynamic Attendance Card ]
+Jika hari ini ada cuti/izin/sakit yang sudah disetujui, user tidak wajib absen dan tidak langsung diarahkan ke selfie presensi.
 ```
 
-Ukuran card jangan terlalu tinggi. Card harus tetap proporsional agar `Menu Cepat` tidak terdorong terlalu jauh ke bawah.
-
-Rekomendasi ukuran:
-
-```text
-height: 112 - 128 px
-borderRadius: 28 - 32
-padding horizontal: 18 - 22
-icon circle kiri: 58 - 66 px
-arrow kanan: 38 - 44 px
-```
-
-Jangan gunakan tinggi 160-180 px karena terlalu dominan.
-
-## Icon utama
-
-Gunakan icon kamera/selfie, bukan fingerprint dan bukan check besar.
-
-Icon disarankan:
-
-```dart
-Icons.camera_alt_rounded
-Icons.photo_camera_front_rounded
-Icons.camera_enhance_rounded
-```
-
-Jangan gunakan:
-
-```dart
-Icons.fingerprint_rounded
-```
-
-Jangan gunakan ceklis besar sebagai icon utama.
-
-Status sudah masuk/pulang dijelaskan lewat teks, bukan icon besar.
-
-## State dan teks
-
-### State 1: belum absen masuk
-
-Kondisi:
-
-```text
-nextAction == 'masuk'
-hasIn == false
-hasOut == false
-```
-
-Tampilan:
-
-```text
-Title: Absen Masuk
-Subtitle: Tap untuk selfie presensi masuk
-Info kecil: Belum absen
-Icon kiri: kamera/selfie
-Arrow kanan: tampil
-Card: hijau gradient 3D/elevated
-```
-
-### State 2: sudah masuk, belum pulang
-
-Kondisi:
-
-```text
-nextAction == 'pulang'
-hasIn == true
-hasOut == false
-```
-
-Tampilan:
-
-```text
-Title: Absen Pulang
-Subtitle: Tap untuk selfie presensi pulang
-Info kecil: Masuk 07:32
-Icon kiri: kamera/selfie
-Arrow kanan: tampil
-Card: biru/cyan gradient 3D/elevated atau hijau-teal sesuai style app
-```
-
-### State 3: presensi selesai
-
-Kondisi:
-
-```text
-nextAction == 'done'
-hasIn == true
-hasOut == true
-```
-
-Tampilan:
-
-```text
-Title: Presensi Selesai
-Subtitle: Anda sudah absen masuk & pulang
-Info kecil: Masuk 07:32 • Pulang 17:05
-Icon kiri: kamera/selfie
-Arrow kanan: tidak tampil
-Card: hijau gradient 3D/elevated tapi non-clickable
-```
-
-Jangan tampilkan icon ceklis besar sebagai icon utama. Jika ingin tanda selesai, boleh badge kecil opsional, tetapi status utama tetap lewat teks.
-
-## Data jam masuk/pulang
-
-Jika `ClockAttendanceCard` belum menerima jam masuk/pulang, tambahkan parameter opsional:
-
-```dart
-final String? checkInTime;
-final String? checkOutTime;
-```
-
-Lalu dari `HomePage`, kirim nilai `masuk` dan `pulang` yang sudah dihitung di build.
-
-Jaga backward compatibility kalau memungkinkan.
-
-## Interaction behavior
-
-```text
-nextAction == 'masuk'  -> card bisa ditekan, panggil onPressed
-nextAction == 'pulang' -> card bisa ditekan, panggil onPressed
-nextAction == 'done'   -> card tidak bisa ditekan, jangan panggil onPressed
-```
-
-Boleh pakai animasi ringan:
-
-```text
-AnimatedContainer untuk gradient/shape
-AnimatedSwitcher untuk title/subtitle/info
-Durasi 200-300ms
-```
-
-Jangan tambah package animasi baru.
+6. Jika `_ApprovedLeaveBanner` tidak lagi dipakai di file mana pun, boleh hapus class widget-nya agar tidak jadi kode mati.
 
 ## Acceptance criteria
 
-- Area absen menjadi satu card besar dinamis, bukan dua tombol.
-- Card compact, tidak terlalu tinggi.
-- Icon utama kamera/selfie, bukan fingerprint.
-- Tidak ada icon ceklis besar sebagai icon utama.
-- Status masuk/pulang/selesai dijelaskan lewat teks.
-- Jam masuk dan jam pulang tampil jelas saat tersedia.
-- Tidak ada teks terpotong.
-- Tidak ada icon duplikat.
-- `onPressed` hanya berjalan saat nextAction masuk/pulang.
-- Tidak mengubah logic absensi, geofence, jadwal, kamera, Firebase.
+- Home tidak lagi menampilkan banner “Cuti/Izin/Sakit Disetujui Hari Ini”.
+- User dengan cuti/izin/sakit disetujui tetap tidak dipaksa absen.
+- Status lengkap tetap tersedia di Status Pengajuan.
+- Notifikasi singkat approval tetap tersedia di icon bell.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-02 - Foto Profil Home Langsung Update Setelah Ganti Foto
+# PATCH-02 - Approval Pengajuan Tetap Masuk Icon Bell sebagai Notifikasi Singkat
+
+## Kondisi saat ini
+
+Halaman Notifikasi sudah membaca dua sumber:
+
+```text
+Firestore notification inbox
+RTDB notifications/{uid}
+```
+
+Filter Notifikasi juga sudah punya kategori:
+
+```text
+Semua
+Belum dibaca
+Approval
+Jadwal
+Koreksi
+Presensi
+Sistem
+```
+
+Approval pengajuan seharusnya tampil sebagai notifikasi singkat di icon bell, sementara detail lengkap tetap ada di halaman Status Pengajuan.
+
+## File target kemungkinan
+
+```text
+lib/services/app_notification_service.dart
+lib/features/notifications/notifications_page.dart
+lib/features/notifications/notification_detail_page.dart
+lib/services/notification_router.dart
+lib/features/requests/request_status_page.dart
+lib/features/requests/request_status_detail_sheet.dart
+```
+
+Jika pembuatan notifikasi approval berasal dari admin_web/backend, jangan ubah schema secara asal. Cukup pastikan app Flutter bisa membaca dan mengarahkan dengan benar.
+
+## Aturan UX
+
+Jangan membuat duplikasi penuh.
+
+Pembagian yang benar:
+
+```text
+Home = tidak menampilkan banner approval.
+Icon Bell = notifikasi singkat bahwa status pengajuan berubah.
+Status Pengajuan = data lengkap dan riwayat pengajuan.
+```
+
+Contoh notifikasi bell:
+
+```text
+Cuti Disetujui
+Pengajuan cuti Anda pada 8 Jun 2026 - 12 Jun 2026 telah disetujui.
+```
+
+Atau:
+
+```text
+Izin Ditolak
+Pengajuan izin Anda ditolak. Lihat detail catatan admin.
+```
+
+## Instruksi implementasi
+
+1. Pastikan item approval dengan kata/ref berikut masuk filter personal notification:
+
+```text
+approval
+approved
+rejected
+leave
+izin
+cuti
+sakit
+lembur
+overtime
+correction
+koreksi
+qr
+attendance
+presensi
+```
+
+2. Pastikan notifikasi approval tidak dianggap pengumuman umum.
+3. Pastikan filter `Approval` menangkap:
+
+```text
+izin
+sakit
+cuti
+lembur
+leave
+overtime
+approved
+rejected
+approval
+```
+
+4. Jangan tampilkan data detail lengkap pengajuan di list notifikasi. List cukup ringkas.
+5. Detail penuh tetap dibuka dari Status Pengajuan/detail pengajuan.
+
+## Acceptance criteria
+
+- Approval cuti/izin/sakit/lembur tampil di filter `Approval` pada halaman Notifikasi jika datanya memang ada di Firestore/RTDB inbox.
+- Bell badge menghitung unread approval sebagai personal notification.
+- Pengumuman umum tetap tidak dihitung sebagai personal approval.
+- Tidak ada banner approval di Home.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-03 - Klik Notifikasi Approval Harus Mengarah ke Status Pengajuan
 
 ## Masalah
 
-Setelah user mengganti foto profil dari kamera/galeri, foto di halaman Profil berubah, tetapi foto profil di Home masih kosong/lama. Foto baru muncul setelah logout/login.
+Saat ini routing notifikasi dengan `ref_type` mengandung `leave` atau `approval` berpotensi diarahkan ke `MainShell(initialIndex: 0)`, yaitu tab Riwayat. Ini kurang tepat.
 
-Penyebab utama: Home masih memakai `AppSession` lama. Profile update hanya mengubah state lokal `_photoUrl` di ProfilePage.
+Approval pengajuan harus mengarah ke halaman Status Pengajuan atau detail pengajuan terkait.
 
-## File target kemungkinan
+## File target utama
+
+```text
+lib/services/notification_router.dart
+```
+
+Target tambahan jika perlu:
 
 ```text
 lib/features/profile/profile_page.dart
-lib/features/home/main_shell.dart
-lib/features/home/home_page.dart
-lib/features/home/widgets/home_sticky_profile_header.dart
-lib/core/models/app_session.dart
-lib/services/profile_service.dart
+lib/features/requests/request_status_page.dart
+lib/features/requests/request_status_detail_sheet.dart
 ```
 
 ## Instruksi implementasi
 
-Implementasikan refresh session/profile setelah foto profil berhasil diupload.
-
-Rekomendasi aman:
-
-1. `MainShell` menyimpan session aktif sebagai state lokal, bukan hanya memakai `widget.session` langsung.
-2. Tambahkan callback ke `ProfilePage`, misalnya:
+1. Ubah routing untuk notifikasi approval/leave/izin/cuti/sakit/lembur/koreksi agar menuju Status Pengajuan.
+2. Jika `RequestStatusPage` bisa menerima filter/initial ref, tambahkan parameter opsional:
 
 ```dart
-final ValueChanged<AppSession>? onSessionUpdated;
+initialStatus
+initialType
+highlightRefId
 ```
 
-3. Setelah foto profil berhasil diupload, fetch ulang data user/session terbaru melalui service yang sudah ada.
-4. Panggil `onSessionUpdated(newSession)`.
-5. `MainShell` melakukan `setState(() => _session = newSession)`.
-6. `HomePage`, `HistoryPage`, dan `ProfilePage` menerima `_session` terbaru.
-7. `HomeStickyProfileHeader` otomatis rebuild dengan foto terbaru.
+3. Jika detail langsung belum mudah, minimal arahkan ke halaman Status Pengajuan, bukan Riwayat.
+4. Jika `ref_id` tersedia, gunakan untuk highlight atau membuka detail terkait.
+5. Jangan membuat route baru yang merusak navigation utama.
 
-Jika membuat AppSession baru terlalu besar, minimal update field photoUrl pada session copy. Namun jangan hardcode data penting.
-
-## Antisipasi image cache
-
-Jika upload foto profil memakai URL/path yang sama, Flutter `NetworkImage` bisa tetap menampilkan cache lama.
-
-Tambahkan cache busting aman:
+## Mapping rekomendasi
 
 ```text
-photoUrl + '?v=$updatedAt'
+ref_type contains leave/izin/cuti/sakit/lembur/approval -> RequestStatusPage
+ref_type contains correction/koreksi -> RequestStatusPage filter koreksi
+ref_type contains qr -> RequestStatusPage atau detail QR request jika tersedia
+ref_type contains attendance/presensi -> Riwayat/Detail Presensi
+ref_type contains schedule/jadwal -> Home + detail jadwal
+ref_type contains announcement/pengumuman -> Pengumuman
 ```
-
-atau gunakan key berdasarkan URL/timestamp:
-
-```dart
-key: ValueKey(photoUrl)
-```
-
-Prefer path file unik berbasis timestamp jika sudah sesuai dengan ProfileService.
 
 ## Acceptance criteria
 
-- Setelah ganti foto dari kamera, Home langsung menampilkan foto baru tanpa logout/login.
-- Setelah pilih foto dari galeri, Home langsung menampilkan foto baru tanpa logout/login.
-- ProfilePage tetap menampilkan foto baru.
-- Employee QR jika memakai foto profil tetap menerima foto terbaru jika relevan.
-- Tidak perlu restart app.
-- Tidak mengubah auth flow selain refresh session/profile.
+- Klik notifikasi cuti/izin/sakit disetujui membuka Status Pengajuan/detail pengajuan.
+- Klik notifikasi approval tidak lagi hanya membuka tab Riwayat.
+- Tombol `Lihat Detail Pengajuan` di `NotificationDetailPage` mengarah ke tempat yang benar.
+- Jika ref id tidak ditemukan, fallback tetap aman ke Status Pengajuan.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-03 - Back Button: Riwayat/Profile Kembali ke Home, Popup Hanya dari Home
+# PATCH-04 - Audit Trigger Notifikasi Status Bar Saat Waktu Absen Sesuai Jadwal
 
 ## Masalah
 
-Saat tombol back Android ditekan dari tab Riwayat atau Profil, popup keluar aplikasi langsung muncul. User ingin perilaku default lebih natural: kembali dulu ke Home.
+User belum mengetes apakah alert/notifikasi status bar muncul saat sudah masuk waktu absen sesuai jadwal.
 
-## File target
-
-```text
-lib/features/home/main_shell.dart
-```
-
-## Logic final
-
-Index tab saat ini diasumsikan:
+Saat ini service reminder perlu diaudit agar jelas:
 
 ```text
-0 = Riwayat
-1 = Home
-2 = Profil
+- kapan notifikasi dijadwalkan
+- apakah muncul di status bar Android
+- apakah masuk icon bell/inbox
+- apakah tap notification membuka halaman yang tepat
 ```
 
-Aturan:
+## File target utama
 
 ```text
-Jika user di tab Riwayat:
-Back -> pindah ke Home
-
-Jika user di tab Profil:
-Back -> pindah ke Home
-
-Jika user di tab Home:
-Back -> tampilkan popup “Keluar dari Aplikasi?”
+lib/services/attendance_reminder_service.dart
+lib/services/local_notification_service.dart
+lib/features/home/home_page.dart
+lib/services/notification_router.dart
+AndroidManifest.xml jika izin notifikasi/exact alarm perlu dicek
 ```
 
-Jangan tampilkan popup keluar dari tab Riwayat/Profile.
+## Kondisi yang perlu diperiksa
+
+Dari logic sekarang, reminder kemungkinan dijadwalkan:
+
+```text
+- 10 menit sebelum jam kerja mulai untuk absen masuk
+- 10 menit sebelum jam kerja selesai untuk absen pulang
+```
+
+Codex harus memastikan apakah kebutuhan final adalah:
+
+```text
+A. Notifikasi 10 menit sebelum waktu absen
+B. Notifikasi tepat saat jam absen dimulai
+C. Keduanya
+```
+
+Untuk sekarang, jangan mengubah drastis tanpa perlu. Minimal audit dan pastikan notifikasi 10 menit sebelum berjalan. Jika mudah dan aman, tambahkan notifikasi tepat waktu dengan ID berbeda.
 
 ## Instruksi implementasi
 
-Ubah handler `PopScope` di `MainShell` menjadi seperti konsep berikut:
+1. Pastikan local notification sudah initialize saat app start.
+2. Pastikan permission notifikasi Android 13+ (`POST_NOTIFICATIONS`) diminta/ditangani.
+3. Pastikan notification channel high importance dibuat.
+4. Pastikan scheduled notification memakai payload yang benar:
 
-```dart
-onPopInvokedWithResult: (didPop, _) {
-  if (didPop) return;
-
-  if (_index != 1) {
-    setState(() => _index = 1);
-    return;
-  }
-
-  unawaited(_confirmExit());
-}
+```text
+ref_type: attendance_reminder
+reminder_action: check_in / check_out
 ```
 
-Pastikan `_confirmExit()` hanya dipanggil saat tab Home aktif.
+5. Pastikan notifikasi juga tercatat di RTDB `notifications/{uid}` agar muncul di icon bell.
+6. Pastikan reminder tidak muncul jika:
+
+```text
+- hari libur
+- bukan workday
+- user sudah absen masuk untuk check_in
+- user sudah absen pulang untuk check_out
+- user punya izin/sakit/cuti disetujui hari ini
+```
+
+7. Pastikan saat user selesai absen, reminder lama dibersihkan/ditandai inactive/read.
+8. Pastikan tap notifikasi attendance reminder membuka Home, bukan halaman kosong.
+9. Jika menggunakan `inexactAllowWhileIdle`, catat bahwa waktu muncul bisa tidak presisi penuh di beberapa device Android. Jangan klaim exact alarm kecuali memakai exact scheduling dan izin yang sesuai.
+
+## Optional improvement jika aman
+
+Tambahkan dua tahap reminder:
+
+```text
+check_in_pre   -> 10 menit sebelum jam masuk
+check_in_now   -> tepat saat jam masuk/checkInStart
+check_out_pre  -> 10 menit sebelum jam pulang
+check_out_now  -> tepat saat jam pulang/checkOutStart atau workEnd sesuai logic jadwal
+```
+
+Gunakan notification ID berbeda agar tidak saling overwrite.
+
+Namun jika perubahan ini berisiko besar, cukup audit dan rapikan existing reminder dulu.
 
 ## Acceptance criteria
 
-- Back dari Riwayat pindah ke Home.
-- Back dari Profil pindah ke Home.
-- Back dari Home menampilkan popup keluar aplikasi.
-- Batal pada popup tetap menutup dialog saja.
-- Keluar pada popup tetap menutup aplikasi.
-- Back dari child route seperti kamera/detail/form tetap berjalan normal.
+- Reminder absen masuk dijadwalkan sesuai jadwal user.
+- Reminder absen pulang dijadwalkan sesuai jadwal user.
+- Status bar Android menampilkan notifikasi saat waktunya tiba.
+- Notifikasi masuk ke icon bell/inbox sebagai personal notification.
+- Tap notifikasi membuka Home atau flow presensi yang relevan.
+- Reminder tidak muncul setelah user sudah melakukan aksi terkait.
+- Reminder tidak muncul saat user punya cuti/izin/sakit disetujui hari ini.
 - `flutter analyze` pass.
 
----
+## Catatan manual test untuk user
 
-# PATCH-04 - Card Maps Bisa Diklik dan Preview Dibuat Lebih Wide
-
-## Masalah
-
-Card `Lokasi & Radius Absensi` di Home sekarang terasa kurang wide. Area maps terlihat terpotong/sempit dan card belum bisa diklik untuk melihat detail lokasi.
-
-## File target kemungkinan
+Codex wajib menulis catatan manual test seperti ini di laporan akhir:
 
 ```text
-lib/features/home/widgets/radius_card.dart
-lib/features/home/home_page.dart
+Manual test reminder:
+1. Buat jadwal hari ini dengan jam masuk 5-15 menit dari waktu sekarang.
+2. Login ke app dan buka Home agar reminder terschedule.
+3. Pastikan permission notifikasi aktif.
+4. Kunci/minimize app.
+5. Tunggu sampai waktu reminder.
+6. Cek status bar Android.
+7. Tap notifikasi dan pastikan membuka Home.
+8. Cek icon bell, reminder harus muncul sebagai personal notification.
+9. Lakukan absen masuk, lalu pastikan reminder masuk tidak muncul lagi.
 ```
-
-Jika membuat sheet baru:
-
-```text
-lib/features/home/widgets/location_detail_sheet.dart
-```
-
-## Target UX
-
-1. Card maps di Home bisa diklik.
-2. Saat diklik, tampilkan detail lokasi.
-3. Preview maps di Home dibuat lebih wide/tidak terasa terpotong.
-4. Detail lokasi menampilkan maps lebih besar dan info geofence lengkap.
-
-## Opsi implementasi yang disarankan
-
-Gunakan bottom sheet, bukan halaman baru dulu.
-
-Tap pada card:
-
-```text
-RadiusCard -> showLocationDetailSheet(...)
-```
-
-Bottom sheet berisi:
-
-```text
-- Judul: Detail Lokasi Absensi
-- Nama kantor
-- Status lokasi valid/tidak valid
-- Maps preview lebih besar/wide
-- Radius kantor
-- Jarak user ke kantor
-- Latitude/longitude kantor
-- Latitude/longitude user
-```
-
-Jika ada tombol tambahan, boleh tambahkan:
-
-```text
-Buka di Maps
-```
-
-Tapi jangan wajib jika butuh dependency baru. Kalau pakai URL launcher belum ada, jangan tambah dependency hanya untuk ini.
-
-## Perbaikan visual RadiusCard
-
-- Buat area map di card Home sedikit lebih tinggi/lebar.
-- Kurangi clipping/padding yang membuat maps terasa terpotong.
-- Tambahkan affordance bahwa card bisa diklik:
-
-```text
-Lihat detail
-atau icon chevron kecil
-```
-
-- Tetap pertahankan informasi radius dan jarak di bawah maps.
-- Jangan mengubah logic location/geofence.
-
-## Acceptance criteria
-
-- Card maps bisa diklik.
-- Klik card membuka bottom sheet/detail lokasi.
-- Maps di Home terlihat lebih wide dan tidak terlalu terpotong.
-- Detail lokasi menampilkan info kantor, radius, jarak, status lokasi, koordinat kantor dan user.
-- Tidak mengubah logic LocationService/geofence.
-- Jika user location belum tersedia, UI tetap aman dan menampilkan placeholder.
-- `flutter analyze` pass.
 
 ---
 
@@ -483,14 +415,13 @@ lib/features/attendance/camera_presence_page.dart
 lib/features/proxy_qr/proxy_qr_camera_page.dart
 lib/services/photo_quality_service.dart
 lib/features/history/history_page.dart
-lib/features/history/attendance_detail_sheet.dart
-lib/features/requests/request_status_detail_sheet.dart
+lib/features/home/widgets/clock_attendance_card.dart
+lib/features/home/widgets/radius_card.dart
+lib/features/home/widgets/location_detail_sheet.dart
 android/app/build.gradle
 android/app/google-services.json
 lib/firebase_options.dart
 ```
-
-Poin kamera, photo quality, history 7 hari, popup logout, dan warning foto sudah selesai. Jangan dirusak. Ini bukan tantangan.
 
 ---
 
@@ -507,17 +438,21 @@ Setelah selesai, Codex wajib menulis laporan:
 ## Validation
 - flutter analyze: pass/fail
 
-## Package Check
-- namespace:
-- applicationId:
+## Notification Routing Check
+- Approval notification route:
+- Attendance reminder route:
+- Bell inbox source:
 
 ## Manual Build
 - Tidak dijalankan oleh Codex. Build dilakukan manual oleh user.
 
+## Manual Test Notes
+- Cara test reminder status bar:
+- Risiko Android permission/battery optimization:
+
 ## Notes
-- Apakah poin kamera/history sebelumnya tidak disentuh:
+- Apakah kamera/history/card absen/maps tidak disentuh:
 - Risiko tersisa:
-- Hal yang perlu dicek manual:
 ```
 
 Jangan menulis hasil build karena build tidak diminta.
@@ -527,10 +462,10 @@ Jangan menulis hasil build karena build tidak diminta.
 # Urutan pengerjaan wajib
 
 ```text
-1. Ubah ClockAttendanceCard menjadi single dynamic attendance card compact.
-2. Tambahkan refresh session/profile agar foto Home update setelah ganti foto.
-3. Ubah behavior back button di MainShell.
-4. Buat RadiusCard clickable dan tambahkan detail lokasi/maps bottom sheet.
+1. Hapus banner approved leave dari Home tanpa menghapus validasi cuti/izin/sakit.
+2. Audit filter personal notification dan approval di icon bell.
+3. Perbaiki routing klik approval ke Status Pengajuan/detail pengajuan.
+4. Audit scheduled attendance reminder ke status bar dan icon bell.
 5. flutter analyze.
-6. Tulis laporan akhir.
+6. Tulis laporan akhir lengkap dengan catatan manual test.
 ```
