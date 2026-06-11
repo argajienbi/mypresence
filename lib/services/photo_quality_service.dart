@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
+
+import 'package:image/image.dart' as img;
 
 class PhotoQualityCheckResult {
   final String status;
@@ -63,8 +66,74 @@ class PhotoQualityCheckResult {
 }
 
 class PhotoQualityService {
+  static const int maxUploadFileSizeBytes = 1024 * 1024;
+  static const int maxUploadSidePx = 1600;
+  static const int minUploadSidePx = 600;
   static const String warningMessage =
-      'Foto terlihat kurang jelas. Anda tetap bisa mengirim, tetapi admin mungkin perlu validasi tambahan.';
+      'Kualitas foto standar. Admin dapat memvalidasi jika diperlukan.';
+
+  Future<File> prepareForUpload(File file) async {
+    if (!await file.exists()) {
+      throw Exception('Foto tidak ditemukan. Silakan ambil foto ulang.');
+    }
+
+    final fileSize = await file.length();
+    if (fileSize <= 0) {
+      throw Exception('Foto belum valid. Silakan ulangi foto.');
+    }
+
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) {
+      throw Exception('Foto belum valid. Silakan ulangi foto.');
+    }
+
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) {
+      throw Exception('Foto belum bisa diproses. Silakan ulangi foto.');
+    }
+
+    final normalized = img.bakeOrientation(decoded);
+    final longestSide = math.max(normalized.width, normalized.height);
+    final needsResize =
+        longestSide > maxUploadSidePx || fileSize > maxUploadFileSizeBytes;
+    if (!needsResize) {
+      return file;
+    }
+
+    final candidates = <int>{
+      math.min(longestSide, maxUploadSidePx),
+      1440,
+      1280,
+    }.where((side) => side > 0 && side <= longestSide).toList();
+
+    if (candidates.isEmpty) {
+      candidates.add(longestSide);
+    }
+
+    final qualities = <int>[85, 80, 75];
+    final tempDir = Directory('${Directory.systemTemp.path}/mypresensi');
+    await tempDir.create(recursive: true);
+
+    for (final targetSide in candidates) {
+      final resized = _resizeToSide(normalized, targetSide);
+      for (final quality in qualities) {
+        final encoded = img.encodeJpg(resized, quality: quality);
+        if (encoded.length > maxUploadFileSizeBytes) {
+          continue;
+        }
+
+        final output = File(
+          '${tempDir.path}/photo_${DateTime.now().microsecondsSinceEpoch}_${targetSide}_q$quality.jpg',
+        );
+        await output.writeAsBytes(encoded, flush: true);
+        return output;
+      }
+    }
+
+    throw Exception(
+      'Ukuran foto masih terlalu besar. Silakan ulangi foto agar file lebih ringan.',
+    );
+  }
 
   Future<PhotoQualityCheckResult> validate(File file) async {
     try {
@@ -75,6 +144,12 @@ class PhotoQualityService {
       final fileSize = await file.length();
       if (fileSize <= 0) {
         return PhotoQualityCheckResult.invalid();
+      }
+      if (fileSize > maxUploadFileSizeBytes) {
+        return PhotoQualityCheckResult.invalid(
+          message:
+              'Ukuran foto masih terlalu besar. Silakan ulangi foto agar file lebih ringan.',
+        );
       }
 
       final bytes = await file.readAsBytes();
@@ -93,7 +168,7 @@ class PhotoQualityService {
       }
 
       final minSide = width < height ? width : height;
-      if (fileSize < 12 * 1024 || minSide < 600) {
+      if (fileSize < 12 * 1024 || minSide < minUploadSidePx) {
         return PhotoQualityCheckResult.warning(
           fileSize: fileSize,
           width: width,
@@ -110,5 +185,17 @@ class PhotoQualityService {
     } catch (_) {
       return PhotoQualityCheckResult.invalid();
     }
+  }
+
+  img.Image _resizeToSide(img.Image source, int targetSide) {
+    if (source.width <= targetSide && source.height <= targetSide) {
+      return source;
+    }
+
+    if (source.width >= source.height) {
+      return img.copyResize(source, width: targetSide);
+    }
+
+    return img.copyResize(source, height: targetSide);
   }
 }

@@ -119,14 +119,33 @@ class _CameraPresencePageState extends State<CameraPresencePage>
       );
 
       await _disposeCameraController();
-      newController = CameraController(
-        selected,
+      Object? lastError;
+      for (final preset in const [
+        ResolutionPreset.high,
         ResolutionPreset.medium,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
-      );
+      ]) {
+        final candidate = CameraController(
+          selected,
+          preset,
+          enableAudio: false,
+          imageFormatGroup: ImageFormatGroup.jpeg,
+        );
+        try {
+          await candidate.initialize();
+          newController = candidate;
+          break;
+        } catch (error) {
+          lastError = error;
+          try {
+            await candidate.dispose();
+          } catch (_) {}
+        }
+      }
 
-      await newController.initialize();
+      if (newController == null) {
+        throw lastError ?? Exception('Kamera tidak dapat diinisialisasi.');
+      }
+
       await newController.lockCaptureOrientation(DeviceOrientation.portraitUp);
 
       if (!mounted) {
@@ -136,7 +155,7 @@ class _CameraPresencePageState extends State<CameraPresencePage>
       setState(() {
         _controller = newController;
         _initializing = false;
-        _status = 'Posisikan wajah di dalam oval';
+        _status = 'Pastikan wajah terlihat jelas di kamera.';
       });
     } catch (e) {
       if (newController != null) {
@@ -199,7 +218,9 @@ class _CameraPresencePageState extends State<CameraPresencePage>
       final file = await controller.takePicture();
       if (!mounted) return;
       final captured = File(file.path);
-      final quality = await _photoQualityService.validate(captured);
+      setState(() => _status = 'Menyiapkan foto...');
+      final prepared = await _photoQualityService.prepareForUpload(captured);
+      final quality = await _photoQualityService.validate(prepared);
       if (!mounted) return;
       if (!quality.isValid) {
         AppToast.error(context, quality.message);
@@ -211,11 +232,9 @@ class _CameraPresencePageState extends State<CameraPresencePage>
         return;
       }
       setState(() {
-        _photo = captured;
+        _photo = prepared;
         _photoQuality = quality;
-        _status = quality.hasWarning
-            ? quality.message
-            : 'Foto berhasil diambil. Periksa hasilnya.';
+        _status = 'Foto siap dikirim.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -248,7 +267,7 @@ class _CameraPresencePageState extends State<CameraPresencePage>
     setState(() {
       _photo = null;
       _photoQuality = null;
-      _status = 'Posisikan wajah di dalam oval';
+      _status = 'Pastikan wajah terlihat jelas di kamera.';
     });
 
     if (_controller == null || !_controller!.value.isInitialized) {
@@ -339,8 +358,6 @@ class _CameraPresencePageState extends State<CameraPresencePage>
         widget.actionType == 'pulang' ? 'Absen Pulang' : 'Absen Masuk';
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     const bottomSheetHeight = 176.0;
-    final topInset = MediaQuery.of(context).padding.top;
-    final guideTop = topInset + 96.0;
 
     return AppLoadingOverlay(
       visible: _submitting,
@@ -362,37 +379,13 @@ class _CameraPresencePageState extends State<CameraPresencePage>
                 onSwitch: _isBusy ? null : _switchCamera,
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: guideTop,
-              bottom: bottomSheetHeight + bottomPadding + 72,
-              child: Center(
-                child: IgnorePointer(
-                  child: Container(
-                    width: 196,
-                    height: 258,
-                    decoration: BoxDecoration(
-                      border:
-                          Border.all(color: const Color(0xFF8ED5F6), width: 3),
-                      borderRadius: BorderRadius.circular(150),
-                      boxShadow: [
-                        BoxShadow(
-                            color:
-                                const Color(0xFF8ED5F6).withValues(alpha: .30),
-                            blurRadius: 24),
-                      ],
-                    ),
-                  ),
-                ),
+            if (_photo == null)
+              Positioned(
+                left: 28,
+                right: 28,
+                bottom: bottomSheetHeight + bottomPadding + 16,
+                child: _StatusPill(status: _status),
               ),
-            ),
-            Positioned(
-              left: 28,
-              right: 28,
-              bottom: bottomSheetHeight + bottomPadding + 16,
-              child: _StatusPill(status: _status),
-            ),
             Positioned(
               left: 0,
               right: 0,
@@ -400,7 +393,6 @@ class _CameraPresencePageState extends State<CameraPresencePage>
               child: _CameraBottomSheet(
                 officeName: widget.session.officeName,
                 photoTaken: _photo != null,
-                photoQuality: _photoQuality,
                 canInteract: !_isBusy,
                 canSubmit: _photo == null ? _controllerReady : true,
                 capturing: _capturing,
@@ -503,7 +495,6 @@ class _StatusPill extends StatelessWidget {
 class _CameraBottomSheet extends StatelessWidget {
   final String officeName;
   final bool photoTaken;
-  final PhotoQualityCheckResult? photoQuality;
   final bool canInteract;
   final bool canSubmit;
   final bool capturing;
@@ -513,7 +504,6 @@ class _CameraBottomSheet extends StatelessWidget {
   const _CameraBottomSheet({
     required this.officeName,
     required this.photoTaken,
-    required this.photoQuality,
     required this.canInteract,
     required this.canSubmit,
     required this.capturing,
@@ -523,7 +513,6 @@ class _CameraBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasWarning = photoQuality?.hasWarning == true;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
       decoration: const BoxDecoration(
@@ -563,38 +552,6 @@ class _CameraBottomSheet extends StatelessWidget {
                         color: AppColors.text)),
               ],
             ),
-            if (hasWarning) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.orange.withValues(alpha: .10),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                      color: AppColors.orange.withValues(alpha: .18)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.info_outline_rounded,
-                        color: AppColors.orange, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        photoQuality?.message ?? '',
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 12,
-                          height: 1.35,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -604,14 +561,9 @@ class _CameraBottomSheet extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: canInteract ? onSwitchOrRetake : null,
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: hasWarning
-                            ? AppColors.orange.withValues(alpha: .10)
-                            : Colors.white,
-                        foregroundColor:
-                            hasWarning ? AppColors.orange : AppColors.text,
-                        side: BorderSide(
-                            color:
-                                hasWarning ? AppColors.orange : AppColors.line),
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.line),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -620,15 +572,15 @@ class _CameraBottomSheet extends StatelessWidget {
                         photoTaken
                             ? Icons.refresh_rounded
                             : Icons.cameraswitch_rounded,
-                        color: hasWarning ? AppColors.orange : AppColors.text,
+                        color: AppColors.text,
                         size: 18,
                       ),
                       label: Text(
                         photoTaken ? 'Ulangi Foto' : 'Ganti Kamera',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: hasWarning ? AppColors.orange : AppColors.text,
+                        style: const TextStyle(
+                          color: AppColors.text,
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
                         ),
@@ -685,7 +637,7 @@ class _CameraBottomSheet extends StatelessWidget {
             Text(
               photoTaken
                   ? 'Periksa hasil foto, lalu kirim presensi.'
-                  : 'Pastikan wajah berada di tengah oval.',
+                  : 'Pastikan wajah terlihat jelas sebelum mengambil foto.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: AppColors.muted,

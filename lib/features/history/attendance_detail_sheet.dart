@@ -623,25 +623,10 @@ class _AttendanceDetailSheet extends StatelessWidget {
     Map<String, dynamic>? masuk,
     Map<String, dynamic>? pulang,
   ) {
-    final direct = asString(attendance['photo_quality_warning']);
-    if (direct.isNotEmpty) return direct;
-    final nestedIn = asString(masuk?['photo_quality_warning']);
-    if (nestedIn.isNotEmpty) return nestedIn;
-    final nestedOut = asString(pulang?['photo_quality_warning']);
-    if (nestedOut.isNotEmpty) return nestedOut;
     return '';
   }
 
   String _photoWarning(Map<String, dynamic>? row) {
-    if (row == null) return '';
-    final warning = asString(row['photo_quality_warning']);
-    if (warning.isNotEmpty) return warning;
-
-    final status = asString(row['photo_quality_status']).toLowerCase();
-    if (status == 'warning') {
-      return 'Foto terlihat kurang jelas. Anda tetap bisa mengirim, tetapi admin mungkin perlu validasi tambahan.';
-    }
-
     return '';
   }
 }

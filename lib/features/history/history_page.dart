@@ -468,7 +468,13 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     final summary = _summary();
-    final visibleDailyStatuses = _dailyStatuses.where((item) => item.status != 'libur' && item.status != 'tanpa_data').toList(growable: false);
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final visibleDailyStatuses = _dailyStatuses.where((item) {
+      final dateOnly = DateTime(item.date.year, item.date.month, item.date.day);
+      if (dateOnly.isAfter(todayOnly)) return false;
+      return item.status != 'libur' && item.status != 'tanpa_data';
+    }).take(7).toList(growable: false);
     final hasAnyData =
         visibleDailyStatuses.isNotEmpty || _leaveRows.isNotEmpty || _overtimeRows.isNotEmpty;
 
@@ -506,7 +512,9 @@ class _HistoryPageState extends State<HistoryPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const _SectionTitle('Daftar Presensi'),
+                const _SectionTitle('Daftar Presensi Terbaru'),
+                const SizedBox(height: 4),
+                const _SectionNote('Menampilkan 7 hari terakhir.'),
                 const SizedBox(height: 10),
                 if (_loading)
                   const AppCard(
@@ -526,7 +534,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           Icon(Icons.inbox_rounded, color: AppColors.muted, size: 38),
                           SizedBox(height: 10),
                           Text(
-                            'Belum ada riwayat presensi pada bulan ini.',
+                            'Belum ada presensi dalam 7 hari terakhir.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AppColors.muted,
@@ -543,7 +551,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       child: Padding(
                         padding: EdgeInsets.all(18),
                         child: Text(
-                          'Belum ada status presensi harian untuk bulan ini.',
+                          'Belum ada presensi dalam 7 hari terakhir.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: AppColors.muted,

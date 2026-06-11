@@ -228,14 +228,6 @@ class _RequestStatusDetailSheet extends StatelessWidget {
   String _valueOrDash(String value) => value.trim().isEmpty ? '-' : value;
 
   String _attachmentWarningMessage(Map<String, dynamic> row) {
-    final warning = asString(row['photo_quality_warning']);
-    if (warning.isNotEmpty) return warning;
-
-    final status = asString(row['photo_quality_status']).toLowerCase();
-    if (status == 'warning') {
-      return 'Foto terlihat kurang jelas. Anda tetap bisa mengirim, tetapi admin mungkin perlu validasi tambahan.';
-    }
-
     return '';
   }
 }

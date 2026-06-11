@@ -29,9 +29,9 @@ class ClockAttendanceCard extends StatelessWidget {
         Expanded(
           child: _ClockActionCard(
             title: 'Clock In',
-            subtitle: hasIn ? 'Sudah masuk' : 'Masuk',
+            subtitle: hasIn ? 'Selesai' : clockInActive ? 'Masuk' : 'Menunggu',
             icon: hasIn ? Icons.check_rounded : Icons.fingerprint_rounded,
-            color: AppColors.green,
+            accentColor: AppColors.green,
             active: clockInActive,
             completed: hasIn,
             onTap: clockInActive ? onPressed : null,
@@ -41,9 +41,10 @@ class ClockAttendanceCard extends StatelessWidget {
         Expanded(
           child: _ClockActionCard(
             title: 'Clock Out',
-            subtitle: hasOut ? 'Sudah pulang' : 'Pulang',
+            subtitle:
+                hasOut ? 'Selesai' : clockOutActive ? 'Pulang' : 'Menunggu',
             icon: hasOut ? Icons.check_rounded : Icons.fingerprint_rounded,
-            color: AppColors.blue,
+            accentColor: AppColors.blue,
             active: clockOutActive,
             completed: hasOut,
             onTap: clockOutActive ? onPressed : null,
@@ -58,7 +59,7 @@ class _ClockActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color color;
+  final Color accentColor;
   final bool active;
   final bool completed;
   final VoidCallback? onTap;
@@ -67,7 +68,7 @@ class _ClockActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.accentColor,
     required this.active,
     required this.completed,
     required this.onTap,
@@ -75,95 +76,188 @@ class _ClockActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = active;
-    final visualColor = completed ? AppColors.green : active ? color : const Color(0xFF9CA3AF);
+    final isInteractive = active && onTap != null;
+    final isHighlighted = active || completed;
+    final gradient = completed
+        ? LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF42C974),
+              const Color(0xFF179A57),
+            ],
+          )
+        : active
+            ? LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  accentColor.withValues(alpha: .98),
+                  Color.lerp(accentColor, Colors.black, .18) ?? accentColor,
+                ],
+              )
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFF7FAFD),
+                  Color(0xFFE8EEF5),
+                ],
+              );
+    final borderColor = completed
+        ? Colors.white.withValues(alpha: .24)
+        : active
+            ? Colors.white.withValues(alpha: .24)
+            : AppColors.line;
+    final shadowColor = completed
+        ? const Color(0xFF179A57).withValues(alpha: .34)
+        : active
+            ? accentColor.withValues(alpha: .30)
+            : Colors.black.withValues(alpha: .08);
+    final contentColor = isHighlighted ? Colors.white : AppColors.text;
+    final mutedColor = isHighlighted
+        ? Colors.white.withValues(alpha: .88)
+        : AppColors.muted;
+    final iconColor = completed
+        ? const Color(0xFF179A57)
+        : active
+            ? accentColor
+            : const Color(0xFF9AA5B1);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(30),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          height: 92,
-          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          height: 108,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: active
-                ? color.withValues(alpha: .12)
-                : completed
-                    ? AppColors.green.withValues(alpha: .08)
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: active
-                  ? color.withValues(alpha: .35)
-                  : completed
-                      ? AppColors.green.withValues(alpha: .30)
-                      : AppColors.line,
-              width: active ? 1.4 : 1,
-            ),
+            borderRadius: BorderRadius.circular(30),
+            gradient: gradient,
+            border: Border.all(color: borderColor, width: active ? 1.2 : 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .07),
-                blurRadius: 18,
+                color: shadowColor,
+                blurRadius: active || completed ? 22 : 18,
                 offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .04),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
               ),
             ],
           ),
-          child: Row(
+          child: Stack(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: visualColor.withValues(alpha: enabled || completed ? .15 : .10),
-                ),
-                child: Icon(icon, color: visualColor, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: active || completed ? AppColors.text : const Color(0xFF8E98A5),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(alpha: .24),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: .08),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: visualColor,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: .10),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: iconColor, size: 27),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: contentColor,
+                            fontSize: 15.2,
+                            fontWeight: FontWeight.w900,
+                            height: 1.05,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: mutedColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (active)
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .22),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withValues(alpha: .30)),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 21,
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 36, height: 36),
+                ],
+              ),
+              if (isInteractive)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: .16),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: visualColor.withValues(alpha: active ? .16 : .10),
-                ),
-                child: Icon(
-                  completed ? Icons.check_rounded : Icons.chevron_right_rounded,
-                  color: visualColor,
-                  size: 23,
-                ),
-              ),
             ],
           ),
         ),

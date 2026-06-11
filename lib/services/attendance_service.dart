@@ -35,7 +35,8 @@ class AttendanceService {
       throw Exception(window.message);
     }
 
-    final photoQualityResult = photoQuality ?? await _photoQuality.validate(photoFile);
+    final uploadPhotoFile = await _photoQuality.prepareForUpload(photoFile);
+    final photoQualityResult = await _photoQuality.validate(uploadPhotoFile);
     if (!photoQualityResult.isValid) {
       throw Exception(photoQualityResult.message);
     }
@@ -49,7 +50,8 @@ class AttendanceService {
     final locationAssessment = _location.assessLocation(loc);
 
     final photoPath = FirebasePaths.attendancePhoto(session.companyId, session.uid, date, actionType, ts);
-    final photoUrl = await _storage.uploadFile(path: photoPath, file: photoFile);
+    final photoUrl =
+        await _storage.uploadFile(path: photoPath, file: uploadPhotoFile);
 
     final payload = <String, dynamic>{
       'record_id': '${session.companyId}_${session.uid}_${date}_$actionType',
@@ -114,7 +116,7 @@ class AttendanceService {
 
     return PresenceSubmissionResult(
       photoQualityStatus: photoQualityResult.status,
-      photoQualityWarning: photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      photoQualityWarning: '',
       photoFileSize: photoQualityResult.fileSize,
       photoWidth: photoQualityResult.width,
       photoHeight: photoQualityResult.height,

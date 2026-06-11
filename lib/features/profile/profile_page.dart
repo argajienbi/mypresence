@@ -44,22 +44,15 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showAppConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title:
-            const Text('Logout', style: TextStyle(fontWeight: FontWeight.w900)),
-        content: const Text('Anda yakin ingin keluar dari akun ini?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Keluar')),
-        ],
-      ),
+      title: 'Keluar dari Akun?',
+      message:
+          'Anda akan keluar dari akun ini. Pastikan semua data presensi sudah tersimpan.',
+      confirmLabel: 'Keluar',
+      cancelLabel: 'Batal',
+      icon: Icons.logout_rounded,
+      accentColor: AppColors.red,
     );
     if (confirm != true) return;
 
