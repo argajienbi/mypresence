@@ -12,7 +12,7 @@ class LocalNotificationService {
 
   static const AndroidNotificationChannel highImportanceChannel =
       AndroidNotificationChannel(
-    'mypresence_high_importance_channel',
+    'mypresence_high_importance_channel_v2',
     'MYPRESENCE Notifications',
     description: 'Notifikasi penting MYPRESENCE',
     importance: Importance.high,
@@ -22,6 +22,7 @@ class LocalNotificationService {
 
   static bool _timezoneReady = false;
   static bool _initialized = false;
+  static bool _exactAlarmsGranted = false;
   static void Function(Map<String, dynamic> payload)? _onTap;
 
   static Future<void> initialize({
@@ -53,6 +54,11 @@ class LocalNotificationService {
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(highImportanceChannel);
     await androidPlugin?.requestNotificationsPermission();
+    final exactAlarmsGranted =
+        await androidPlugin?.requestExactAlarmsPermission();
+    if (exactAlarmsGranted != null) {
+      _exactAlarmsGranted = exactAlarmsGranted;
+    }
 
     _initialized = true;
   }
@@ -90,7 +96,9 @@ class LocalNotificationService {
       body,
       _scheduledDate(scheduledAt),
       _notificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: _exactAlarmsGranted
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode(payload),
