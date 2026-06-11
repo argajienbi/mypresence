@@ -10,6 +10,7 @@ class AttendanceReminderService {
 
   static const int _checkInBaseId = 710100;
   static const int _checkOutBaseId = 710200;
+  static const Duration _lateReminderGrace = Duration(minutes: 15);
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
 
   static Future<void> scheduleToday({
@@ -43,6 +44,7 @@ class AttendanceReminderService {
           title: 'Jangan lupa absen masuk',
           body: 'Jadwal kerja Anda dimulai pukul ${_shortTime(workStart)}.',
           scheduledAt: workStart.subtract(const Duration(minutes: 10)),
+          catchUpUntil: workStart,
         );
         await _scheduleReminder(
           session: session,
@@ -78,6 +80,7 @@ class AttendanceReminderService {
           title: 'Jangan lupa absen pulang',
           body: 'Jangan lupa melakukan Clock Out sebelum jam selesai.',
           scheduledAt: adjustedEnd.subtract(const Duration(minutes: 10)),
+          catchUpUntil: adjustedEnd,
         );
         await _scheduleReminder(
           session: session,
@@ -104,8 +107,9 @@ class AttendanceReminderService {
     required String title,
     required String body,
     required DateTime scheduledAt,
+    DateTime? catchUpUntil,
   }) async {
-    final id = _scheduledNotificationId(daySeed, action, stage);
+    final localNotificationId = _scheduledNotificationId(daySeed, action, stage);
     final payload = _payload(
       dateKey: dayKey,
       action: action,
@@ -114,17 +118,42 @@ class AttendanceReminderService {
       body: body,
       scheduledAt: scheduledAt,
     );
-    await _upsertReminderInbox(session, payload);
-    if (!scheduledAt.isAfter(DateTime.now())) {
+    final reminderId = payload['notification_id'].toString();
+    final now = DateTime.now();
+
+    if (scheduledAt.isAfter(now)) {
+      await _upsertReminderInbox(session, payload);
+      await LocalNotificationService.scheduleOnce(
+        id: localNotificationId,
+        title: payload['title'].toString(),
+        body: payload['body'].toString(),
+        scheduledAt: scheduledAt,
+        payload: payload,
+      );
       return;
     }
-    await LocalNotificationService.scheduleOnce(
-      id: id,
+
+    if (catchUpUntil != null && now.isAfter(catchUpUntil)) {
+      return;
+    }
+
+    await _upsertReminderInbox(session, payload);
+
+    if (now.difference(scheduledAt) > _lateReminderGrace) {
+      return;
+    }
+
+    if (await _wasLocallyDelivered(session, reminderId)) {
+      return;
+    }
+
+    await LocalNotificationService.show(
+      id: localNotificationId,
       title: payload['title'].toString(),
       body: payload['body'].toString(),
-      scheduledAt: scheduledAt,
       payload: payload,
     );
+    await _markLocallyDelivered(session, reminderId);
   }
 
   static Map<String, dynamic> _payload({
@@ -215,6 +244,27 @@ class AttendanceReminderService {
       'is_read': true,
       'active': false,
       'cleared_at': DateTime.now().millisecondsSinceEpoch,
+    }).catchError((_) {});
+  }
+
+  static Future<bool> _wasLocallyDelivered(
+    AppSession session,
+    String id,
+  ) async {
+    final snap = await _database.ref('notifications/${session.uid}/$id').get();
+    final value = snap.value;
+    if (value is! Map) return false;
+    return value['local_delivered_at'] != null ||
+        value['local_shown_at'] != null;
+  }
+
+  static Future<void> _markLocallyDelivered(
+    AppSession session,
+    String id,
+  ) async {
+    await _database.ref('notifications/${session.uid}/$id').update({
+      'local_delivered_at': DateTime.now().millisecondsSinceEpoch,
+      'local_delivery_mode': 'catch_up',
     }).catchError((_) {});
   }
 
