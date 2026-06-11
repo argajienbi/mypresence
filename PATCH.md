@@ -1,21 +1,19 @@
-# PATCH.md - MYPRESENCE UI, Camera, History Polish Batch
+# PATCH.md - MYPRESENCE Focused Home/Profile Polish
 
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
-Fokus patch ini adalah memperbaiki 8 catatan UI/UX terbaru:
+Fokus patch ini hanya sisa catatan perubahan terbaru. Poin 1-7 dari patch sebelumnya sudah dianggap selesai dan **jangan disentuh lagi** kecuali ada error compile langsung.
+
+Fokus perubahan sekarang:
 
 ```text
-1. Hilangkan lingkaran/oval biru di kamera absen.
-2. Relayout popup logout.
-3. Tambahkan alert konfirmasi saat tombol back ditekan dari halaman utama.
-4. Tingkatkan kualitas kamera, tapi kontrol ukuran file sebelum upload.
-5. Hilangkan peringatan “Foto terlihat kurang jelas” dari UI user.
-6. Perbaiki teks/status kamera yang tertutup overlay bottom sheet.
-7. Ubah Daftar Presensi di Riwayat agar hanya menampilkan 7 hari terakhir sampai hari ini, bukan 1 bulan penuh.
-8. Redesign tombol Clock In dan Clock Out menjadi 3D Elevated, sekaligus perbaiki teks terpotong dan icon ceklis duplikat.
+1. Redesign tombol absen menjadi single dynamic attendance card compact.
+2. Foto profil di Home harus langsung update setelah ganti foto dari kamera/galeri.
+3. Behavior tombol back: dari Riwayat/Profile kembali ke Home, popup keluar hanya saat back dari Home.
+4. Card Maps/Lokasi & Radius Absensi bisa diklik dan preview maps dibuat lebih wide/tidak terasa terpotong.
 ```
 
-Jangan mengerjakan fitur lain. Jangan refactor besar. Jangan mengganti package. Jangan mengubah struktur RTDB. Jangan mengubah logic approval, schedule, leave, QR, atau Firebase config. Kita sedang memperbaiki pengalaman pakai, bukan mengundang bug pesta keluarga.
+Jangan mengerjakan fitur lain. Jangan refactor besar. Jangan mengubah package, Firebase config, struktur RTDB, schedule resolver, kamera absen, history 7 hari, popup logout, atau upload foto yang sudah selesai. Kita sedang merapikan sisa UX, bukan membuka festival bug baru.
 
 ---
 
@@ -42,11 +40,14 @@ lib/firebase_options.dart
 Firebase project config
 package name
 RTDB path
-AttendanceService submit path, kecuali untuk kompresi file sebelum upload jika dibutuhkan
+AttendanceService submit path
 ScheduleService logic utama
 LeaveService
 QR approval/request logic
-History detail logic selain daftar utama 7 hari
+CameraPresencePage behavior yang sudah diperbaiki
+ProxyQrCameraPage behavior yang sudah diperbaiki
+HistoryPage logic 7 hari yang sudah diperbaiki
+PhotoQualityService compress/resize yang sudah berjalan
 ```
 
 ---
@@ -72,532 +73,424 @@ Build akan dilakukan manual oleh user.
 
 ---
 
-# PATCH-UI-01 - Hilangkan lingkaran/oval biru di kamera absen
+# PATCH-01 - Single Dynamic Attendance Card Compact
 
 ## Masalah
 
-Pada halaman kamera absen, masih ada overlay oval/lingkaran biru untuk frame wajah. User ingin overlay itu dihilangkan.
+Tombol absen saat ini masih memakai dua tombol berdampingan `Clock In` dan `Clock Out`. Hasil 3D/elevated sebelumnya belum sesuai, ada teks terpotong dan icon kurang cocok.
 
-## File target
+Aplikasi ini memakai selfie camera, bukan fingerprint. Jadi jangan gunakan icon fingerprint sebagai icon utama.
 
-```text
-lib/features/attendance/camera_presence_page.dart
-lib/features/proxy_qr/proxy_qr_camera_page.dart jika QR camera punya overlay serupa
-```
-
-## Instruksi implementasi
-
-1. Hapus widget overlay oval biru pada kamera.
-2. Jangan tampilkan frame wajah berbentuk oval.
-3. Ubah status awal dari:
-
-```text
-Posisikan wajah di dalam oval
-```
-
-menjadi:
-
-```text
-Pastikan wajah terlihat jelas di kamera.
-```
-
-atau:
-
-```text
-Arahkan wajah ke kamera, lalu ambil foto.
-```
-
-4. Ubah teks bawah dari:
-
-```text
-Pastikan wajah berada di tengah oval.
-```
-
-menjadi:
-
-```text
-Pastikan wajah terlihat jelas sebelum mengambil foto.
-```
-
-5. Jangan menghapus preview kamera, header kamera, tombol ganti kamera, tombol foto, atau bottom sheet.
-
-## Acceptance criteria
-
-- Oval/lingkaran biru tidak muncul lagi di kamera absen.
-- Tidak ada teks yang menyebut “oval”.
-- Kamera tetap bisa capture dan submit.
-- `flutter analyze` pass.
-
----
-
-# PATCH-UI-02 - Relayout popup logout
-
-## Masalah
-
-Popup logout sekarang terlalu polos dan terlihat seperti dialog bawaan. Perlu dibuat lebih modern dan konsisten dengan style MYPRESENCE.
-
-## File target
-
-```text
-lib/features/profile/profile_page.dart
-```
-
-Jika ingin dipisah:
-
-```text
-lib/features/profile/widgets/logout_dialog.dart
-```
-
-## Instruksi implementasi
-
-1. Relayout dialog logout menjadi custom dialog/bottom sheet yang rapi.
-2. Tambahkan icon logout/peringatan di atas.
-3. Judul:
-
-```text
-Keluar dari Akun?
-```
-
-4. Deskripsi:
-
-```text
-Anda akan keluar dari akun ini. Pastikan semua data presensi sudah tersimpan.
-```
-
-5. Tombol:
-
-```text
-Batal   Keluar
-```
-
-6. `Batal` sebagai secondary button.
-7. `Keluar` sebagai danger button merah/soft red/gradient red.
-8. Radius dialog besar, padding rapi, shadow lembut.
-9. Background overlay jangan terlalu pekat.
-10. Jangan mengubah logic logout, hanya UI confirmation.
-
-## Acceptance criteria
-
-- Popup logout tampil modern dan rapi.
-- Tombol Batal membatalkan logout.
-- Tombol Keluar tetap menjalankan logout lama.
-- Tidak ada perubahan auth/session selain flow logout existing.
-- `flutter analyze` pass.
-
----
-
-# PATCH-UI-03 - Alert konfirmasi saat tombol back ditekan dari halaman utama
-
-## Masalah
-
-Saat user menekan tombol back Android dari halaman utama, aplikasi langsung keluar. Perlu alert konfirmasi agar tidak keluar tidak sengaja.
-
-## File target
-
-Cari shell/root navigation utama, kemungkinan salah satu:
-
-```text
-lib/main.dart
-lib/app.dart
-lib/app_shell.dart
-lib/main_navigation.dart
-lib/features/home/home_page.dart
-```
-
-Gunakan file yang memang mengatur tab utama Home/Riwayat/Profile.
-
-## Instruksi implementasi
-
-1. Gunakan `PopScope` untuk Flutter terbaru.
-2. Alert hanya muncul ketika user berada di halaman/tab utama.
-3. Back dari halaman detail/form/kamera tetap kembali normal.
-4. Dialog style harus senada dengan popup logout.
-5. Judul:
-
-```text
-Keluar dari Aplikasi?
-```
-
-6. Deskripsi:
-
-```text
-Anda yakin ingin menutup MYPRESENCE? Pastikan data presensi atau pengajuan sudah tersimpan.
-```
-
-7. Tombol:
-
-```text
-Batal   Keluar
-```
-
-8. Jika user pilih `Keluar`, tutup aplikasi menggunakan mekanisme aman yang sudah lazim di Flutter, misalnya `SystemNavigator.pop()`.
-9. Jangan mengganggu flow kamera, submit presensi, QR, form izin, detail schedule, atau history detail.
-
-## Acceptance criteria
-
-- Tekan back dari tab utama menampilkan konfirmasi.
-- Batal menutup dialog saja.
-- Keluar menutup aplikasi.
-- Back dari page child tetap kembali ke page sebelumnya.
-- `flutter analyze` pass.
-
----
-
-# PATCH-CAMERA-04 - Tingkatkan kualitas kamera, tapi kontrol ukuran file sebelum upload
-
-## Masalah
-
-Kualitas foto di dalam app terlihat lebih rendah dibanding kamera bawaan. Penyebab utama kemungkinan `ResolutionPreset.medium`. Namun menaikkan kualitas kamera akan menaikkan ukuran file Storage, jadi perlu kontrol ukuran.
-
-## File target
-
-```text
-lib/features/attendance/camera_presence_page.dart
-lib/features/proxy_qr/proxy_qr_camera_page.dart jika ada kamera QR
-lib/services/photo_quality_service.dart
-lib/services/attendance_service.dart jika kompresi dilakukan sebelum upload
-lib/services/qr_service.dart jika QR upload foto juga perlu kompresi
-```
-
-## Instruksi implementasi kamera
-
-1. Ubah capture kamera dari `ResolutionPreset.medium` ke kualitas lebih tinggi yang masih stabil:
-
-```dart
-ResolutionPreset.high
-```
-
-2. Jangan langsung gunakan `veryHigh` atau `max` karena risiko file terlalu besar dan bisa memicu masalah kamera/surface di beberapa device.
-3. Jika `ResolutionPreset.high` gagal init di device tertentu, fallback ke `ResolutionPreset.medium`.
-4. Jangan mengembalikan bug lama `No supported surface combination`. Jangan menambah image analysis use case baru.
-5. Tetap gunakan `imageFormatGroup: ImageFormatGroup.jpeg` jika stabil.
-
-## Instruksi kontrol ukuran file
-
-1. Jangan upload file mentah besar tanpa kontrol ukuran.
-2. Target ukuran akhir upload:
-
-```text
-maksimal sekitar 1 MB
-```
-
-3. Target resolusi:
-
-```text
-sisi panjang 1280px - 1600px
-```
-
-4. Target JPEG quality:
-
-```text
-75 - 85
-```
-
-5. Jangan tambah dependency baru jika project belum punya dan ada solusi sederhana. Jika memang perlu dependency untuk compress/resize, tambahkan dengan alasan jelas dan minimal.
-6. Jika belum bisa kompres tanpa dependency, minimal:
-
-```text
-- naikkan kamera ke high
-- validasi file size
-- jika file terlalu besar, tampilkan error ramah atau gunakan fallback medium
-```
-
-7. Simpan metadata final setelah kompres:
-
-```text
-photo_file_size
-photo_width
-photo_height
-photo_quality_status
-photo_quality_warning
-```
-
-8. Pastikan file yang diupload adalah file final yang sudah dikontrol ukurannya.
-
-## Acceptance criteria
-
-- Foto dari app lebih tajam daripada preset medium lama.
-- Upload Storage tidak mengirim file besar tanpa kontrol.
-- Target file maksimal sekitar 1 MB jika kompresi tersedia.
-- Kamera tetap stabil, tidak crash saat ganti kamera/capture berulang.
-- `flutter analyze` pass.
-
----
-
-# PATCH-CAMERA-05 - Hilangkan peringatan “Foto terlihat kurang jelas” dari UI user
-
-## Masalah
-
-Peringatan “Foto terlihat kurang jelas...” kurang relevan karena validasi sekarang hanya berbasis ukuran/resolusi dasar, bukan deteksi blur/gelap/wajah. User ingin warning ini dihilangkan dari UI.
-
-## File target
-
-```text
-lib/services/photo_quality_service.dart
-lib/features/attendance/camera_presence_page.dart
-lib/features/proxy_qr/proxy_qr_camera_page.dart jika ada
-```
-
-## Instruksi implementasi
-
-1. Jangan tampilkan warning card kuning/oranye di bottom sheet kamera untuk `photoQuality.status == warning`.
-2. Jangan tampilkan status pill hitam berisi pesan “Foto terlihat kurang jelas...”.
-3. Jika validasi menghasilkan warning, tetap izinkan user submit tanpa gangguan UI.
-4. Boleh tetap simpan audit field ke database:
-
-```text
-photo_quality_status
-photo_quality_warning
-```
-
-5. Blokir hanya jika foto benar-benar invalid/kosong/rusak/sangat kecil.
-6. Jika pesan warning masih diperlukan untuk admin, simpan di payload, tapi jangan tampilkan ke user.
-7. Ubah `PhotoQualityService.warningMessage` menjadi lebih netral jika tetap dipakai untuk audit:
-
-```text
-Kualitas foto standar. Admin dapat memvalidasi jika diperlukan.
-```
-
-atau kosongkan warning untuk data yang masih valid.
-
-## Acceptance criteria
-
-- User tidak melihat warning “Foto terlihat kurang jelas...”.
-- Tidak ada warning card kuning/oranye di kamera setelah foto diambil.
-- Foto valid tetap bisa dikirim.
-- Foto invalid tetap ditolak.
-- `flutter analyze` pass.
-
----
-
-# PATCH-CAMERA-06 - Perbaiki teks/status kamera yang tertutup overlay bottom sheet
-
-## Masalah
-
-Status pill/teks kamera bisa tertutup oleh bottom sheet, terutama saat ada warning card atau panel bawah berubah tinggi.
-
-## File target
-
-```text
-lib/features/attendance/camera_presence_page.dart
-lib/features/proxy_qr/proxy_qr_camera_page.dart jika ada
-```
-
-## Instruksi implementasi
-
-1. Jangan hardcode posisi status pill dengan tinggi bottom sheet yang tidak sesuai isi.
-2. Karena warning card UI akan dihapus, pastikan status pill tetap tidak tertutup pada layar kecil.
-3. Opsi aman:
-
-```text
-- Sembunyikan status pill setelah foto berhasil diambil, karena instruksi sudah ada di bottom sheet.
-- Atau posisikan status pill lebih tinggi dan adaptif terhadap bottom sheet.
-```
-
-4. Hindari pesan dobel antara status pill dan bottom sheet.
-5. Jangan biarkan text berada di belakang bottom sheet.
-
-## Acceptance criteria
-
-- Tidak ada teks/status kamera yang tertutup bottom sheet.
-- Setelah foto diambil, UI tetap bersih dan tidak dobel pesan.
-- Layout aman di layar kecil.
-- `flutter analyze` pass.
-
----
-
-# PATCH-HISTORY-07 - Daftar Presensi hanya tampilkan 7 hari terakhir sampai hari ini
-
-## Masalah
-
-Menu Riwayat sekarang menampilkan daftar presensi 1 bulan penuh. Tanggal yang belum terjadi/masa depan ikut terlihat sebagai `JADWAL`, sehingga daftar terasa terlalu banyak dan membingungkan.
-
-## File target
-
-```text
-lib/features/history/history_page.dart
-```
-
-## Instruksi implementasi
-
-1. `Ringkasan Bulan Ini` tetap menghitung 1 bulan.
-2. `Lihat Kehadiran 1 Bulan` / kalender tetap menampilkan 1 bulan penuh.
-3. Hanya bagian `Daftar Presensi` utama yang diubah menjadi 7 hari terakhir sampai hari ini.
-4. Jangan tampilkan tanggal masa depan pada daftar utama.
-5. Filter daftar utama berdasarkan:
-
-```text
-date >= today - 6 hari
-date <= today
-```
-
-6. Jika bulan yang sedang dipilih bukan bulan sekarang, tetap tampilkan 7 hari relevan dalam bulan tersebut dengan aturan aman:
-
-```text
-- Untuk bulan sekarang: 7 hari terakhir sampai hari ini.
-- Untuk bulan lalu/arsip: tampilkan maksimal 7 hari terakhir dalam bulan yang dipilih, atau tetap gunakan daftar bulan itu tapi batasi 7 item terbaru.
-```
-
-Rekomendasi paling sederhana:
-
-```text
-visibleDailyStatuses.take(7)
-```
-
-setelah list sudah diurutkan descending dan sudah mengecualikan libur/tanpa_data/masa depan.
-
-7. Ubah judul dari:
-
-```text
-Daftar Presensi
-```
-
-menjadi:
-
-```text
-Daftar Presensi Terbaru
-```
-
-8. Tambahkan subtitle kecil jika rapi:
-
-```text
-Menampilkan 7 hari terakhir.
-```
-
-9. Empty state:
-
-```text
-Belum ada presensi dalam 7 hari terakhir.
-```
-
-10. Jangan mengubah logic calendar 1 bulan.
-11. Jangan mengubah detail presensi.
-
-## Acceptance criteria
-
-- Daftar utama tidak lagi menampilkan 1 bulan penuh.
-- Tanggal masa depan tidak muncul di daftar utama.
-- Maksimal 7 item terbaru tampil di daftar utama.
-- Ringkasan bulan tetap 1 bulan.
-- Kalender 1 bulan tetap lengkap.
-- Loading terasa lebih ringan secara UX.
-- `flutter analyze` pass.
-
----
-
-# PATCH-CLOCK-08 - Redesign tombol Clock In/Clock Out 3D Elevated + fix teks terpotong dan icon duplikat
-
-## Masalah
-
-Tombol Clock In/Clock Out perlu dibuat gaya 3D Elevated. Pada hasil sekarang, saat absen berhasil ada masalah:
-
-```text
-- teks subtitle terpotong: “Sudah ma...”
-- icon ceklis duplikat pada Clock In completed
-- Clock Out aktif masih bisa terlihat text “Clock O...” jika ruang sempit
-```
-
-## File target
+## File target utama
 
 ```text
 lib/features/home/widgets/clock_attendance_card.dart
 ```
 
-## Instruksi visual
+Boleh ubah `home_page.dart` hanya jika perlu mengirim jam masuk/jam pulang ke widget. Jangan ubah logic `_openAttendance()`.
 
-Gunakan gaya **3D / Elevated**:
+## Target desain
 
-```text
-- rounded pill besar
-- gradient hijau untuk Clock In aktif/completed
-- gradient biru atau merah/oranye untuk Clock Out aktif sesuai style app
-- icon lingkaran putih di kiri
-- shadow bawah kuat
-- highlight lembut di bagian atas
-- arrow kanan jelas hanya untuk action aktif
-- completed state terlihat sukses tapi tidak penuh icon berulang
-```
+Ubah menjadi **satu card absen dinamis** yang compact dan tidak terlalu besar.
 
-## Instruksi logic state
-
-Pertahankan logic:
+Bukan lagi:
 
 ```text
-nextAction == 'masuk'  -> Clock In aktif
-nextAction == 'pulang' -> Clock Out aktif
-nextAction == 'done'   -> semua selesai
-hasIn                  -> Clock In completed
-hasOut                 -> Clock Out completed
-onPressed              -> hanya aktif pada tombol nextAction
+[Clock In] [Clock Out]
 ```
 
-## Perbaikan teks terpotong
-
-1. Jangan tampilkan subtitle panjang jika lebar tombol sempit.
-2. Ganti subtitle completed:
+Menjadi:
 
 ```text
-Sudah masuk -> Masuk selesai
-Sudah pulang -> Pulang selesai
+[ Single Dynamic Attendance Card ]
 ```
 
-atau cukup:
+Ukuran card jangan terlalu tinggi. Card harus tetap proporsional agar `Menu Cepat` tidak terdorong terlalu jauh ke bawah.
+
+Rekomendasi ukuran:
 
 ```text
-Selesai
+height: 112 - 128 px
+borderRadius: 28 - 32
+padding horizontal: 18 - 22
+icon circle kiri: 58 - 66 px
+arrow kanan: 38 - 44 px
 ```
 
-3. Pastikan `Clock Out` tidak tampil sebagai `Clock O...` jika masih ada ruang.
-4. Jika layout tetap sempit, gunakan font title lebih kecil atau gunakan label:
+Jangan gunakan tinggi 160-180 px karena terlalu dominan.
+
+## Icon utama
+
+Gunakan icon kamera/selfie, bukan fingerprint dan bukan check besar.
+
+Icon disarankan:
+
+```dart
+Icons.camera_alt_rounded
+Icons.photo_camera_front_rounded
+Icons.camera_enhance_rounded
+```
+
+Jangan gunakan:
+
+```dart
+Icons.fingerprint_rounded
+```
+
+Jangan gunakan ceklis besar sebagai icon utama.
+
+Status sudah masuk/pulang dijelaskan lewat teks, bukan icon besar.
+
+## State dan teks
+
+### State 1: belum absen masuk
+
+Kondisi:
 
 ```text
-Masuk
-Pulang
+nextAction == 'masuk'
+hasIn == false
+hasOut == false
 ```
 
-Namun prefer tetap:
+Tampilan:
 
 ```text
-Clock In
-Clock Out
+Title: Absen Masuk
+Subtitle: Tap untuk selfie presensi masuk
+Info kecil: Belum absen
+Icon kiri: kamera/selfie
+Arrow kanan: tampil
+Card: hijau gradient 3D/elevated
 ```
 
-jika muat.
+### State 2: sudah masuk, belum pulang
 
-## Perbaikan icon ceklis duplikat
-
-1. Jangan tampilkan dua icon ceklis pada satu tombol completed.
-2. Untuk completed state pilih salah satu:
+Kondisi:
 
 ```text
-- icon kiri berubah check, arrow kanan hilang/menjadi kosong
+nextAction == 'pulang'
+hasIn == true
+hasOut == false
 ```
 
-atau:
+Tampilan:
 
 ```text
-- icon kiri tetap fingerprint, kanan check
+Title: Absen Pulang
+Subtitle: Tap untuk selfie presensi pulang
+Info kecil: Masuk 07:32
+Icon kiri: kamera/selfie
+Arrow kanan: tampil
+Card: biru/cyan gradient 3D/elevated atau hijau-teal sesuai style app
 ```
 
-Rekomendasi:
+### State 3: presensi selesai
+
+Kondisi:
 
 ```text
-Completed: icon kiri check_rounded, tombol kanan/arrow disembunyikan.
-Active: icon kiri fingerprint, kanan chevron/arrow.
-Disabled: icon kiri fingerprint grey, kanan chevron grey atau disembunyikan.
+nextAction == 'done'
+hasIn == true
+hasOut == true
 ```
 
-3. Jika tombol completed tidak bisa ditekan, jangan tampilkan arrow aktif.
+Tampilan:
+
+```text
+Title: Presensi Selesai
+Subtitle: Anda sudah absen masuk & pulang
+Info kecil: Masuk 07:32 • Pulang 17:05
+Icon kiri: kamera/selfie
+Arrow kanan: tidak tampil
+Card: hijau gradient 3D/elevated tapi non-clickable
+```
+
+Jangan tampilkan icon ceklis besar sebagai icon utama. Jika ingin tanda selesai, boleh badge kecil opsional, tetapi status utama tetap lewat teks.
+
+## Data jam masuk/pulang
+
+Jika `ClockAttendanceCard` belum menerima jam masuk/pulang, tambahkan parameter opsional:
+
+```dart
+final String? checkInTime;
+final String? checkOutTime;
+```
+
+Lalu dari `HomePage`, kirim nilai `masuk` dan `pulang` yang sudah dihitung di build.
+
+Jaga backward compatibility kalau memungkinkan.
+
+## Interaction behavior
+
+```text
+nextAction == 'masuk'  -> card bisa ditekan, panggil onPressed
+nextAction == 'pulang' -> card bisa ditekan, panggil onPressed
+nextAction == 'done'   -> card tidak bisa ditekan, jangan panggil onPressed
+```
+
+Boleh pakai animasi ringan:
+
+```text
+AnimatedContainer untuk gradient/shape
+AnimatedSwitcher untuk title/subtitle/info
+Durasi 200-300ms
+```
+
+Jangan tambah package animasi baru.
 
 ## Acceptance criteria
 
-- Tombol terlihat 3D Elevated dan lebih menarik.
-- Tidak ada subtitle terpotong seperti “Sudah ma...”.
-- Tidak ada icon ceklis duplikat pada completed state.
-- Clock Out tidak terpotong jika ruang cukup.
-- onPressed hanya jalan untuk tombol aktif.
-- Tidak mengubah logic HomePage.
+- Area absen menjadi satu card besar dinamis, bukan dua tombol.
+- Card compact, tidak terlalu tinggi.
+- Icon utama kamera/selfie, bukan fingerprint.
+- Tidak ada icon ceklis besar sebagai icon utama.
+- Status masuk/pulang/selesai dijelaskan lewat teks.
+- Jam masuk dan jam pulang tampil jelas saat tersedia.
+- Tidak ada teks terpotong.
+- Tidak ada icon duplikat.
+- `onPressed` hanya berjalan saat nextAction masuk/pulang.
+- Tidak mengubah logic absensi, geofence, jadwal, kamera, Firebase.
 - `flutter analyze` pass.
+
+---
+
+# PATCH-02 - Foto Profil Home Langsung Update Setelah Ganti Foto
+
+## Masalah
+
+Setelah user mengganti foto profil dari kamera/galeri, foto di halaman Profil berubah, tetapi foto profil di Home masih kosong/lama. Foto baru muncul setelah logout/login.
+
+Penyebab utama: Home masih memakai `AppSession` lama. Profile update hanya mengubah state lokal `_photoUrl` di ProfilePage.
+
+## File target kemungkinan
+
+```text
+lib/features/profile/profile_page.dart
+lib/features/home/main_shell.dart
+lib/features/home/home_page.dart
+lib/features/home/widgets/home_sticky_profile_header.dart
+lib/core/models/app_session.dart
+lib/services/profile_service.dart
+```
+
+## Instruksi implementasi
+
+Implementasikan refresh session/profile setelah foto profil berhasil diupload.
+
+Rekomendasi aman:
+
+1. `MainShell` menyimpan session aktif sebagai state lokal, bukan hanya memakai `widget.session` langsung.
+2. Tambahkan callback ke `ProfilePage`, misalnya:
+
+```dart
+final ValueChanged<AppSession>? onSessionUpdated;
+```
+
+3. Setelah foto profil berhasil diupload, fetch ulang data user/session terbaru melalui service yang sudah ada.
+4. Panggil `onSessionUpdated(newSession)`.
+5. `MainShell` melakukan `setState(() => _session = newSession)`.
+6. `HomePage`, `HistoryPage`, dan `ProfilePage` menerima `_session` terbaru.
+7. `HomeStickyProfileHeader` otomatis rebuild dengan foto terbaru.
+
+Jika membuat AppSession baru terlalu besar, minimal update field photoUrl pada session copy. Namun jangan hardcode data penting.
+
+## Antisipasi image cache
+
+Jika upload foto profil memakai URL/path yang sama, Flutter `NetworkImage` bisa tetap menampilkan cache lama.
+
+Tambahkan cache busting aman:
+
+```text
+photoUrl + '?v=$updatedAt'
+```
+
+atau gunakan key berdasarkan URL/timestamp:
+
+```dart
+key: ValueKey(photoUrl)
+```
+
+Prefer path file unik berbasis timestamp jika sudah sesuai dengan ProfileService.
+
+## Acceptance criteria
+
+- Setelah ganti foto dari kamera, Home langsung menampilkan foto baru tanpa logout/login.
+- Setelah pilih foto dari galeri, Home langsung menampilkan foto baru tanpa logout/login.
+- ProfilePage tetap menampilkan foto baru.
+- Employee QR jika memakai foto profil tetap menerima foto terbaru jika relevan.
+- Tidak perlu restart app.
+- Tidak mengubah auth flow selain refresh session/profile.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-03 - Back Button: Riwayat/Profile Kembali ke Home, Popup Hanya dari Home
+
+## Masalah
+
+Saat tombol back Android ditekan dari tab Riwayat atau Profil, popup keluar aplikasi langsung muncul. User ingin perilaku default lebih natural: kembali dulu ke Home.
+
+## File target
+
+```text
+lib/features/home/main_shell.dart
+```
+
+## Logic final
+
+Index tab saat ini diasumsikan:
+
+```text
+0 = Riwayat
+1 = Home
+2 = Profil
+```
+
+Aturan:
+
+```text
+Jika user di tab Riwayat:
+Back -> pindah ke Home
+
+Jika user di tab Profil:
+Back -> pindah ke Home
+
+Jika user di tab Home:
+Back -> tampilkan popup “Keluar dari Aplikasi?”
+```
+
+Jangan tampilkan popup keluar dari tab Riwayat/Profile.
+
+## Instruksi implementasi
+
+Ubah handler `PopScope` di `MainShell` menjadi seperti konsep berikut:
+
+```dart
+onPopInvokedWithResult: (didPop, _) {
+  if (didPop) return;
+
+  if (_index != 1) {
+    setState(() => _index = 1);
+    return;
+  }
+
+  unawaited(_confirmExit());
+}
+```
+
+Pastikan `_confirmExit()` hanya dipanggil saat tab Home aktif.
+
+## Acceptance criteria
+
+- Back dari Riwayat pindah ke Home.
+- Back dari Profil pindah ke Home.
+- Back dari Home menampilkan popup keluar aplikasi.
+- Batal pada popup tetap menutup dialog saja.
+- Keluar pada popup tetap menutup aplikasi.
+- Back dari child route seperti kamera/detail/form tetap berjalan normal.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-04 - Card Maps Bisa Diklik dan Preview Dibuat Lebih Wide
+
+## Masalah
+
+Card `Lokasi & Radius Absensi` di Home sekarang terasa kurang wide. Area maps terlihat terpotong/sempit dan card belum bisa diklik untuk melihat detail lokasi.
+
+## File target kemungkinan
+
+```text
+lib/features/home/widgets/radius_card.dart
+lib/features/home/home_page.dart
+```
+
+Jika membuat sheet baru:
+
+```text
+lib/features/home/widgets/location_detail_sheet.dart
+```
+
+## Target UX
+
+1. Card maps di Home bisa diklik.
+2. Saat diklik, tampilkan detail lokasi.
+3. Preview maps di Home dibuat lebih wide/tidak terasa terpotong.
+4. Detail lokasi menampilkan maps lebih besar dan info geofence lengkap.
+
+## Opsi implementasi yang disarankan
+
+Gunakan bottom sheet, bukan halaman baru dulu.
+
+Tap pada card:
+
+```text
+RadiusCard -> showLocationDetailSheet(...)
+```
+
+Bottom sheet berisi:
+
+```text
+- Judul: Detail Lokasi Absensi
+- Nama kantor
+- Status lokasi valid/tidak valid
+- Maps preview lebih besar/wide
+- Radius kantor
+- Jarak user ke kantor
+- Latitude/longitude kantor
+- Latitude/longitude user
+```
+
+Jika ada tombol tambahan, boleh tambahkan:
+
+```text
+Buka di Maps
+```
+
+Tapi jangan wajib jika butuh dependency baru. Kalau pakai URL launcher belum ada, jangan tambah dependency hanya untuk ini.
+
+## Perbaikan visual RadiusCard
+
+- Buat area map di card Home sedikit lebih tinggi/lebar.
+- Kurangi clipping/padding yang membuat maps terasa terpotong.
+- Tambahkan affordance bahwa card bisa diklik:
+
+```text
+Lihat detail
+atau icon chevron kecil
+```
+
+- Tetap pertahankan informasi radius dan jarak di bawah maps.
+- Jangan mengubah logic location/geofence.
+
+## Acceptance criteria
+
+- Card maps bisa diklik.
+- Klik card membuka bottom sheet/detail lokasi.
+- Maps di Home terlihat lebih wide dan tidak terlalu terpotong.
+- Detail lokasi menampilkan info kantor, radius, jarak, status lokasi, koordinat kantor dan user.
+- Tidak mengubah logic LocationService/geofence.
+- Jika user location belum tersedia, UI tetap aman dan menampilkan placeholder.
+- `flutter analyze` pass.
+
+---
+
+# File yang jangan disentuh kecuali terpaksa
+
+```text
+lib/features/attendance/camera_presence_page.dart
+lib/features/proxy_qr/proxy_qr_camera_page.dart
+lib/services/photo_quality_service.dart
+lib/features/history/history_page.dart
+lib/features/history/attendance_detail_sheet.dart
+lib/features/requests/request_status_detail_sheet.dart
+android/app/build.gradle
+android/app/google-services.json
+lib/firebase_options.dart
+```
+
+Poin kamera, photo quality, history 7 hari, popup logout, dan warning foto sudah selesai. Jangan dirusak. Ini bukan tantangan.
 
 ---
 
@@ -622,6 +515,7 @@ Setelah selesai, Codex wajib menulis laporan:
 - Tidak dijalankan oleh Codex. Build dilakukan manual oleh user.
 
 ## Notes
+- Apakah poin kamera/history sebelumnya tidak disentuh:
 - Risiko tersisa:
 - Hal yang perlu dicek manual:
 ```
@@ -633,14 +527,10 @@ Jangan menulis hasil build karena build tidak diminta.
 # Urutan pengerjaan wajib
 
 ```text
-1. Hilangkan oval kamera dan teks oval
-2. Hapus warning foto kurang jelas dari UI
-3. Tingkatkan kualitas kamera dengan kontrol ukuran file
-4. Perbaiki overlay/status kamera
-5. Relayout popup logout
-6. Tambahkan alert back dari halaman utama
-7. Ubah daftar presensi utama menjadi 7 hari terakhir
-8. Redesign/fix tombol Clock In/Out 3D Elevated
-9. flutter analyze
-10. Laporan akhir
+1. Ubah ClockAttendanceCard menjadi single dynamic attendance card compact.
+2. Tambahkan refresh session/profile agar foto Home update setelah ganti foto.
+3. Ubah behavior back button di MainShell.
+4. Buat RadiusCard clickable dan tambahkan detail lokasi/maps bottom sheet.
+5. flutter analyze.
+6. Tulis laporan akhir.
 ```
