@@ -23,6 +23,7 @@ import 'widgets/clock_attendance_card.dart';
 import 'widgets/home_announcement_card.dart';
 import 'widgets/home_quick_menu_horizontal.dart';
 import 'widgets/home_sticky_profile_header.dart';
+import 'widgets/location_detail_sheet.dart';
 import 'widgets/radius_card.dart';
 import 'widgets/status_detail_sheet.dart';
 
@@ -393,6 +394,23 @@ class _HomePageState extends State<HomePage> {
                   radiusMeter: widget.session.officeRadiusMeter,
                   inside: _insideRadius,
                   loading: _loadingLocation,
+                  onTap: () => unawaited(
+                    showLocationDetailSheet(
+                      context: context,
+                      data: LocationDetailData(
+                        officeName: widget.session.officeName,
+                        address: widget.session.officeAddress,
+                        officeLat: widget.session.officeLatitude,
+                        officeLng: widget.session.officeLongitude,
+                        userLat: _userLat,
+                        userLng: _userLng,
+                        distanceMeter: _distance,
+                        radiusMeter: widget.session.officeRadiusMeter,
+                        inside: _insideRadius,
+                        loading: _loadingLocation,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 14),
                 ClockAttendanceCard(
@@ -400,6 +418,8 @@ class _HomePageState extends State<HomePage> {
                   insideRadius: _insideRadius,
                   hasIn: hasIn,
                   hasOut: hasOut,
+                  checkInTime: masuk,
+                  checkOutTime: pulang,
                   onPressed: _openAttendance,
                 ),
                 const SizedBox(height: 16),

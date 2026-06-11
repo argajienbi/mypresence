@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../core/app_theme.dart';
 import '../../core/models/app_notification.dart';
 import '../../core/models/app_session.dart';
+import '../../core/session/app_session_controller.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/notification_router.dart';
 import '../../services/push_notification_service.dart';
@@ -33,6 +34,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int _index;
   late bool _showScheduleOnOpen;
+  late AppSession _session;
   bool _showingExitPrompt = false;
 
   @override
@@ -40,6 +42,8 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     _index = widget.initialIndex.clamp(0, 2);
     _showScheduleOnOpen = widget.showScheduleOnOpen;
+    _session = widget.session;
+    AppSessionController.instance.setSession(_session);
     PushNotificationService.onPayloadReceived = _handlePushPayload;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,9 +72,15 @@ class _MainShellState extends State<MainShell> {
 
   void _handlePushPayload(Map<String, dynamic> payload) {
     if (!mounted || payload.isEmpty) return;
-    AppNotificationService().markPayloadAsRead(widget.session, payload);
+    AppNotificationService().markPayloadAsRead(_session, payload);
     if (!mounted) return;
-    NotificationRouter.openFromPayload(context, widget.session, payload);
+    NotificationRouter.openFromPayload(context, _session, payload);
+  }
+
+  void _updateSession(AppSession session) {
+    if (!mounted) return;
+    setState(() => _session = session);
+    AppSessionController.instance.setSession(session);
   }
 
   Future<void> _confirmExit() async {
@@ -97,21 +107,28 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HistoryPage(session: widget.session),
+      HistoryPage(session: _session),
       HomePage(
-        session: widget.session,
+        session: _session,
         showScheduleOnOpen: _showScheduleOnOpen,
         onScheduleShown: () {
           if (_showScheduleOnOpen) setState(() => _showScheduleOnOpen = false);
         },
       ),
-      ProfilePage(session: widget.session),
+      ProfilePage(
+        session: _session,
+        onSessionUpdated: _updateSession,
+      ),
     ];
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        if (_index != 1) {
+          setState(() => _index = 1);
+          return;
+        }
         unawaited(_confirmExit());
       },
       child: Scaffold(

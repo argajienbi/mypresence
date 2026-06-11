@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
+import '../../core/session/app_session_controller.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/request_status_service.dart';
@@ -21,8 +22,13 @@ import 'terms_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final AppSession session;
+  final ValueChanged<AppSession>? onSessionUpdated;
 
-  const ProfilePage({super.key, required this.session});
+  const ProfilePage({
+    super.key,
+    required this.session,
+    this.onSessionUpdated,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -41,6 +47,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _photoUrl = widget.session.photoUrl;
     _pendingRequestsFuture =
         _requestStatusService.countPendingRequests(widget.session);
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session.photoUrl != widget.session.photoUrl) {
+      _photoUrl = widget.session.photoUrl;
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -77,7 +91,11 @@ class _ProfilePageState extends State<ProfilePage> {
           session: widget.session, source: source);
       if (!mounted) return;
       if (result != null) {
-        setState(() => _photoUrl = result.photoUrl);
+        final refreshedSession = await _refreshSessionAfterPhotoUpload(result);
+        if (!mounted) return;
+        setState(() => _photoUrl = refreshedSession.photoUrl);
+        AppSessionController.instance.setSession(refreshedSession);
+        widget.onSessionUpdated?.call(refreshedSession);
         AppToast.success(context, 'Foto profil berhasil diperbarui.');
       }
     } catch (e) {
@@ -85,6 +103,18 @@ class _ProfilePageState extends State<ProfilePage> {
       AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<AppSession> _refreshSessionAfterPhotoUpload(
+      ProfilePhotoResult result) async {
+    try {
+      return await AuthService().loadSession();
+    } catch (_) {
+      return widget.session.copyWith(
+        photoUrl: result.photoUrl,
+        photoPath: result.photoPath,
+      );
     }
   }
 
@@ -211,7 +241,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               MaterialPageRoute(
                                   builder: (_) => EmployeeQrPage(
                                       session: widget.session,
-                                      photoUrl: _photoUrl)),
+                                      photoUrl: _displayPhotoUrl(
+                                        _photoUrl,
+                                        widget.session.photoPath,
+                                      ))),
                             ),
                           ),
                           _MenuTile(
@@ -358,6 +391,7 @@ class _ProfileIdentityCard extends StatelessWidget {
     final initial = session.displayName.isEmpty
         ? 'MP'
         : session.displayName.trim()[0].toUpperCase();
+    final displayPhotoUrl = _displayPhotoUrl(photoUrl, session.photoPath);
     return AppCard(
       padding: const EdgeInsets.all(16),
       radius: 22,
@@ -368,11 +402,13 @@ class _ProfileIdentityCard extends StatelessWidget {
             child: Stack(
               children: [
                 CircleAvatar(
+                  key: ValueKey(displayPhotoUrl),
                   radius: 36,
                   backgroundColor: AppColors.primary,
-                  backgroundImage:
-                      photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                  child: photoUrl.isEmpty
+                  backgroundImage: displayPhotoUrl.isNotEmpty
+                      ? NetworkImage(displayPhotoUrl)
+                      : null,
+                  child: displayPhotoUrl.isEmpty
                       ? Text(initial,
                           style: const TextStyle(
                               color: Colors.white,
@@ -450,6 +486,14 @@ class _ProfileIdentityCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _displayPhotoUrl(String photoUrl, String photoPath) {
+  final value = photoUrl.trim();
+  if (value.isEmpty) return '';
+  final cacheKey = photoPath.trim().isEmpty ? value : photoPath.trim();
+  final separator = value.contains('?') ? '&' : '?';
+  return '$value${separator}v=${Uri.encodeComponent(cacheKey)}';
 }
 
 class _SectionTitle extends StatelessWidget {

@@ -34,7 +34,10 @@ class HomeStickyProfileHeader extends StatelessWidget {
             .firstOrNull ??
         'User';
     final greeting = _getGreeting();
-    final photoUrl = session.photoUrl.trim();
+    final photoUrl = _displayPhotoUrl(
+      session.photoUrl.trim(),
+      session.photoPath.trim(),
+    );
 
     return SizedBox(
       height: 184,
@@ -184,6 +187,13 @@ class _ProfileAvatar extends StatelessWidget {
       ),
     );
   }
+}
+
+String _displayPhotoUrl(String photoUrl, String photoPath) {
+  if (photoUrl.trim().isEmpty) return '';
+  final cacheKey = photoPath.trim().isEmpty ? photoUrl.trim() : photoPath.trim();
+  final separator = photoUrl.contains('?') ? '&' : '?';
+  return '${photoUrl.trim()}${separator}v=${Uri.encodeComponent(cacheKey)}';
 }
 
 class _InitialAvatar extends StatelessWidget {
