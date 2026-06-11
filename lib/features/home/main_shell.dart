@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,7 @@ import '../../core/models/app_session.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/notification_router.dart';
 import '../../services/push_notification_service.dart';
+import '../../widgets/app_feedback.dart';
 import '../history/history_page.dart';
 import '../profile/profile_page.dart';
 import 'home_page.dart';
@@ -30,6 +33,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int _index;
   late bool _showScheduleOnOpen;
+  bool _showingExitPrompt = false;
 
   @override
   void initState() {
@@ -69,6 +73,27 @@ class _MainShellState extends State<MainShell> {
     NotificationRouter.openFromPayload(context, widget.session, payload);
   }
 
+  Future<void> _confirmExit() async {
+    if (_showingExitPrompt) return;
+    _showingExitPrompt = true;
+    try {
+      final confirm = await showAppConfirmationDialog(
+        context: context,
+        title: 'Keluar dari Aplikasi?',
+        message:
+            'Anda yakin ingin menutup MYPRESENCE? Pastikan data presensi atau pengajuan sudah tersimpan.',
+        confirmLabel: 'Keluar',
+        cancelLabel: 'Batal',
+        icon: Icons.warning_amber_rounded,
+        accentColor: AppColors.red,
+      );
+      if (!mounted || confirm != true) return;
+      await SystemNavigator.pop();
+    } finally {
+      _showingExitPrompt = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -83,59 +108,66 @@ class _MainShellState extends State<MainShell> {
       ProfilePage(session: widget.session),
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        reverseDuration: const Duration(milliseconds: 160),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        child: KeyedSubtree(
-          key: ValueKey<int>(_index),
-          child: pages[_index],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        unawaited(_confirmExit());
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          reverseDuration: const Duration(milliseconds: 160),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: KeyedSubtree(
+            key: ValueKey<int>(_index),
+            child: pages[_index],
+          ),
         ),
-      ),
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          height: 72,
-          backgroundColor: Colors.white,
-          indicatorColor: AppColors.primary.withValues(alpha: .14),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            final selected = states.contains(WidgetState.selected);
-            return TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w900,
-              color: selected ? AppColors.primary : AppColors.muted,
-            );
-          }),
-          iconTheme: WidgetStateProperty.resolveWith((states) {
-            final selected = states.contains(WidgetState.selected);
-            return IconThemeData(
-              color: selected ? AppColors.primary : AppColors.muted,
-              size: selected ? 25 : 23,
-            );
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (value) => setState(() => _index = value),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.history_rounded),
-              selectedIcon: Icon(Icons.history_rounded),
-              label: 'Riwayat',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'Profil',
-            ),
-          ],
+        bottomNavigationBar: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            height: 72,
+            backgroundColor: Colors.white,
+            indicatorColor: AppColors.primary.withValues(alpha: .14),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
+                color: selected ? AppColors.primary : AppColors.muted,
+              );
+            }),
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return IconThemeData(
+                color: selected ? AppColors.primary : AppColors.muted,
+                size: selected ? 25 : 23,
+              );
+            }),
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) => setState(() => _index = value),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.history_rounded),
+                selectedIcon: Icon(Icons.history_rounded),
+                label: 'Riwayat',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Profil',
+              ),
+            ],
+          ),
         ),
       ),
     );

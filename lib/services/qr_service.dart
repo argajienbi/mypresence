@@ -114,7 +114,8 @@ class QrService {
       throw Exception('Target QR tidak valid.');
     }
 
-    final photoQualityResult = photoQuality ?? await _photoQuality.validate(photoFile);
+    final uploadPhotoFile = await _photoQuality.prepareForUpload(photoFile);
+    final photoQualityResult = await _photoQuality.validate(uploadPhotoFile);
     if (!photoQualityResult.isValid) {
       throw Exception(photoQualityResult.message);
     }
@@ -143,7 +144,7 @@ class QrService {
     final photoPath = FirebasePaths.qrAttendancePhoto(
         helperSession.companyId, targetUid, dateKey, actionType, ts);
     final photoUrl =
-        await _storage.uploadFile(path: photoPath, file: photoFile);
+        await _storage.uploadFile(path: photoPath, file: uploadPhotoFile);
 
     final targetOfficeId = asString(target['office_id'], helperSession.officeId);
     final targetOfficeName = asString(target['office_name'], helperSession.officeName);
@@ -274,7 +275,7 @@ class QrService {
 
     return PresenceSubmissionResult(
       photoQualityStatus: photoQualityResult.status,
-      photoQualityWarning: photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      photoQualityWarning: '',
       photoFileSize: photoQualityResult.fileSize,
       photoWidth: photoQualityResult.width,
       photoHeight: photoQualityResult.height,
