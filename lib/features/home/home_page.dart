@@ -12,6 +12,7 @@ import '../../services/attendance_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/local_notification_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../attendance/camera_presence_page.dart';
@@ -49,6 +50,7 @@ class _HomePageState extends State<HomePage> {
   final ScheduleService _scheduleService = ScheduleService();
   final LeaveService _leaveService = LeaveService();
   final AppNotificationService _notificationService = AppNotificationService();
+  final NotificationService _deliveryService = NotificationService();
 
   Timer? _timer;
   Timer? _schedulePollTimer;
@@ -176,21 +178,73 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _showScheduleChangedNotification(DailySchedule schedule) async {
-    await LocalNotificationService.show(
-      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title: 'Jadwal Kerja Diperbarui',
-      body: schedule.isWorkday
-          ? 'Jadwal hari ini: ${_workTime(schedule)}.'
-          : schedule.message,
-      payload: {
-        'ref_type': 'schedule',
-        'type': 'info',
-        'title': 'Jadwal Kerja Diperbarui',
-        'body': schedule.isWorkday
-            ? 'Jadwal hari ini: ${_workTime(schedule)}.'
-            : schedule.message,
-      },
+    final body = schedule.isWorkday
+        ? 'Jadwal hari ini: ${_workTime(schedule)}.'
+        : schedule.message;
+    final now = DateTime.now();
+    final notificationId = _scheduleNotificationId(schedule, now);
+    final refId = schedule.assignmentId.isNotEmpty
+        ? schedule.assignmentId
+        : schedule.overtimeScheduleId.isNotEmpty
+            ? schedule.overtimeScheduleId
+            : schedule.timetableId.isNotEmpty
+                ? schedule.timetableId
+                : AppDate.dateKey(now);
+
+    final payload = <String, dynamic>{
+      'notification_id': notificationId,
+      'id': notificationId,
+      'inbox_id': notificationId,
+      'company_id': widget.session.companyId,
+      'uid': widget.session.uid,
+      'title': 'Jadwal Kerja Diperbarui',
+      'body': body,
+      'message': body,
+      'type': 'schedule_update',
+      'ref_type': 'schedule',
+      'ref_id': refId,
+      'related_id': refId,
+      'sender_uid': 'system',
+      'sender_name': 'Sistem',
+      'sender_role': 'system',
+      'created_at': now.millisecondsSinceEpoch,
+      'created_date': AppDate.dateKey(now),
+      'created_time': AppDate.time(now),
+      'schedule_source': schedule.source,
+      'schedule_fingerprint': _scheduleFingerprint(schedule),
+      'schedule_ready': schedule.scheduleReady,
+      'active': true,
+      'read': false,
+      'is_read': false,
+    };
+
+    await _deliveryService.upsertPayload(
+      session: widget.session,
+      payload: payload,
     );
+
+    await LocalNotificationService.show(
+      id: notificationId.hashCode.abs().remainder(2147483647),
+      title: 'Jadwal Kerja Diperbarui',
+      body: body,
+      payload: payload,
+    );
+  }
+
+  String _scheduleNotificationId(DailySchedule schedule, DateTime now) {
+    final fingerprint = _scheduleFingerprint(schedule);
+    final seed = [
+      widget.session.companyId,
+      widget.session.uid,
+      AppDate.dateKey(now),
+      fingerprint,
+    ].join('|');
+    final slug = seed
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    return 'schedule_update_$slug';
   }
 
   String _scheduleFingerprint(DailySchedule schedule) {

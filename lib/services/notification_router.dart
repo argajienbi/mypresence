@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../core/models/app_notification.dart';
 import '../core/models/app_session.dart';
 import '../features/announcements/announcements_page.dart';
+import '../features/history/history_page.dart';
 import '../features/home/main_shell.dart';
 import '../features/notifications/notifications_page.dart';
 import '../features/requests/request_status_page.dart';
+import '../features/schedule/schedule_detail_page.dart';
+import 'schedule_service.dart';
 
 class NotificationRouter {
   const NotificationRouter._();
@@ -109,10 +112,10 @@ class NotificationRouter {
         text.contains('jadwal')) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => MainShell(
+          builder: (_) => ScheduleDetailPage(
             session: session,
-            initialIndex: 1,
-            showScheduleOnOpen: true,
+            scheduleService: ScheduleService(),
+            initialDate: DateTime.now(),
           ),
         ),
       );
@@ -121,7 +124,13 @@ class NotificationRouter {
 
     if (type.contains('qr') || text.contains('qr')) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 0)),
+        MaterialPageRoute(
+          builder: (_) => RequestStatusPage(
+            session: session,
+            initialType: RequestTypeFilter.qr,
+            highlightRefId: refId.trim().isEmpty ? null : refId.trim(),
+          ),
+        ),
       );
       return;
     }
@@ -131,7 +140,7 @@ class NotificationRouter {
         type.contains('absensi') ||
         text.contains('presensi')) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => MainShell(session: session, initialIndex: 0)),
+        MaterialPageRoute(builder: (_) => HistoryPage(session: session)),
       );
       return;
     }

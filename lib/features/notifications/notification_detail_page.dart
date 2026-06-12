@@ -136,8 +136,11 @@ class NotificationDetailPage extends StatelessWidget {
     if (type.contains('correction') || type.contains('koreksi')) {
       return 'Lihat Detail Koreksi';
     }
-    if (type.contains('qr') || type.contains('attendance')) {
-      return 'Lihat Detail Presensi';
+    if (type.contains('qr')) {
+      return 'Lihat Status QR';
+    }
+    if (type.contains('attendance')) {
+      return 'Lihat Riwayat Presensi';
     }
     if (type.contains('schedule') || type.contains('jadwal')) {
       return 'Lihat Detail Jadwal';

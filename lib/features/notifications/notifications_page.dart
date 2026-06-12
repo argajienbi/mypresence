@@ -234,7 +234,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return value.contains('system') ||
             value.contains('sistem') ||
             value.contains('user_status') ||
-            value.contains('status_update');
+            value.contains('status_update') ||
+            value.contains('account_status') ||
+            value.contains('status akun') ||
+            value.contains('status_akun') ||
+            value.contains('validation') ||
+            value.contains('warning') ||
+            value.contains('alert');
       case _NotificationFilter.all:
       case _NotificationFilter.unread:
         return true;

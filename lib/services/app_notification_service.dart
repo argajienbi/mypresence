@@ -205,6 +205,10 @@ class AppNotificationService {
         value.contains('koreksi') ||
         value.contains('schedule') ||
         value.contains('jadwal') ||
+        value.contains('shift') ||
+        value.contains('work_time') ||
+        value.contains('work time') ||
+        value.contains('jam kerja') ||
         value.contains('attendance') ||
         value.contains('presensi') ||
         value.contains('absensi') ||
@@ -214,8 +218,14 @@ class AppNotificationService {
         value.contains('qr') ||
         value.contains('status_update') ||
         value.contains('status update') ||
+        value.contains('account_status') ||
+        value.contains('status akun') ||
+        value.contains('status_akun') ||
         value.contains('user_status') ||
         value.contains('user status') ||
+        value.contains('validation') ||
+        value.contains('warning') ||
+        value.contains('alert') ||
         value.contains('system') ||
         value.contains('sistem');
   }

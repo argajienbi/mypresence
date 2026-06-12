@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../core/firestore_paths.dart';
 import '../core/models/app_session.dart';
+import 'attendance_reminder_service.dart';
 import 'local_notification_service.dart';
 
 class PushNotificationService {
@@ -82,6 +83,9 @@ class PushNotificationService {
     await LocalNotificationService.initialize(onTap: _handleNotificationTap);
 
     final payload = _normalizePayload(message);
+    await AttendanceReminderService.cancelScheduledReminderByNotificationId(
+      payload['notification_id'].toString(),
+    );
 
     await LocalNotificationService.show(
       id: _notificationId(message),
@@ -92,6 +96,11 @@ class PushNotificationService {
   }
 
   static Future<void> showBackgroundMessage(RemoteMessage message) async {
+    final payload = _normalizePayload(message);
+    await AttendanceReminderService.cancelScheduledReminderByNotificationId(
+      payload['notification_id'].toString(),
+    );
+
     // Jika payload FCM berisi notification dan aplikasi background/killed,
     // Android biasanya menampilkan notification otomatis.
     // Local notification tetap hanya dipakai untuk data-only agar tidak dobel.
@@ -100,8 +109,6 @@ class PushNotificationService {
     await LocalNotificationService.initialize(
       onTap: _handleNotificationTap,
     );
-
-    final payload = _normalizePayload(message);
 
     await LocalNotificationService.show(
       id: _notificationId(message),
@@ -328,6 +335,25 @@ class PushNotificationService {
         : data['body'];
 
     data['ref_type'] = (data['ref_type'] ?? data['type'] ?? '').toString();
+
+    final notificationId = [
+      data['notification_id'],
+      data['id'],
+      data['inbox_id'],
+      message.messageId,
+    ].map((value) => value?.toString().trim() ?? '').firstWhere(
+          (value) => value.isNotEmpty,
+          orElse: () => '',
+        );
+    if (notificationId.isNotEmpty) {
+      data['notification_id'] = notificationId;
+      if ((data['id']?.toString().trim() ?? '').isEmpty) {
+        data['id'] = notificationId;
+      }
+      if ((data['inbox_id']?.toString().trim() ?? '').isEmpty) {
+        data['inbox_id'] = notificationId;
+      }
+    }
 
     if (message.messageId != null && message.messageId!.isNotEmpty) {
       data['message_id'] = message.messageId;

@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../core/models/app_session.dart';
 import '../core/utils.dart';
 import 'local_notification_service.dart';
+import 'notification_service.dart';
 import 'schedule_service.dart';
 
 class AttendanceReminderService {
@@ -11,6 +12,8 @@ class AttendanceReminderService {
   static const int _checkInBaseId = 710100;
   static const int _checkOutBaseId = 710200;
   static const Duration _lateReminderGrace = Duration(minutes: 15);
+  static final NotificationService _notificationService =
+      NotificationService();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
 
   static Future<void> scheduleToday({
@@ -195,26 +198,14 @@ class AttendanceReminderService {
     AppSession session,
     Map<String, dynamic> payload,
   ) async {
-    final id = payload['notification_id'].toString();
-    final ref = _database.ref('notifications/${session.uid}/$id');
-    final existing = await ref.get();
-    final existingValue = existing.value;
-    final existingRead = existingValue is Map
-        ? _asBool(existingValue['read']) || _asBool(existingValue['is_read'])
-        : false;
-    final existingReadAt = existingValue is Map
-        ? existingValue['read_at'] ?? existingValue['readAt']
-        : null;
-
-    await ref.set({
-      ...payload,
-      'read': existingRead,
-      'is_read': existingRead,
-      if (existingReadAt != null) 'read_at': existingReadAt,
-      'company_id': session.companyId,
-      'uid': session.uid,
-      'updated_at': DateTime.now().millisecondsSinceEpoch,
-    }).catchError((_) {});
+    await _notificationService.upsertPayload(
+      session: session,
+      payload: {
+        ...payload,
+        'company_id': session.companyId,
+        'uid': session.uid,
+      },
+    );
   }
 
   static Future<void> _clearReminderGroup(
@@ -239,12 +230,17 @@ class AttendanceReminderService {
     await LocalNotificationService.cancel(
       _scheduledNotificationId(daySeed, action, stage),
     );
-    await _database.ref('notifications/${session.uid}/$id').update({
-      'read': true,
-      'is_read': true,
-      'active': false,
-      'cleared_at': DateTime.now().millisecondsSinceEpoch,
-    }).catchError((_) {});
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _notificationService.updateNotificationFields(
+      session: session,
+      notificationId: id,
+      fields: {
+        'read': true,
+        'is_read': true,
+        'active': false,
+        'cleared_at': now,
+      },
+    );
   }
 
   static Future<bool> _wasLocallyDelivered(
@@ -268,6 +264,15 @@ class AttendanceReminderService {
     }).catchError((_) {});
   }
 
+  static Future<void> cancelScheduledReminderByNotificationId(
+    String notificationId,
+  ) async {
+    final localNotificationId =
+        _localNotificationIdFromNotificationId(notificationId);
+    if (localNotificationId == null) return;
+    await LocalNotificationService.cancel(localNotificationId);
+  }
+
   static String _reminderId(String dateKey, String action, String stage) =>
       'attendance_reminder_${dateKey}_${action}_$stage';
 
@@ -279,6 +284,21 @@ class AttendanceReminderService {
     final base = action == 'check_in' ? _checkInBaseId : _checkOutBaseId;
     final variant = stage == 'now' ? 1 : 0;
     return base + (daySeed % 10000) * 10 + variant;
+  }
+
+  static int? _localNotificationIdFromNotificationId(String notificationId) {
+    final match = RegExp(
+      r'^attendance_reminder_(\d{4}-\d{2}-\d{2})_(check_in|check_out)_(pre|now)$',
+    ).firstMatch(notificationId.trim());
+    if (match == null) return null;
+
+    final daySeed =
+        int.tryParse(match.group(1)!.replaceAll('-', '')) ?? DateTime.now().day;
+    return _scheduledNotificationId(
+      daySeed,
+      match.group(2)!,
+      match.group(3)!,
+    );
   }
 
   static DateTime? _todayAt(String value) {
@@ -293,12 +313,4 @@ class AttendanceReminderService {
 
   static String _shortTime(DateTime value) =>
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-
-  static bool _asBool(dynamic value) {
-    if (value == null) return false;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final text = value.toString().trim().toLowerCase();
-    return text == 'true' || text == '1' || text == 'yes';
-  }
 }
