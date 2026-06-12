@@ -314,27 +314,30 @@ class PushNotificationService {
     final data = Map<String, dynamic>.from(message.data);
     final notification = message.notification;
 
-    final title =
-        notification?.title ?? data['title'] ?? data['notification_title'];
+    final title = _firstNonEmptyText([
+      notification?.title,
+      data['title'],
+      data['notification_title'],
+    ], fallback: 'MYPRESENSI');
 
-    final body = notification?.body ??
-        data['body'] ??
-        data['message'] ??
-        data['notification_body'];
+    final body = _firstNonEmptyText([
+      notification?.body,
+      data['body'],
+      data['message'],
+      data['notification_body'],
+    ], fallback: 'Ada notifikasi baru.');
 
-    data['title'] = (title?.toString().trim().isNotEmpty == true)
-        ? title.toString()
-        : 'MYPRESENSI';
-
-    data['body'] = (body?.toString().trim().isNotEmpty == true)
-        ? body.toString()
-        : 'Ada notifikasi baru.';
+    data['title'] = title;
+    data['body'] = body;
 
     data['message'] = data['message']?.toString().trim().isNotEmpty == true
         ? data['message'].toString()
         : data['body'];
 
-    data['ref_type'] = (data['ref_type'] ?? data['type'] ?? '').toString();
+    data['ref_type'] = _firstNonEmptyText([
+      data['ref_type'],
+      data['type'],
+    ]);
 
     final notificationId = [
       data['notification_id'],
@@ -360,5 +363,16 @@ class PushNotificationService {
     }
 
     return data;
+  }
+
+  static String _firstNonEmptyText(
+    List<dynamic> values, {
+    String fallback = '',
+  }) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) return text;
+    }
+    return fallback;
   }
 }

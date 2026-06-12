@@ -18,15 +18,23 @@ class NotificationRouter {
     AppSession session,
     Map<String, dynamic> payload,
   ) {
-    final refType = (payload['ref_type'] ?? payload['type'] ?? '').toString();
-    final refId = (payload['ref_id'] ?? payload['related_id'] ?? '').toString();
-    final title =
-        (payload['title'] ?? payload['notification_title'] ?? '').toString();
-    final body = (payload['body'] ??
-            payload['message'] ??
-            payload['notification_body'] ??
-            '')
-        .toString();
+    final refType = _firstNonEmptyText([
+      payload['ref_type'],
+      payload['type'],
+    ]);
+    final refId = _firstNonEmptyText([
+      payload['ref_id'],
+      payload['related_id'],
+    ]);
+    final title = _firstNonEmptyText([
+      payload['title'],
+      payload['notification_title'],
+    ]);
+    final body = _firstNonEmptyText([
+      payload['body'],
+      payload['message'],
+      payload['notification_body'],
+    ]);
     _routeByRefType(
       context,
       session,
@@ -171,6 +179,14 @@ class NotificationRouter {
         text.contains('koreksi') ||
         text.contains('disetujui') ||
         text.contains('ditolak');
+  }
+
+  static String _firstNonEmptyText(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   static RequestTypeFilter? _requestTypeFromText(String type, String text) {

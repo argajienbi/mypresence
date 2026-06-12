@@ -109,7 +109,11 @@ class AppNotification {
       body: body,
       message: message,
       type: _firstNonEmpty([map['type']], fallback: 'info'),
-      refType: _firstNonEmpty([map['ref_type'], map['refType']]),
+      refType: _firstNonEmpty([
+        map['ref_type'],
+        map['refType'],
+        map['type'],
+      ]),
       refId: refId,
       relatedId: relatedId,
       senderUid: _firstNonEmpty([map['sender_uid'], map['senderUid']]),
