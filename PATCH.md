@@ -1,32 +1,43 @@
-# PATCH.md - MYPRESENCE FCM Receiver & Local Fallback Cleanup
+# PATCH.md - MYPRESENCE FCM Token Permission Resync
 
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
-Patch sebelumnya untuk single attendance card, refresh foto profil, back behavior, maps card, approval routing, dan local attendance reminder sudah dianggap selesai. Jangan sentuh lagi kecuali ada error compile langsung.
+Fokus patch ini hanya memperbaiki sinkronisasi status izin notifikasi/token FCM agar admin_web Token Health tidak terus menampilkan `Permission Blocked/Denied` ketika izin notifikasi Android sebenarnya sudah ON.
 
-Fokus patch ini hanya memastikan `mypresence` siap sebagai **penerima notifikasi FCM** dan menjaga local notification sebagai fallback. Pengiriman FCM utama untuk event bisnis harus dikerjakan di `admin_web`/cloud/backend, bukan di app Flutter.
+Patch sebelumnya untuk UI, kamera, history, tombol absen, maps, approval routing, FCM receiver, dan local fallback sudah dianggap selesai. Jangan disentuh lagi kecuali ada error compile langsung. Karena menyentuh fitur yang sudah sehat itu cara klasik mengundang bug datang bertamu.
 
 ---
 
-## Konteks penting
+## Konteks masalah
 
-Test push FCM dari admin sudah normal. Artinya device/app penerima sudah bisa menerima FCM.
+Di Android Settings, izin notifikasi app sudah ON.
 
-Masalah yang tersisa:
-
-```text
-- Notifikasi bell/inbox masuk.
-- Tetapi perubahan jadwal/reminder kadang tidak muncul di status bar.
-```
-
-Kesimpulan arsitektur:
+Namun admin_web > Token Health masih menampilkan:
 
 ```text
-admin_web/cloud/backend = pengirim resmi event bisnis via FCM
-mypresence = penerima FCM + pembaca inbox/bell + fallback local notification
+Permission Blocked/Denied
 ```
 
-Jangan mencoba mengirim FCM dari app Flutter menggunakan server key. Itu berbahaya dan tidak boleh dilakukan. App Flutter hanya menyimpan token dan menerima payload.
+Penyebab paling mungkin:
+
+```text
+1. permission_status token di Firestore/RTDB masih data lama.
+2. App belum menulis ulang status izin setelah user mengaktifkan notifikasi dari Android Settings.
+3. Token lama masih tampil di dashboard dan belum ditandai inactive.
+4. registerDeviceToken hanya dipanggil pada momen tertentu, bukan saat app resume/Home dibuka.
+```
+
+Dashboard admin_web tidak membaca izin Android secara langsung. Dashboard hanya membaca field token di database, seperti:
+
+```text
+permission_status
+active
+updated_at
+last_seen_at
+permission_last_checked_at
+```
+
+Jadi app `mypresence` wajib melakukan resync token permission secara berkala.
 
 ---
 
@@ -52,14 +63,14 @@ android/app/google-services.json
 lib/firebase_options.dart
 Firebase project config
 package name
-CameraPresencePage behavior yang sudah diperbaiki
-ProxyQrCameraPage behavior yang sudah diperbaiki
-PhotoQualityService compress/resize yang sudah berjalan
-HistoryPage logic 7 hari yang sudah berjalan
-ClockAttendanceCard single dynamic card yang sudah berjalan
-RadiusCard clickable/detail lokasi yang sudah berjalan
-Profile photo refresh yang sudah berjalan
-Back behavior yang sudah berjalan
+CameraPresencePage behavior
+ProxyQrCameraPage behavior
+PhotoQualityService behavior
+HistoryPage logic 7 hari
+ClockAttendanceCard behavior
+RadiusCard behavior
+NotificationRouter mapping utama
+admin_web/cloud sender architecture
 ```
 
 ---
@@ -81,173 +92,13 @@ flutter run
 flutter install
 ```
 
-Build dan test notifikasi di device dilakukan manual oleh user.
+Build dan test device dilakukan manual oleh user.
 
 ---
 
-# PATCH-01 - Rapikan Receiver Payload FCM
+# PATCH-01 - Tambahkan `refreshCurrentTokenStatus`
 
-## Target file
-
-```text
-lib/services/push_notification_service.dart
-lib/services/notification_router.dart
-lib/features/notifications/notifications_page.dart
-lib/features/notifications/notification_detail_page.dart
-```
-
-## Instruksi
-
-Pastikan app bisa membaca payload dari admin_web/cloud dengan field standar berikut:
-
-```text
-notification_id
-id
-inbox_id
-company_id
-uid
-title
-body
-message
-type
-ref_type
-ref_id
-related_id
-sender_uid
-sender_name
-sender_role
-created_at
-```
-
-Jika sebagian field kosong, lakukan fallback aman:
-
-```text
-notification_id fallback ke id/inbox_id/messageId
-body fallback ke message/notification_body
-type fallback ke info
-ref_type fallback ke type jika ref_type kosong
-ref_id fallback ke related_id
-```
-
-Jangan membuat payload baru yang tidak kompatibel dengan admin_web/cloud.
-
-## Acceptance criteria
-
-- FCM dari test push tetap muncul.
-- FCM dari event jadwal/approval/reminder dengan payload standar bisa dibaca.
-- Foreground FCM tetap tampil sebagai local notification.
-- Background/killed FCM dengan notification payload tetap muncul di status bar Android.
-- `flutter analyze` pass.
-
----
-
-# PATCH-02 - Dedupe FCM vs Local Reminder
-
-## Masalah
-
-Reminder absen nanti akan datang dari cloud/FCM sebagai jalur utama, tetapi app juga masih punya local reminder fallback. Jangan sampai user menerima dua notifikasi yang sama.
-
-## Target file
-
-```text
-lib/services/push_notification_service.dart
-lib/services/attendance_reminder_service.dart
-lib/services/local_notification_service.dart
-```
-
-## Instruksi
-
-1. Jika FCM diterima dengan `notification_id` seperti:
-
-```text
-attendance_reminder_YYYY-MM-DD_check_in_pre
-attendance_reminder_YYYY-MM-DD_check_in_now
-attendance_reminder_YYYY-MM-DD_check_out_pre
-attendance_reminder_YYYY-MM-DD_check_out_now
-```
-
-maka app harus membatalkan scheduled local notification dengan ID yang sesuai.
-
-2. Jangan membatalkan semua notifikasi lokal secara brutal.
-3. Batalkan hanya reminder yang punya `notification_id` sama atau bisa dipetakan.
-4. Jika FCM foreground ditampilkan dengan local notification, jangan munculkan local fallback kedua.
-5. Jika app hanya menerima inbox/bell tanpa FCM, local fallback masih boleh bekerja.
-
-## Acceptance criteria
-
-- FCM reminder dari cloud tidak dobel dengan local fallback.
-- Local reminder tetap berfungsi jika FCM tidak datang.
-- Tidak ada pembatalan notifikasi yang tidak terkait.
-- `flutter analyze` pass.
-
----
-
-# PATCH-03 - Routing Tap Notifikasi Harus Konsisten
-
-## Target file
-
-```text
-lib/services/notification_router.dart
-```
-
-## Mapping final
-
-Pastikan payload berikut diarahkan benar:
-
-```text
-ref_type: attendance_reminder -> Home
-ref_type: schedule / jadwal -> Detail Jadwal atau Home + detail jadwal
-ref_type: leave / izin / cuti / sakit / approval -> Status Pengajuan/detail pengajuan
-ref_type: correction / koreksi -> Status Pengajuan/detail koreksi
-ref_type: qr -> Status Pengajuan/detail QR jika tersedia
-ref_type: attendance / presensi -> Riwayat/detail presensi
-ref_type: announcement / pengumuman -> Pengumuman
-```
-
-Jika `ref_id` kosong, fallback harus tetap aman dan tidak crash.
-
-## Acceptance criteria
-
-- Tap reminder membuka Home.
-- Tap jadwal membuka detail jadwal.
-- Tap approval membuka Status Pengajuan.
-- Tap koreksi membuka Status Pengajuan filter koreksi.
-- Tap presensi membuka Riwayat.
-- Tap pengumuman membuka Pengumuman.
-- `flutter analyze` pass.
-
----
-
-# PATCH-04 - Local Notification Tetap Fallback, Bukan Jalur Utama
-
-## Target file
-
-```text
-lib/services/attendance_reminder_service.dart
-lib/features/home/home_page.dart
-```
-
-## Instruksi
-
-1. Jangan hapus local reminder sepenuhnya.
-2. Jadikan local reminder sebagai fallback saat app sudah pernah membuka Home dan jadwal hari ini tersedia.
-3. Jangan menganggap local reminder sebagai sumber utama status bar.
-4. Jangan menambahkan logic FCM sender di Flutter client.
-5. Jika Home mendeteksi jadwal berubah dari polling, boleh tampilkan local notification sebagai fallback ringan, tetapi jalur utama tetap admin_web/cloud FCM.
-6. Hindari duplikasi antara local schedule change notification dan FCM schedule notification dengan `notification_id` konsisten.
-
-## Acceptance criteria
-
-- App tetap menjadwalkan reminder lokal sebagai fallback.
-- App tidak mencoba mengirim FCM sendiri.
-- Status bar utama untuk event bisnis dipersiapkan dari FCM cloud.
-- `flutter analyze` pass.
-
----
-
-# PATCH-05 - Token FCM Tetap Tersimpan dan Bisa Dipakai Admin_web/Cloud
-
-## Target file
+## Target file utama
 
 ```text
 lib/services/push_notification_service.dart
@@ -255,62 +106,371 @@ lib/services/push_notification_service.dart
 
 ## Instruksi
 
-Pastikan token FCM tetap disimpan ke lokasi yang sudah digunakan:
+Tambahkan method public:
 
-```text
-Firestore:
-companies/{companyId}/fcm_tokens/{uid}/{tokenId}
-
-RTDB mirror:
-companies/{companyId}/users/{uid}/fcm_tokens/{tokenId}
+```dart
+static Future<void> refreshCurrentTokenStatus(AppSession session) async
 ```
 
-atau path existing di project. Jangan mengganti path token tanpa alasan kuat.
+Method ini wajib:
 
-Pastikan field minimal token:
+```text
+1. Panggil FirebaseMessaging.instance.getNotificationSettings().
+2. Ambil FCM token saat ini dengan getToken().
+3. Jika token kosong/null, tulis debug status empty_token dan permission terbaru.
+4. Jika token tersedia, update Firestore token record.
+5. Update RTDB mirror token record.
+6. Update companies/{companyId}/users/{uid}/fcm_token_status.
+```
+
+Field yang harus diupdate di token record:
 
 ```text
 token
 token_id
-uid
-company_id
 platform
+device_name
 permission_status
+statusbar_allowed
 active
 updated_at
 last_seen_at
+permission_last_checked_at
+uid
+company_id
 app_source
 ```
 
+Aturan `statusbar_allowed`:
+
+```text
+authorized atau provisional -> true
+denied atau notDetermined -> false
+```
+
+Aturan `active`:
+
+```text
+authorized/provisional dan token tidak kosong -> true
+denied/notDetermined atau token kosong -> false
+```
+
+Jika permission denied, tambahkan:
+
+```text
+invalid_reason = notification_permission_denied
+```
+
+Jika permission authorized/provisional, hapus/bersihkan `invalid_reason` jika sebelumnya berisi `notification_permission_denied`.
+
+Jangan mematikan token karena error jaringan sementara.
+
+## Catatan implementasi
+
+Method ini sebaiknya memakai helper internal `_saveToken(...)` agar format path tetap sama.
+
+Namun `_saveToken` sekarang menerima `permissionStatus` dari hasil requestPermission lama. Pastikan refresh membaca permission terbaru dari:
+
+```dart
+await _messaging.getNotificationSettings()
+```
+
+bukan memakai status lama yang tersimpan di closure token refresh.
+
 ## Acceptance criteria
 
-- Test push tetap normal.
-- Token aktif bisa dibaca oleh admin_web/cloud.
-- Logout/deactivate token tetap aman.
+- Saat user mengaktifkan izin notifikasi dari Android Settings lalu membuka app, token record berubah dari denied ke authorized.
+- Token Health admin_web tidak lagi menampilkan permission blocked untuk token terbaru.
+- Field `permission_last_checked_at` berubah saat refresh.
+- `active` sesuai status permission terbaru.
 - `flutter analyze` pass.
 
 ---
 
-# File yang jangan disentuh kecuali terpaksa
+# PATCH-02 - Panggil Resync Saat Login/Home/App Resume
+
+## Target file kemungkinan
 
 ```text
-lib/features/attendance/camera_presence_page.dart
-lib/features/proxy_qr/proxy_qr_camera_page.dart
-lib/services/photo_quality_service.dart
-lib/features/history/history_page.dart
-lib/features/home/widgets/clock_attendance_card.dart
-lib/features/home/widgets/radius_card.dart
-lib/features/home/widgets/location_detail_sheet.dart
-android/app/build.gradle
-android/app/google-services.json
-lib/firebase_options.dart
+lib/main.dart
+lib/features/auth/login_page.dart
+lib/features/home/home_page.dart
+lib/services/session_service.dart
+lib/services/push_notification_service.dart
+```
+
+Sesuaikan dengan struktur repo.
+
+## Instruksi
+
+Panggil:
+
+```dart
+PushNotificationService.refreshCurrentTokenStatus(session)
+```
+
+pada momen berikut:
+
+```text
+1. Setelah login sukses dan session tersedia.
+2. Saat HomePage initState/load awal.
+3. Saat app resume dari background.
+4. Setelah registerDeviceToken jika ada flow existing.
+```
+
+Untuk app resume, gunakan salah satu:
+
+```text
+WidgetsBindingObserver pada root app / MainShell / HomePage.
+```
+
+Saat lifecycle `AppLifecycleState.resumed`, panggil resync jika session valid.
+
+## Jangan lakukan
+
+```text
+- Jangan memanggil requestPermission berulang-ulang di setiap frame.
+- Jangan menampilkan dialog permission terus-menerus.
+- Jangan logout user jika permission denied.
+- Jangan mengganggu flow presensi.
+```
+
+Gunakan debounce ringan agar tidak spam write database.
+
+Rekomendasi debounce:
+
+```text
+minimal 30-60 detik antar refresh token status
+```
+
+## Acceptance criteria
+
+- Setelah user mengubah izin di Android Settings dan kembali ke app, status token tersinkron.
+- Saat Home dibuka, token status tersinkron.
+- Tidak ada spam write database tiap rebuild.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-03 - Perbaiki Token Refresh Listener agar Baca Permission Terbaru
+
+## Target file
+
+```text
+lib/services/push_notification_service.dart
+```
+
+## Masalah
+
+Listener `onTokenRefresh` bisa memakai permission status lama yang didapat saat `registerDeviceToken` pertama kali dipanggil.
+
+## Instruksi
+
+Di dalam listener:
+
+```dart
+_messaging.onTokenRefresh.listen((newToken) async { ... })
+```
+
+jangan pakai permission dari closure lama.
+
+Ubah agar saat token refresh:
+
+```dart
+final latestSettings = await _messaging.getNotificationSettings();
+await _saveToken(
+  session,
+  newToken,
+  permissionStatus: latestSettings.authorizationStatus.name,
+  preserveCreatedAt: true,
+);
+```
+
+Pastikan field `statusbar_allowed`, `active`, dan `permission_last_checked_at` juga terupdate.
+
+## Acceptance criteria
+
+- Token baru selalu menyimpan permission terbaru.
+- Token refresh tidak memakai permission status lama.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-04 - Tandai Token Lama Device yang Sama sebagai Inactive Jika Aman
+
+## Target file
+
+```text
+lib/services/push_notification_service.dart
+```
+
+## Masalah
+
+Token Health menampilkan banyak token lama untuk user yang sama. Ini membuat dashboard terlihat blocked/denied walaupun token terbaru sudah authorized.
+
+## Instruksi
+
+Saat menyimpan token baru yang valid:
+
+```text
+1. Ambil daftar token user di Firestore path existing.
+2. Untuk token lain milik uid+companyId+platform yang sama, tandai inactive.
+3. Jangan hapus token lama, cukup update active=false.
+4. Mirror inactive ke RTDB juga.
+```
+
+Payload inactive token lama:
+
+```text
+active = false
+updated_at = now
+invalidated_at = now
+invalid_reason = superseded_by_new_token
+superseded_by = tokenId baru
+```
+
+Hati-hati:
+
+```text
+- Jangan menonaktifkan token device lain jika nanti multi-device ingin didukung.
+- Jika tidak ada device_id stabil, batasi hanya token dengan platform yang sama dan app_source=mypresence.
+- Jika ragu, buat method ini optional/aman, jangan sampai mematikan token device lain secara agresif.
+```
+
+## Acceptance criteria
+
+- Token lama dari app/source yang sama tidak lagi terlihat active.
+- Token terbaru tetap active.
+- Token Health lebih bersih.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-05 - Tambahkan Helper untuk Membuka Settings Notifikasi Jika Permission Denied
+
+## Target file kemungkinan
+
+```text
+lib/services/push_notification_service.dart
+lib/features/profile/profile_page.dart
+lib/features/notifications/notifications_page.dart
+```
+
+Opsional, tapi sangat berguna.
+
+## Instruksi
+
+Jika permission denied, app boleh menampilkan pesan ringan di halaman Profil atau Notifikasi:
+
+```text
+Notifikasi belum aktif. Aktifkan izin notifikasi agar reminder absen dan status pengajuan muncul di status bar.
+```
+
+Tambahkan tombol:
+
+```text
+Buka Pengaturan Notifikasi
+```
+
+Jika package untuk open app settings sudah ada, gunakan. Jika belum ada, jangan menambah dependency besar tanpa perlu. Cukup siapkan TODO ringan.
+
+Jangan tampilkan popup paksa di Home setiap waktu.
+
+## Acceptance criteria
+
+- User diberi arahan jika permission denied.
+- Tidak mengganggu flow absensi.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-06 - Tambahkan Debug Log Ringan di RTDB
+
+## Target file
+
+```text
+lib/services/push_notification_service.dart
+```
+
+Saat refresh berhasil/gagal, update:
+
+```text
+companies/{companyId}/users/{uid}/fcm_token_status
+```
+
+Field minimal:
+
+```text
+status = registered / refreshed / empty_token / permission_denied / error
+permission_status
+statusbar_allowed
+token_id
+updated_at
+platform
+last_error
+```
+
+Jangan tulis token penuh di debug status. Token penuh cukup di token record.
+
+## Acceptance criteria
+
+- Admin bisa melihat status terakhir sync token.
+- Debug status tidak mengekspos token penuh.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-07 - Manual Test Notes untuk Codex
+
+Codex wajib menulis manual test di laporan akhir:
+
+```text
+1. Install build baru mypresence.
+2. Login sebagai user target.
+3. Buka Android Settings > App > MY PRESENCE > Izin aplikasi.
+4. Pastikan Notifikasi ON.
+5. Matikan 'Kelola aplikasi jika tidak digunakan' jika ada.
+6. Buka app mypresence.
+7. Masuk Home dan tunggu 5-10 detik.
+8. Buka admin_web > Log Notifikasi > Kesehatan Token.
+9. Klik Pindai Sembari Sinkron.
+10. Pastikan token terbaru user menjadi ACTIVE dan permission bukan blocked/denied.
+11. Kirim Uji Push dari admin_web.
+12. Status bar harus muncul.
+13. Jika belum muncul, cek delivery log dan permission_status terbaru.
 ```
 
 ---
 
-# Laporan akhir Codex
+# PATCH-08 - Jangan Ubah Area Lain
 
-Setelah selesai, Codex wajib menulis laporan:
+Jangan ubah:
+
+```text
+CameraPresencePage
+ProxyQrCameraPage
+PhotoQualityService
+HistoryPage
+ClockAttendanceCard
+RadiusCard
+Attendance submission logic
+Admin_web integration payload
+NotificationRouter mapping besar
+```
+
+Patch ini hanya untuk:
+
+```text
+FCM token permission resync
+FCM token health cleanup
+status debug token
+```
+
+---
+
+# Laporan akhir wajib
+
+Setelah selesai, Codex wajib menulis:
 
 ```text
 ## Summary
@@ -318,45 +478,45 @@ Setelah selesai, Codex wajib menulis laporan:
 - File yang diubah:
 - File baru:
 
+## Token Permission Resync
+- refreshCurrentTokenStatus:
+- dipanggil saat login:
+- dipanggil saat Home init:
+- dipanggil saat app resume:
+- debounce:
+
+## Token Record Fields
+- permission_status:
+- statusbar_allowed:
+- active:
+- permission_last_checked_at:
+- invalid_reason:
+
+## Token Cleanup
+- token lama inactive:
+- RTDB mirror:
+
 ## Validation
-- flutter analyze: pass/fail
-
-## FCM Receiver Check
-- Payload normalization:
-- Foreground handling:
-- Background/killed handling:
-- Token path:
-
-## Local Fallback Check
-- Reminder local fallback:
-- Dedupe FCM vs local:
-- Schedule change fallback:
-
-## Routing Check
-- Schedule notification route:
-- Approval notification route:
-- Attendance reminder route:
+- flutter analyze:
 
 ## Manual Build
 - Tidak dijalankan oleh Codex. Build dilakukan manual oleh user.
 
-## Notes
-- Apakah kamera/history/card absen/maps tidak disentuh:
-- Risiko tersisa:
+## Manual Test Notes
+- Langkah test ulang dengan admin_web:
 ```
-
-Jangan menulis hasil build karena build tidak diminta.
 
 ---
 
 # Urutan pengerjaan wajib
 
 ```text
-1. Audit receiver FCM payload.
-2. Pastikan token FCM tetap di path existing.
-3. Pastikan dedupe FCM vs local reminder.
-4. Pastikan routing tap notifikasi konsisten.
-5. Pastikan local notification hanya fallback.
-6. flutter analyze.
-7. Tulis laporan akhir.
+1. Tambahkan refreshCurrentTokenStatus.
+2. Update _saveToken agar mendukung statusbar_allowed, active by permission, permission_last_checked_at.
+3. Ubah token refresh listener agar baca permission terbaru.
+4. Panggil refresh setelah login/Home/app resume dengan debounce.
+5. Tambahkan debug status RTDB.
+6. Optional: inactive token lama secara aman.
+7. flutter analyze.
+8. Tulis laporan akhir.
 ```
