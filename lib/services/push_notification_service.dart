@@ -40,12 +40,7 @@ class PushNotificationService {
     try {
       await _messaging.setAutoInitEnabled(true);
 
-      await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
+      await _ensureNotificationPermission();
 
       await _messaging.setForegroundNotificationPresentationOptions(
         alert: true,
@@ -153,7 +148,7 @@ class PushNotificationService {
   static Future<void> registerDeviceToken(AppSession session) async {
     await _messaging.setAutoInitEnabled(true);
 
-    final settings = await _messaging.getNotificationSettings();
+    final settings = await _ensureNotificationPermission();
     final permissionStatus = settings.authorizationStatus.name;
     final statusbarAllowed = _statusbarAllowed(settings.authorizationStatus);
     final checkedAt = DateTime.now().millisecondsSinceEpoch;
@@ -459,6 +454,21 @@ class PushNotificationService {
 
   static Future<void> openNotificationSettings() async {
     await openAppSettings();
+  }
+
+  static Future<NotificationSettings> _ensureNotificationPermission() async {
+    var settings = await _messaging.getNotificationSettings();
+
+    if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+      settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+    }
+
+    return settings;
   }
 
   static int _notificationId(RemoteMessage message) {
