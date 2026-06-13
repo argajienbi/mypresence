@@ -13,6 +13,7 @@ import '../../services/leave_service.dart';
 import '../../services/local_notification_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../attendance/camera_presence_page.dart';
@@ -77,6 +78,7 @@ class _HomePageState extends State<HomePage> {
       const Duration(minutes: 5),
       (_) => _loadSchedule(notifyChange: true),
     );
+    unawaited(PushNotificationService.refreshCurrentTokenStatus(widget.session));
     _refresh().then((_) {
       if (!mounted || !widget.showScheduleOnOpen) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {

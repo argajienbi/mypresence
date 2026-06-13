@@ -136,6 +136,10 @@ class _SplashPageState extends State<SplashPage>
       debugPrint('Gagal register token notifikasi dari splash: $e');
     }
 
+    unawaited(
+      PushNotificationService.refreshCurrentTokenStatus(resolvedSession),
+    );
+
     await _safeNavigate(() => MainShell(session: resolvedSession));
   }
 

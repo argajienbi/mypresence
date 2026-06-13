@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -55,6 +57,10 @@ class _LoginPageState extends State<LoginPage> {
       } catch (e) {
         debugPrint('Gagal register token notifikasi: $e');
       }
+
+      unawaited(
+        PushNotificationService.refreshCurrentTokenStatus(session),
+      );
 
       if (!mounted) return;
 

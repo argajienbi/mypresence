@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_theme.dart';
@@ -6,6 +7,7 @@ import '../../core/models/app_session.dart';
 import '../../core/session/app_session_controller.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../services/request_status_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
@@ -172,6 +174,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     photoUrl: _photoUrl,
                     onPhotoTap: _showPhotoSource,
                   ),
+                  const SizedBox(height: 14),
+                  const _NotificationPermissionBanner(),
                   const SizedBox(height: 14),
                   const _SectionTitle('Informasi Kerja'),
                   const SizedBox(height: 7),
@@ -686,6 +690,79 @@ class _SheetOption extends StatelessWidget {
       title: Text(title,
           style: const TextStyle(
               fontWeight: FontWeight.w900, color: AppColors.text)),
+    );
+  }
+}
+
+class _NotificationPermissionBanner extends StatelessWidget {
+  const _NotificationPermissionBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<NotificationSettings>(
+      future: FirebaseMessaging.instance.getNotificationSettings(),
+      builder: (context, snapshot) {
+        final denied =
+            snapshot.data?.authorizationStatus == AuthorizationStatus.denied;
+        if (!denied) return const SizedBox.shrink();
+
+        return AppCard(
+          padding: const EdgeInsets.all(16),
+          radius: 22,
+          color: AppColors.orange.withValues(alpha: .08),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: .16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.notifications_off_outlined,
+                  color: AppColors.orange,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Notifikasi belum aktif',
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Aktifkan izin notifikasi agar reminder absen dan status pengajuan muncul di status bar.',
+                      style: TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12.5,
+                        height: 1.45,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.tonalIcon(
+                      onPressed: () async {
+                        await PushNotificationService.openNotificationSettings();
+                      },
+                      icon: const Icon(Icons.settings_outlined, size: 18),
+                      label: const Text('Buka Pengaturan Notifikasi'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

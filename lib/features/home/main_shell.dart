@@ -31,7 +31,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   late int _index;
   late bool _showScheduleOnOpen;
   late AppSession _session;
@@ -40,11 +40,13 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _index = widget.initialIndex.clamp(0, 2);
     _showScheduleOnOpen = widget.showScheduleOnOpen;
     _session = widget.session;
     AppSessionController.instance.setSession(_session);
     PushNotificationService.onPayloadReceived = _handlePushPayload;
+    unawaited(PushNotificationService.refreshCurrentTokenStatus(_session));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -64,10 +66,23 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (PushNotificationService.onPayloadReceived == _handlePushPayload) {
       PushNotificationService.onPayloadReceived = null;
     }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(
+        PushNotificationService.refreshCurrentTokenStatus(
+          _session,
+          force: true,
+        ),
+      );
+    }
   }
 
   void _handlePushPayload(Map<String, dynamic> payload) {
