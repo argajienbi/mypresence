@@ -78,6 +78,7 @@ class NotificationService {
     required AppSession session,
     required Map<String, dynamic> payload,
     bool preserveReadState = true,
+    bool preserveActiveState = true,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final normalized = _normalizePayload(session, payload, now: now);
@@ -172,7 +173,7 @@ class NotificationService {
       firestoreData['active'],
       rtdbData['active'],
     ]);
-    if (existingActive != null) {
+    if (preserveActiveState && existingActive != null) {
       merged['active'] = existingActive;
     } else {
       merged['active'] = _asBool(merged['active'], true);
