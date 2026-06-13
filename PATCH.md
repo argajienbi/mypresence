@@ -1,43 +1,28 @@
-# PATCH.md - MYPRESENCE FCM Token Permission Resync
+# PATCH.md - MYPRESENCE FCM Lifecycle Resync Wiring
 
 Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
-Fokus patch ini hanya memperbaiki sinkronisasi status izin notifikasi/token FCM agar admin_web Token Health tidak terus menampilkan `Permission Blocked/Denied` ketika izin notifikasi Android sebenarnya sudah ON.
+Fokus patch ini **hanya menyambungkan** method yang sudah dibuat:
 
-Patch sebelumnya untuk UI, kamera, history, tombol absen, maps, approval routing, FCM receiver, dan local fallback sudah dianggap selesai. Jangan disentuh lagi kecuali ada error compile langsung. Karena menyentuh fitur yang sudah sehat itu cara klasik mengundang bug datang bertamu.
-
----
-
-## Konteks masalah
-
-Di Android Settings, izin notifikasi app sudah ON.
-
-Namun admin_web > Token Health masih menampilkan:
-
-```text
-Permission Blocked/Denied
+```dart
+PushNotificationService.refreshCurrentTokenStatus(session)
 ```
 
-Penyebab paling mungkin:
+ke lifecycle aplikasi, supaya status izin notifikasi/token FCM benar-benar tersinkron saat user membuka app, masuk Home, login ulang, atau kembali dari Android Settings.
+
+Patch sebelumnya sudah menambahkan inti penyimpanan token seperti:
 
 ```text
-1. permission_status token di Firestore/RTDB masih data lama.
-2. App belum menulis ulang status izin setelah user mengaktifkan notifikasi dari Android Settings.
-3. Token lama masih tampil di dashboard dan belum ditandai inactive.
-4. registerDeviceToken hanya dipanggil pada momen tertentu, bukan saat app resume/Home dibuka.
-```
-
-Dashboard admin_web tidak membaca izin Android secara langsung. Dashboard hanya membaca field token di database, seperti:
-
-```text
-permission_status
-active
-updated_at
-last_seen_at
+refreshCurrentTokenStatus
+statusbar_allowed
 permission_last_checked_at
+active berdasarkan permission
+invalid_reason notification_permission_denied
+superseded_by_new_token
+fcm_token_status debug
 ```
 
-Jadi app `mypresence` wajib melakukan resync token permission secara berkala.
+Namun dari audit repo, method refresh sudah ada tetapi belum jelas dipanggil dari Home/Login/App Resume. Method bagus yang tidak dipanggil itu cuma pajangan kode, seperti tombol lift palsu yang membuat manusia merasa punya kendali.
 
 ---
 
@@ -63,12 +48,13 @@ android/app/google-services.json
 lib/firebase_options.dart
 Firebase project config
 package name
-CameraPresencePage behavior
-ProxyQrCameraPage behavior
-PhotoQualityService behavior
-HistoryPage logic 7 hari
-ClockAttendanceCard behavior
-RadiusCard behavior
+CameraPresencePage
+ProxyQrCameraPage
+PhotoQualityService
+HistoryPage
+ClockAttendanceCard
+RadiusCard
+Attendance submission logic
 NotificationRouter mapping utama
 admin_web/cloud sender architecture
 ```
@@ -96,295 +82,174 @@ Build dan test device dilakukan manual oleh user.
 
 ---
 
-# PATCH-01 - Tambahkan `refreshCurrentTokenStatus`
+# PATCH-01 - Panggil Refresh Setelah Login Sukses
 
-## Target file utama
+## Target file kemungkinan
+
+Cari flow login/session di file seperti:
 
 ```text
-lib/services/push_notification_service.dart
+lib/features/auth/login_page.dart
+lib/features/auth/login_controller.dart
+lib/features/login/login_page.dart
+lib/services/auth_service.dart
+lib/services/session_service.dart
+lib/main.dart
 ```
+
+Sesuaikan dengan struktur repo yang sebenarnya.
 
 ## Instruksi
 
-Tambahkan method public:
+Setelah login sukses dan `AppSession` sudah tersedia, panggil:
 
 ```dart
-static Future<void> refreshCurrentTokenStatus(AppSession session) async
+unawaited(PushNotificationService.refreshCurrentTokenStatus(session, force: true));
 ```
 
-Method ini wajib:
-
-```text
-1. Panggil FirebaseMessaging.instance.getNotificationSettings().
-2. Ambil FCM token saat ini dengan getToken().
-3. Jika token kosong/null, tulis debug status empty_token dan permission terbaru.
-4. Jika token tersedia, update Firestore token record.
-5. Update RTDB mirror token record.
-6. Update companies/{companyId}/users/{uid}/fcm_token_status.
-```
-
-Field yang harus diupdate di token record:
-
-```text
-token
-token_id
-platform
-device_name
-permission_status
-statusbar_allowed
-active
-updated_at
-last_seen_at
-permission_last_checked_at
-uid
-company_id
-app_source
-```
-
-Aturan `statusbar_allowed`:
-
-```text
-authorized atau provisional -> true
-denied atau notDetermined -> false
-```
-
-Aturan `active`:
-
-```text
-authorized/provisional dan token tidak kosong -> true
-denied/notDetermined atau token kosong -> false
-```
-
-Jika permission denied, tambahkan:
-
-```text
-invalid_reason = notification_permission_denied
-```
-
-Jika permission authorized/provisional, hapus/bersihkan `invalid_reason` jika sebelumnya berisi `notification_permission_denied`.
-
-Jangan mematikan token karena error jaringan sementara.
-
-## Catatan implementasi
-
-Method ini sebaiknya memakai helper internal `_saveToken(...)` agar format path tetap sama.
-
-Namun `_saveToken` sekarang menerima `permissionStatus` dari hasil requestPermission lama. Pastikan refresh membaca permission terbaru dari:
+Jika file belum import `dart:async`, tambahkan:
 
 ```dart
-await _messaging.getNotificationSettings()
+import 'dart:async';
 ```
 
-bukan memakai status lama yang tersimpan di closure token refresh.
+Jika `unawaited` tidak tersedia/kurang cocok, boleh gunakan:
+
+```dart
+PushNotificationService.refreshCurrentTokenStatus(session, force: true).catchError((_) {});
+```
+
+## Syarat penting
+
+Jangan panggil sebelum `session.companyId` dan `session.uid` valid.
+
+Jangan mengganggu navigasi login ke Home.
+
+Jangan menjadikan kegagalan refresh token sebagai alasan login gagal.
 
 ## Acceptance criteria
 
-- Saat user mengaktifkan izin notifikasi dari Android Settings lalu membuka app, token record berubah dari denied ke authorized.
-- Token Health admin_web tidak lagi menampilkan permission blocked untuk token terbaru.
-- Field `permission_last_checked_at` berubah saat refresh.
-- `active` sesuai status permission terbaru.
+- Setelah login ulang, token status langsung refresh.
+- Jika Android notification permission sudah ON, database token menjadi `statusbar_allowed=true` dan `active=true`.
+- Login tetap sukses walaupun refresh token gagal karena jaringan.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-02 - Panggil Resync Saat Login/Home/App Resume
+# PATCH-02 - Panggil Refresh Saat Home Dibuka
 
 ## Target file kemungkinan
 
 ```text
-lib/main.dart
-lib/features/auth/login_page.dart
 lib/features/home/home_page.dart
-lib/services/session_service.dart
-lib/services/push_notification_service.dart
+lib/features/home/home_screen.dart
+lib/features/home/presentation/home_page.dart
 ```
-
-Sesuaikan dengan struktur repo.
 
 ## Instruksi
 
-Panggil:
+Saat HomePage `initState` atau load awal dan session valid, panggil:
 
 ```dart
-PushNotificationService.refreshCurrentTokenStatus(session)
+unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
 ```
 
-pada momen berikut:
+Jika Home punya method load seperti:
 
-```text
-1. Setelah login sukses dan session tersedia.
-2. Saat HomePage initState/load awal.
-3. Saat app resume dari background.
-4. Setelah registerDeviceToken jika ada flow existing.
+```dart
+_loadData()
+_loadHome()
+_initializeHome()
 ```
 
-Untuk app resume, gunakan salah satu:
-
-```text
-WidgetsBindingObserver pada root app / MainShell / HomePage.
-```
-
-Saat lifecycle `AppLifecycleState.resumed`, panggil resync jika session valid.
+boleh panggil di akhir load awal, asalkan tidak dipanggil setiap rebuild.
 
 ## Jangan lakukan
 
 ```text
-- Jangan memanggil requestPermission berulang-ulang di setiap frame.
-- Jangan menampilkan dialog permission terus-menerus.
-- Jangan logout user jika permission denied.
-- Jangan mengganggu flow presensi.
+- Jangan panggil di build().
+- Jangan panggil dalam stream builder/list builder yang sering rebuild.
+- Jangan refresh berulang tiap detik.
 ```
 
-Gunakan debounce ringan agar tidak spam write database.
-
-Rekomendasi debounce:
-
-```text
-minimal 30-60 detik antar refresh token status
-```
+`refreshCurrentTokenStatus` sudah punya debounce 45 detik, tetapi tetap jangan dipanggil sembarangan seperti bel rumah rusak.
 
 ## Acceptance criteria
 
-- Setelah user mengubah izin di Android Settings dan kembali ke app, status token tersinkron.
-- Saat Home dibuka, token status tersinkron.
-- Tidak ada spam write database tiap rebuild.
+- Saat user buka Home, `permission_last_checked_at` update.
+- Token Health admin_web membaca token terbaru.
+- Tidak ada spam write Firestore/RTDB.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-03 - Perbaiki Token Refresh Listener agar Baca Permission Terbaru
-
-## Target file
-
-```text
-lib/services/push_notification_service.dart
-```
-
-## Masalah
-
-Listener `onTokenRefresh` bisa memakai permission status lama yang didapat saat `registerDeviceToken` pertama kali dipanggil.
-
-## Instruksi
-
-Di dalam listener:
-
-```dart
-_messaging.onTokenRefresh.listen((newToken) async { ... })
-```
-
-jangan pakai permission dari closure lama.
-
-Ubah agar saat token refresh:
-
-```dart
-final latestSettings = await _messaging.getNotificationSettings();
-await _saveToken(
-  session,
-  newToken,
-  permissionStatus: latestSettings.authorizationStatus.name,
-  preserveCreatedAt: true,
-);
-```
-
-Pastikan field `statusbar_allowed`, `active`, dan `permission_last_checked_at` juga terupdate.
-
-## Acceptance criteria
-
-- Token baru selalu menyimpan permission terbaru.
-- Token refresh tidak memakai permission status lama.
-- `flutter analyze` pass.
-
----
-
-# PATCH-04 - Tandai Token Lama Device yang Sama sebagai Inactive Jika Aman
-
-## Target file
-
-```text
-lib/services/push_notification_service.dart
-```
-
-## Masalah
-
-Token Health menampilkan banyak token lama untuk user yang sama. Ini membuat dashboard terlihat blocked/denied walaupun token terbaru sudah authorized.
-
-## Instruksi
-
-Saat menyimpan token baru yang valid:
-
-```text
-1. Ambil daftar token user di Firestore path existing.
-2. Untuk token lain milik uid+companyId+platform yang sama, tandai inactive.
-3. Jangan hapus token lama, cukup update active=false.
-4. Mirror inactive ke RTDB juga.
-```
-
-Payload inactive token lama:
-
-```text
-active = false
-updated_at = now
-invalidated_at = now
-invalid_reason = superseded_by_new_token
-superseded_by = tokenId baru
-```
-
-Hati-hati:
-
-```text
-- Jangan menonaktifkan token device lain jika nanti multi-device ingin didukung.
-- Jika tidak ada device_id stabil, batasi hanya token dengan platform yang sama dan app_source=mypresence.
-- Jika ragu, buat method ini optional/aman, jangan sampai mematikan token device lain secara agresif.
-```
-
-## Acceptance criteria
-
-- Token lama dari app/source yang sama tidak lagi terlihat active.
-- Token terbaru tetap active.
-- Token Health lebih bersih.
-- `flutter analyze` pass.
-
----
-
-# PATCH-05 - Tambahkan Helper untuk Membuka Settings Notifikasi Jika Permission Denied
+# PATCH-03 - Panggil Refresh Saat App Resume
 
 ## Target file kemungkinan
 
-```text
-lib/services/push_notification_service.dart
-lib/features/profile/profile_page.dart
-lib/features/notifications/notifications_page.dart
-```
+Pilih tempat paling aman:
 
-Opsional, tapi sangat berguna.
+```text
+lib/main.dart
+lib/app.dart
+lib/features/home/home_page.dart
+lib/features/main/main_shell.dart
+lib/features/root/root_page.dart
+```
 
 ## Instruksi
 
-Jika permission denied, app boleh menampilkan pesan ringan di halaman Profil atau Notifikasi:
+Gunakan `WidgetsBindingObserver` pada widget yang hidup selama user berada di area utama app.
 
-```text
-Notifikasi belum aktif. Aktifkan izin notifikasi agar reminder absen dan status pengajuan muncul di status bar.
+Contoh pola implementasi:
+
+```dart
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshFcmTokenStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshFcmTokenStatus();
+    }
+  }
+
+  void _refreshFcmTokenStatus() {
+    final session = ...; // ambil session existing dari state/service yang sudah ada
+    if (session == null) return;
+    unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
+  }
+}
 ```
 
-Tambahkan tombol:
+Kalau widget root sudah punya lifecycle observer, gunakan yang existing. Jangan bikin observer dobel di banyak halaman jika ada MainShell/root yang lebih tepat.
 
-```text
-Buka Pengaturan Notifikasi
-```
+## Kenapa ini wajib
 
-Jika package untuk open app settings sudah ada, gunakan. Jika belum ada, jangan menambah dependency besar tanpa perlu. Cukup siapkan TODO ringan.
-
-Jangan tampilkan popup paksa di Home setiap waktu.
+Saat user membuka Android Settings lalu mengaktifkan Notifikasi, app perlu refresh saat user kembali ke app. Tanpa lifecycle resume, dashboard admin bisa tetap membaca status lama. Manusia sudah menekan izin, database masih belum tahu. Peradaban modern, katanya.
 
 ## Acceptance criteria
 
-- User diberi arahan jika permission denied.
-- Tidak mengganggu flow absensi.
+- Setelah user ON-kan notifikasi di Android Settings lalu kembali ke app, status token tersinkron tanpa perlu logout.
+- `permission_last_checked_at` berubah.
+- `statusbar_allowed` berubah sesuai permission terbaru.
+- Observer dibersihkan di dispose.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-06 - Tambahkan Debug Log Ringan di RTDB
+# PATCH-04 - Pastikan Permission Prompt Awal Tetap Aman
 
 ## Target file
 
@@ -392,78 +257,137 @@ Jangan tampilkan popup paksa di Home setiap waktu.
 lib/services/push_notification_service.dart
 ```
 
-Saat refresh berhasil/gagal, update:
+## Masalah yang perlu dicek
 
-```text
-companies/{companyId}/users/{uid}/fcm_token_status
+`registerDeviceToken()` sekarang membaca permission dengan:
+
+```dart
+getNotificationSettings()
 ```
 
-Field minimal:
+Ini bagus untuk resync, tetapi untuk install pertama, permission bisa masih:
 
 ```text
-status = registered / refreshed / empty_token / permission_denied / error
-permission_status
-statusbar_allowed
-token_id
-updated_at
-platform
-last_error
+notDetermined
 ```
 
-Jangan tulis token penuh di debug status. Token penuh cukup di token record.
+Jika tidak pernah memanggil `requestPermission()`, user tidak akan diberi popup izin notifikasi.
+
+## Instruksi
+
+Di `registerDeviceToken`, gunakan pola aman:
+
+```dart
+var settings = await _messaging.getNotificationSettings();
+
+if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+  settings = await _messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+    provisional: false,
+  );
+}
+```
+
+Jangan panggil `requestPermission()` jika status sudah `denied`, `authorized`, atau `provisional`.
+
+Untuk user yang `denied`, arahkan lewat `openNotificationSettings()` jika UI sudah ada. Jangan spam popup, karena Android tidak akan terkesan dengan permohonan berulang dari aplikasi absensi.
 
 ## Acceptance criteria
 
-- Admin bisa melihat status terakhir sync token.
-- Debug status tidak mengekspos token penuh.
+- Install pertama tetap bisa memunculkan prompt izin notifikasi.
+- User yang sudah denied tidak diganggu popup terus-menerus.
+- Resync tetap membaca permission terbaru.
 - `flutter analyze` pass.
 
 ---
 
-# PATCH-07 - Manual Test Notes untuk Codex
+# PATCH-05 - Pastikan Import dan Error Handling Aman
 
-Codex wajib menulis manual test di laporan akhir:
+## Target file
+
+Semua file yang memanggil refresh.
+
+## Instruksi
+
+Jika memakai `unawaited`, pastikan import:
+
+```dart
+import 'dart:async';
+```
+
+Pastikan import service:
+
+```dart
+import '../../services/push_notification_service.dart';
+```
+
+atau path yang benar sesuai lokasi file.
+
+Semua refresh harus non-blocking:
+
+```dart
+unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
+```
+
+Jangan sampai error refresh membuat halaman gagal tampil.
+
+## Acceptance criteria
+
+- Tidak ada unused import.
+- Tidak ada compile error karena path import salah.
+- `flutter analyze` pass.
+
+---
+
+# PATCH-06 - Manual Test Wajib
+
+Codex wajib menulis catatan manual test:
 
 ```text
 1. Install build baru mypresence.
 2. Login sebagai user target.
-3. Buka Android Settings > App > MY PRESENCE > Izin aplikasi.
-4. Pastikan Notifikasi ON.
-5. Matikan 'Kelola aplikasi jika tidak digunakan' jika ada.
-6. Buka app mypresence.
-7. Masuk Home dan tunggu 5-10 detik.
-8. Buka admin_web > Log Notifikasi > Kesehatan Token.
-9. Klik Pindai Sembari Sinkron.
-10. Pastikan token terbaru user menjadi ACTIVE dan permission bukan blocked/denied.
-11. Kirim Uji Push dari admin_web.
-12. Status bar harus muncul.
-13. Jika belum muncul, cek delivery log dan permission_status terbaru.
+3. Buka Home dan tunggu 5-10 detik.
+4. Buka admin_web > Log Notifikasi > Kesehatan Token.
+5. Klik Refresh Token Health.
+6. Pastikan token current menjadi ACTIVE dan Permission OK.
+7. Matikan izin notifikasi dari Android Settings.
+8. Kembali ke app mypresence.
+9. Cek permission_last_checked_at berubah dan statusbar_allowed=false.
+10. Nyalakan lagi izin notifikasi dari Android Settings.
+11. Kembali ke app mypresence.
+12. Cek permission_last_checked_at berubah dan statusbar_allowed=true.
+13. Kirim Uji Push dari admin_web.
+14. Status bar harus muncul.
 ```
 
 ---
 
-# PATCH-08 - Jangan Ubah Area Lain
+# PATCH-07 - Jangan Ubah Area Lain
+
+Patch ini hanya untuk lifecycle wiring FCM token refresh.
 
 Jangan ubah:
 
 ```text
-CameraPresencePage
-ProxyQrCameraPage
-PhotoQualityService
-HistoryPage
-ClockAttendanceCard
-RadiusCard
-Attendance submission logic
-Admin_web integration payload
-NotificationRouter mapping besar
+UI Home kecuali penambahan lifecycle call kecil
+kamera absen
+history
+maps
+clock card
+approval pages
+notification routing besar
+attendance submission
+photo upload/compression
 ```
 
-Patch ini hanya untuk:
+Kalau harus menyentuh HomePage, perubahan hanya:
 
 ```text
-FCM token permission resync
-FCM token health cleanup
-status debug token
+- tambah WidgetsBindingObserver jika belum ada
+- tambah helper kecil _refreshFcmTokenStatus
+- panggil refresh di initState/resume
 ```
 
 ---
@@ -478,23 +402,14 @@ Setelah selesai, Codex wajib menulis:
 - File yang diubah:
 - File baru:
 
-## Token Permission Resync
-- refreshCurrentTokenStatus:
-- dipanggil saat login:
-- dipanggil saat Home init:
-- dipanggil saat app resume:
-- debounce:
+## Lifecycle Wiring
+- Setelah login:
+- Home init/load:
+- App resume:
 
-## Token Record Fields
-- permission_status:
-- statusbar_allowed:
-- active:
-- permission_last_checked_at:
-- invalid_reason:
-
-## Token Cleanup
-- token lama inactive:
-- RTDB mirror:
+## Permission Prompt
+- notDetermined handling:
+- denied handling:
 
 ## Validation
 - flutter analyze:
@@ -503,7 +418,8 @@ Setelah selesai, Codex wajib menulis:
 - Tidak dijalankan oleh Codex. Build dilakukan manual oleh user.
 
 ## Manual Test Notes
-- Langkah test ulang dengan admin_web:
+- Cara test dengan admin_web Token Health:
+- Cara test Uji Push:
 ```
 
 ---
@@ -511,12 +427,13 @@ Setelah selesai, Codex wajib menulis:
 # Urutan pengerjaan wajib
 
 ```text
-1. Tambahkan refreshCurrentTokenStatus.
-2. Update _saveToken agar mendukung statusbar_allowed, active by permission, permission_last_checked_at.
-3. Ubah token refresh listener agar baca permission terbaru.
-4. Panggil refresh setelah login/Home/app resume dengan debounce.
-5. Tambahkan debug status RTDB.
-6. Optional: inactive token lama secara aman.
-7. flutter analyze.
-8. Tulis laporan akhir.
+1. Cari flow login/session.
+2. Panggil refresh setelah login sukses.
+3. Cari HomePage/MainShell/root lifecycle.
+4. Panggil refresh saat Home init/load awal.
+5. Tambahkan WidgetsBindingObserver untuk app resume.
+6. Pastikan registerDeviceToken tetap requestPermission hanya saat notDetermined.
+7. Pastikan semua refresh non-blocking dan tidak membuat UI gagal.
+8. flutter analyze.
+9. Tulis laporan akhir.
 ```
