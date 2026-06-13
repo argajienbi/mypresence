@@ -1,439 +1,274 @@
-# PATCH.md - MYPRESENCE FCM Lifecycle Resync Wiring
+# PATCH.md - MYPRESENCE Reminder Absen Statusbar
 
-Dokumen ini adalah instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
+Instruksi kerja untuk Codex pada repo `argajienbi/mypresence`.
 
-Fokus patch ini **hanya menyambungkan** method yang sudah dibuat:
+Fokus patch: sambungkan reminder absen statusbar Flutter dengan konfigurasi dari admin web. Jangan rewrite project. Jangan ubah Firebase config, flow presensi, kamera, radius, QR, login, history, atau inbox notifikasi.
 
-```dart
-PushNotificationService.refreshCurrentTokenStatus(session)
-```
+## Tujuan
 
-ke lifecycle aplikasi, supaya status izin notifikasi/token FCM benar-benar tersinkron saat user membuka app, masuk Home, login ulang, atau kembali dari Android Settings.
+- Reminder absen tetap muncul di statusbar.
+- Waktu reminder tidak lagi hard-code 10 menit.
+- App membaca konfigurasi dari RTDB.
+- App tetap aman jika konfigurasi kosong.
+- Field lama tetap kompatibel.
 
-Patch sebelumnya sudah menambahkan inti penyimpanan token seperti:
+## File prioritas
 
-```text
-refreshCurrentTokenStatus
-statusbar_allowed
-permission_last_checked_at
-active berdasarkan permission
-invalid_reason notification_permission_denied
-superseded_by_new_token
-fcm_token_status debug
-```
+- `lib/services/attendance_reminder_service.dart`
+- `lib/services/push_notification_service.dart`
+- `lib/features/home/home_page.dart`
+- `lib/services/local_notification_service.dart`
+- `lib/services/notification_service.dart`
+- `lib/services/schedule_service.dart`
+- `lib/core/utils.dart`
 
-Namun dari audit repo, method refresh sudah ada tetapi belum jelas dipanggil dari Home/Login/App Resume. Method bagus yang tidak dipanggil itu cuma pajangan kode, seperti tombol lift palsu yang membuat manusia merasa punya kendali.
-
----
-
-## Keputusan yang tidak boleh diubah
-
-Package Android final tetap:
+## Path konfigurasi RTDB
 
 ```text
-com.mypresence
+companies/{companyId}/notification_settings/main
 ```
 
-Pastikan tetap:
-
-```kotlin
-namespace = "com.mypresence"
-applicationId = "com.mypresence"
-```
-
-Jangan ubah:
+## Field utama yang harus dibaca
 
 ```text
-android/app/google-services.json
-lib/firebase_options.dart
-Firebase project config
-package name
-CameraPresencePage
-ProxyQrCameraPage
-PhotoQualityService
-HistoryPage
-ClockAttendanceCard
-RadiusCard
-Attendance submission logic
-NotificationRouter mapping utama
-admin_web/cloud sender architecture
+attendance_reminder_enabled
+reminder_check_in_pre_enabled
+reminder_check_in_now_enabled
+reminder_check_in_late_enabled
+reminder_check_out_pre_enabled
+reminder_check_out_now_enabled
+reminder_check_out_late_enabled
+reminder_check_in_pre_minutes
+reminder_check_in_now_window_minutes
+reminder_check_in_late_minutes
+reminder_check_out_pre_minutes
+reminder_check_out_now_window_minutes
+reminder_check_out_late_minutes
+reminder_scheduler_catchup_minutes
 ```
 
----
-
-## Validasi wajib
-
-Codex cukup menjalankan:
-
-```bash
-flutter analyze
-```
-
-Jangan menjalankan:
-
-```bash
-flutter build apk
-flutter build appbundle
-flutter run
-flutter install
-```
-
-Build dan test device dilakukan manual oleh user.
-
----
-
-# PATCH-01 - Panggil Refresh Setelah Login Sukses
-
-## Target file kemungkinan
-
-Cari flow login/session di file seperti:
+## Field legacy fallback
 
 ```text
-lib/features/auth/login_page.dart
-lib/features/auth/login_controller.dart
-lib/features/login/login_page.dart
-lib/services/auth_service.dart
-lib/services/session_service.dart
-lib/main.dart
+pre_check_in_enabled
+pre_check_in_minutes
+missed_check_in_enabled
+missed_check_in_minutes
+pre_check_out_enabled
+pre_check_out_minutes
+missed_check_out_enabled
+missed_check_out_minutes
 ```
 
-Sesuaikan dengan struktur repo yang sebenarnya.
+Mapping legacy:
 
-## Instruksi
+```text
+pre_check_in_enabled -> reminder_check_in_pre_enabled
+pre_check_in_minutes -> reminder_check_in_pre_minutes
+missed_check_in_enabled -> reminder_check_in_late_enabled
+missed_check_in_minutes -> reminder_check_in_late_minutes
+pre_check_out_enabled -> reminder_check_out_pre_enabled
+pre_check_out_minutes -> reminder_check_out_pre_minutes
+missed_check_out_enabled -> reminder_check_out_late_enabled
+missed_check_out_minutes -> reminder_check_out_late_minutes
+```
 
-Setelah login sukses dan `AppSession` sudah tersedia, panggil:
+## Default jika setting kosong
+
+```text
+attendance_reminder_enabled = true
+checkInPreEnabled = true
+checkInNowEnabled = true
+checkInLateEnabled = false
+checkOutPreEnabled = true
+checkOutNowEnabled = true
+checkOutLateEnabled = false
+checkInPreMinutes = 10
+checkInNowWindowMinutes = 6
+checkInLateMinutes = 10
+checkOutPreMinutes = 10
+checkOutNowWindowMinutes = 6
+checkOutLateMinutes = 10
+schedulerCatchUpMinutes = 6
+```
+
+## Implementasi di `attendance_reminder_service.dart`
+
+1. Tambahkan model kecil, boleh private, misalnya `_AttendanceReminderSettings`.
+2. Tambahkan loader:
 
 ```dart
-unawaited(PushNotificationService.refreshCurrentTokenStatus(session, force: true));
+static Future<_AttendanceReminderSettings> _loadSettings(AppSession session)
 ```
 
-Jika file belum import `dart:async`, tambahkan:
+Loader membaca path:
 
 ```dart
-import 'dart:async';
+_database.ref('companies/${session.companyId}/notification_settings/main')
 ```
 
-Jika `unawaited` tidak tersedia/kurang cocok, boleh gunakan:
+Jika snapshot kosong atau error, return default. Jangan throw ke UI.
+
+3. Tambahkan helper parser:
 
 ```dart
-PushNotificationService.refreshCurrentTokenStatus(session, force: true).catchError((_) {});
+static bool _readBool(Map<String, dynamic> data, List<String> keys, bool fallback)
+static int _readInt(Map<String, dynamic> data, List<String> keys, int fallback, {required int min, required int max})
 ```
 
-## Syarat penting
+Aturan parser:
 
-Jangan panggil sebelum `session.companyId` dan `session.uid` valid.
+- bool menerima `true`, `false`, `"true"`, `"false"`, `"1"`, `"0"`, `1`, `0`.
+- int menerima number dan string angka.
+- nilai `0` jangan dianggap kosong.
+- clamp angka ke batas aman.
 
-Jangan mengganggu navigasi login ke Home.
+Batas angka:
 
-Jangan menjadikan kegagalan refresh token sebagai alasan login gagal.
+```text
+checkInPreMinutes: 0..120
+checkInNowWindowMinutes: 0..30
+checkInLateMinutes: 1..180
+checkOutPreMinutes: 0..120
+checkOutNowWindowMinutes: 0..30
+checkOutLateMinutes: 1..240
+schedulerCatchUpMinutes: 5..30
+```
+
+## Perubahan `scheduleToday`
+
+Di awal `scheduleToday`, load setting:
+
+```dart
+final settings = await _loadSettings(session);
+```
+
+Jika disabled, clear semua reminder check-in dan check-out lalu return.
+
+Jika jadwal null, off, libur, atau user punya cuti/izin approved, clear semua reminder check-in dan check-out lalu return.
+
+Untuk check-in:
+
+- `pre`: jika enabled, jadwalkan pada `workStart - checkInPreMinutes`.
+- `now`: jika enabled, jadwalkan pada `workStart`.
+- `late`: jika enabled, jadwalkan pada `workStart + checkInLateMinutes`.
+- jika user sudah check-in, clear semua reminder check-in.
+
+Untuk check-out:
+
+- `pre`: jika enabled, jadwalkan pada `adjustedEnd - checkOutPreMinutes`.
+- `now`: jika enabled, jadwalkan pada `adjustedEnd`.
+- `late`: jika enabled, jadwalkan pada `adjustedEnd + checkOutLateMinutes`.
+- jika user sudah check-out, clear semua reminder check-out.
+
+## Tambahkan stage `late`
+
+Stage reminder harus mendukung:
+
+```text
+pre
+now
+late
+```
+
+Update bagian ini:
+
+- `_clearReminderGroup`
+- `_scheduledNotificationId`
+- `_localNotificationIdFromNotificationId`
+- regex parser notification id
+
+Regex harus menerima:
+
+```dart
+(pre|now|late)
+```
+
+Variant ID:
+
+```text
+pre = 0
+now = 1
+late = 2
+```
+
+## Payload notifikasi
+
+Jangan hapus field lama berikut:
+
+```text
+id
+notification_id
+title
+body
+message
+type
+ref_type
+ref_id
+related_id
+reminder_action
+reminder_stage
+created_at
+scheduled_at
+created_date
+created_time
+sender_uid
+sender_name
+sender_role
+read
+is_read
+active
+source
+```
+
+Boleh tambah:
+
+```text
+settings_source = companies_notification_settings
+reminder_config_version = 1
+```
+
+## Catch-up window
+
+Gunakan `settings.schedulerCatchUpMinutes` untuk toleransi catch-up. Tetap gunakan mekanisme `_wasLocallyDelivered` dan `_markLocallyDelivered` agar tidak spam statusbar.
+
+## Push FCM
+
+Jangan rusak pemanggilan:
+
+```dart
+AttendanceReminderService.cancelScheduledReminderByNotificationId(...)
+```
+
+di `PushNotificationService`. Ini dibutuhkan agar push server bisa membatalkan local scheduled notification.
 
 ## Acceptance criteria
 
-- Setelah login ulang, token status langsung refresh.
-- Jika Android notification permission sudah ON, database token menjadi `statusbar_allowed=true` dan `active=true`.
-- Login tetap sukses walaupun refresh token gagal karena jaringan.
-- `flutter analyze` pass.
-
----
-
-# PATCH-02 - Panggil Refresh Saat Home Dibuka
-
-## Target file kemungkinan
-
-```text
-lib/features/home/home_page.dart
-lib/features/home/home_screen.dart
-lib/features/home/presentation/home_page.dart
-```
-
-## Instruksi
-
-Saat HomePage `initState` atau load awal dan session valid, panggil:
-
-```dart
-unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
-```
-
-Jika Home punya method load seperti:
-
-```dart
-_loadData()
-_loadHome()
-_initializeHome()
-```
-
-boleh panggil di akhir load awal, asalkan tidak dipanggil setiap rebuild.
-
-## Jangan lakukan
-
-```text
-- Jangan panggil di build().
-- Jangan panggil dalam stream builder/list builder yang sering rebuild.
-- Jangan refresh berulang tiap detik.
-```
-
-`refreshCurrentTokenStatus` sudah punya debounce 45 detik, tetapi tetap jangan dipanggil sembarangan seperti bel rumah rusak.
-
-## Acceptance criteria
-
-- Saat user buka Home, `permission_last_checked_at` update.
-- Token Health admin_web membaca token terbaru.
-- Tidak ada spam write Firestore/RTDB.
-- `flutter analyze` pass.
-
----
-
-# PATCH-03 - Panggil Refresh Saat App Resume
-
-## Target file kemungkinan
-
-Pilih tempat paling aman:
-
-```text
-lib/main.dart
-lib/app.dart
-lib/features/home/home_page.dart
-lib/features/main/main_shell.dart
-lib/features/root/root_page.dart
-```
-
-## Instruksi
-
-Gunakan `WidgetsBindingObserver` pada widget yang hidup selama user berada di area utama app.
-
-Contoh pola implementasi:
-
-```dart
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _refreshFcmTokenStatus();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _refreshFcmTokenStatus();
-    }
-  }
-
-  void _refreshFcmTokenStatus() {
-    final session = ...; // ambil session existing dari state/service yang sudah ada
-    if (session == null) return;
-    unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
-  }
-}
-```
-
-Kalau widget root sudah punya lifecycle observer, gunakan yang existing. Jangan bikin observer dobel di banyak halaman jika ada MainShell/root yang lebih tepat.
-
-## Kenapa ini wajib
-
-Saat user membuka Android Settings lalu mengaktifkan Notifikasi, app perlu refresh saat user kembali ke app. Tanpa lifecycle resume, dashboard admin bisa tetap membaca status lama. Manusia sudah menekan izin, database masih belum tahu. Peradaban modern, katanya.
-
-## Acceptance criteria
-
-- Setelah user ON-kan notifikasi di Android Settings lalu kembali ke app, status token tersinkron tanpa perlu logout.
-- `permission_last_checked_at` berubah.
-- `statusbar_allowed` berubah sesuai permission terbaru.
-- Observer dibersihkan di dispose.
-- `flutter analyze` pass.
-
----
-
-# PATCH-04 - Pastikan Permission Prompt Awal Tetap Aman
-
-## Target file
-
-```text
-lib/services/push_notification_service.dart
-```
-
-## Masalah yang perlu dicek
-
-`registerDeviceToken()` sekarang membaca permission dengan:
-
-```dart
-getNotificationSettings()
-```
-
-Ini bagus untuk resync, tetapi untuk install pertama, permission bisa masih:
-
-```text
-notDetermined
-```
-
-Jika tidak pernah memanggil `requestPermission()`, user tidak akan diberi popup izin notifikasi.
-
-## Instruksi
-
-Di `registerDeviceToken`, gunakan pola aman:
-
-```dart
-var settings = await _messaging.getNotificationSettings();
-
-if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
-  settings = await _messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-    provisional: false,
-  );
-}
-```
-
-Jangan panggil `requestPermission()` jika status sudah `denied`, `authorized`, atau `provisional`.
-
-Untuk user yang `denied`, arahkan lewat `openNotificationSettings()` jika UI sudah ada. Jangan spam popup, karena Android tidak akan terkesan dengan permohonan berulang dari aplikasi absensi.
-
-## Acceptance criteria
-
-- Install pertama tetap bisa memunculkan prompt izin notifikasi.
-- User yang sudah denied tidak diganggu popup terus-menerus.
-- Resync tetap membaca permission terbaru.
-- `flutter analyze` pass.
-
----
-
-# PATCH-05 - Pastikan Import dan Error Handling Aman
-
-## Target file
-
-Semua file yang memanggil refresh.
-
-## Instruksi
-
-Jika memakai `unawaited`, pastikan import:
-
-```dart
-import 'dart:async';
-```
-
-Pastikan import service:
-
-```dart
-import '../../services/push_notification_service.dart';
-```
-
-atau path yang benar sesuai lokasi file.
-
-Semua refresh harus non-blocking:
-
-```dart
-unawaited(PushNotificationService.refreshCurrentTokenStatus(session));
-```
-
-Jangan sampai error refresh membuat halaman gagal tampil.
-
-## Acceptance criteria
-
-- Tidak ada unused import.
-- Tidak ada compile error karena path import salah.
-- `flutter analyze` pass.
-
----
-
-# PATCH-06 - Manual Test Wajib
-
-Codex wajib menulis catatan manual test:
-
-```text
-1. Install build baru mypresence.
-2. Login sebagai user target.
-3. Buka Home dan tunggu 5-10 detik.
-4. Buka admin_web > Log Notifikasi > Kesehatan Token.
-5. Klik Refresh Token Health.
-6. Pastikan token current menjadi ACTIVE dan Permission OK.
-7. Matikan izin notifikasi dari Android Settings.
-8. Kembali ke app mypresence.
-9. Cek permission_last_checked_at berubah dan statusbar_allowed=false.
-10. Nyalakan lagi izin notifikasi dari Android Settings.
-11. Kembali ke app mypresence.
-12. Cek permission_last_checked_at berubah dan statusbar_allowed=true.
-13. Kirim Uji Push dari admin_web.
-14. Status bar harus muncul.
-```
-
----
-
-# PATCH-07 - Jangan Ubah Area Lain
-
-Patch ini hanya untuk lifecycle wiring FCM token refresh.
-
-Jangan ubah:
-
-```text
-UI Home kecuali penambahan lifecycle call kecil
-kamera absen
-history
-maps
-clock card
-approval pages
-notification routing besar
-attendance submission
-photo upload/compression
-```
-
-Kalau harus menyentuh HomePage, perubahan hanya:
-
-```text
-- tambah WidgetsBindingObserver jika belum ada
-- tambah helper kecil _refreshFcmTokenStatus
-- panggil refresh di initState/resume
-```
-
----
-
-# Laporan akhir wajib
-
-Setelah selesai, Codex wajib menulis:
-
-```text
-## Summary
-- Perubahan utama:
-- File yang diubah:
-- File baru:
-
-## Lifecycle Wiring
-- Setelah login:
-- Home init/load:
-- App resume:
-
-## Permission Prompt
-- notDetermined handling:
-- denied handling:
-
-## Validation
-- flutter analyze:
-
-## Manual Build
-- Tidak dijalankan oleh Codex. Build dilakukan manual oleh user.
-
-## Manual Test Notes
-- Cara test dengan admin_web Token Health:
-- Cara test Uji Push:
-```
-
----
-
-# Urutan pengerjaan wajib
-
-```text
-1. Cari flow login/session.
-2. Panggil refresh setelah login sukses.
-3. Cari HomePage/MainShell/root lifecycle.
-4. Panggil refresh saat Home init/load awal.
-5. Tambahkan WidgetsBindingObserver untuk app resume.
-6. Pastikan registerDeviceToken tetap requestPermission hanya saat notDetermined.
-7. Pastikan semua refresh non-blocking dan tidak membuat UI gagal.
-8. flutter analyze.
-9. Tulis laporan akhir.
-```
+- `flutter analyze` berhasil.
+- App tetap login normal.
+- Home tetap membaca jadwal.
+- Reminder tetap muncul di statusbar.
+- Setting admin mengubah menit reminder.
+- Admin bisa enable/disable `pre`, `now`, `late` untuk check-in dan check-out.
+- Nilai `0` tetap valid untuk field yang boleh 0.
+- Reminder tidak muncul saat user sudah absen.
+- Reminder tidak muncul saat cuti/izin approved.
+- Reminder tidak muncul saat jadwal off/libur.
+- Payload tetap terbaca di inbox.
+- FCM push tetap bisa cancel local reminder.
+
+## Test manual
+
+1. Isi RTDB `companies/{companyId}/notification_settings/main`.
+2. Set `attendance_reminder_enabled = true`.
+3. Set `reminder_check_in_pre_enabled = true` dan `reminder_check_in_pre_minutes = 5`.
+4. Set `reminder_check_out_pre_enabled = true` dan `reminder_check_out_pre_minutes = 0`.
+5. Login user yang punya jadwal hari ini.
+6. Buka Home.
+7. Pastikan local notification mengikuti setting.
+8. Lakukan check-in dan pastikan reminder check-in dibersihkan.
+9. Lakukan check-out dan pastikan reminder check-out dibersihkan.
+
+## Catatan
+
+Admin web adalah pusat konfigurasi. Flutter wajib fallback aman jika konfigurasi kosong. Field legacy tetap dibaca agar kompatibel dengan data lama dan worker lama.
