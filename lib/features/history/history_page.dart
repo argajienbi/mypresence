@@ -480,18 +480,12 @@ class _HistoryPageState extends State<HistoryPage> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Column(
+      body: Stack(
         children: [
-          const StickyCurveHeader(
-            title: 'Riwayat Presensi',
-            subtitle: 'Rekam jejak kehadiran dan pengajuan',
-            icon: Icons.history_rounded,
-            height: 108,
-          ),
-          Expanded(
+          Positioned.fill(
             child: ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 96),
+              padding: const EdgeInsets.fromLTRB(18, 136, 18, 96),
               children: [
                 _MonthFilter(
                   monthLabel: AppDate.monthLabel(_month),
@@ -587,6 +581,17 @@ class _HistoryPageState extends State<HistoryPage> {
                   ],
                 ],
               ],
+            ),
+          ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: StickyCurveHeader(
+              title: 'Riwayat Presensi',
+              subtitle: 'Rekam jejak kehadiran dan pengajuan',
+              icon: Icons.history_rounded,
+              height: 108,
             ),
           ),
         ],

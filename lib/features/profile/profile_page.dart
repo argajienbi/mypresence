@@ -156,18 +156,12 @@ class _ProfilePageState extends State<ProfilePage> {
       message: 'Mengunggah foto profil...',
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        body: Column(
+        body: Stack(
           children: [
-            const StickyCurveHeader(
-              title: 'Profil',
-              subtitle: 'Identitas dan pengaturan akun',
-              icon: Icons.person_rounded,
-              height: 108,
-            ),
-            Expanded(
+            Positioned.fill(
               child: ListView(
                 physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 96),
+                padding: const EdgeInsets.fromLTRB(18, 136, 18, 96),
                 children: [
                   _ProfileIdentityCard(
                     session: widget.session,
@@ -371,6 +365,17 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: StickyCurveHeader(
+                title: 'Profil',
+                subtitle: 'Identitas dan pengaturan akun',
+                icon: Icons.person_rounded,
+                height: 108,
               ),
             ),
           ],
