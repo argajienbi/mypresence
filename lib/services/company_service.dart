@@ -33,6 +33,22 @@ class CompanyWebsiteConfig {
   }
 }
 
+class CompanyBrandingConfig {
+  final String companyName;
+  final bool logoEnabled;
+  final String logoUrl;
+  final String logoPath;
+
+  const CompanyBrandingConfig({
+    required this.companyName,
+    required this.logoEnabled,
+    required this.logoUrl,
+    required this.logoPath,
+  });
+
+  bool get hasLogo => logoEnabled && logoUrl.trim().isNotEmpty;
+}
+
 class CompanyService {
   final RtdbService _rtdb = RtdbService();
 
@@ -57,6 +73,26 @@ class CompanyService {
       title: asString(company?['company_website_title'], 'Website Perusahaan'),
       url: url,
       allowedDomains: domains,
+    );
+  }
+
+  Future<CompanyBrandingConfig> loadBrandingConfig(AppSession session) async {
+    final company = await _rtdb.getMap(FirebasePaths.company(session.companyId));
+
+    final companyName = asString(
+      company?['display_name'],
+      asString(
+        company?['name'],
+        asString(company?['company_name'], 'MYPRESENCE'),
+      ),
+    );
+
+    return CompanyBrandingConfig(
+      companyName: companyName.trim().isEmpty ? 'MYPRESENCE' : companyName.trim(),
+      logoEnabled: company?['company_logo_enabled'] == true ||
+          asString(company?['company_logo_enabled']) == 'true',
+      logoUrl: asString(company?['company_logo_url']),
+      logoPath: asString(company?['company_logo_path']),
     );
   }
 }

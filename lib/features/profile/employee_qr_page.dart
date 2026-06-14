@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
+import '../../services/company_service.dart';
 import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../../widgets/sticky_curve_layout.dart';
@@ -41,10 +42,12 @@ class EmployeeQrPage extends StatefulWidget {
 
 class _EmployeeQrPageState extends State<EmployeeQrPage>
     with SingleTickerProviderStateMixin {
+  final CompanyService _companyService = CompanyService();
   final QrService _qr = QrService();
   final GlobalKey _cardKey = GlobalKey();
   late final AnimationController _controller;
   String _payload = '';
+  CompanyBrandingConfig? _branding;
   bool _loading = true;
   bool _saving = false;
   bool _back = false;
@@ -57,6 +60,7 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
       duration: const Duration(milliseconds: 540),
     );
     _loadQr();
+    _loadBranding();
   }
 
   @override
@@ -77,6 +81,24 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
       if (!mounted) return;
       setState(() => _loading = false);
       AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<void> _loadBranding() async {
+    try {
+      final branding = await _companyService.loadBrandingConfig(widget.session);
+      if (!mounted) return;
+      setState(() => _branding = branding);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _branding = const CompanyBrandingConfig(
+          companyName: 'MYPRESENCE',
+          logoEnabled: false,
+          logoUrl: '',
+          logoPath: '',
+        ),
+      );
     }
   }
 
@@ -178,7 +200,9 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
                                       ..rotateY(math.pi),
                                     alignment: Alignment.center,
                                     child: _BackCard(
+                                      session: widget.session,
                                       payload: _payload,
+                                      branding: _branding,
                                       width: cardWidth,
                                       height: cardHeight,
                                     ),
@@ -186,6 +210,7 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
                                 : _FrontCard(
                                     session: widget.session,
                                     photoUrl: _resolvedPhotoUrl,
+                                    branding: _branding,
                                     width: cardWidth,
                                     height: cardHeight,
                                   ),
@@ -263,12 +288,14 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
 class _FrontCard extends StatelessWidget {
   final AppSession session;
   final String photoUrl;
+  final CompanyBrandingConfig? branding;
   final double width;
   final double height;
 
   const _FrontCard({
     required this.session,
     required this.photoUrl,
+    required this.branding,
     required this.width,
     required this.height,
   });
@@ -276,14 +303,16 @@ class _FrontCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayName = _displayNameForCard(session).toUpperCase();
-    final nip = _nipForCard(session);
+    final employeeId = _employeeIdForCard(session);
+    final companyName = _companyNameForCard(branding).toUpperCase();
+    final showCompanyName = companyName.toUpperCase() != _kDefaultCompanyName;
     final initial = _initialForAvatar(_displayNameForCard(session));
     final headerHeight = math.max(160.0, math.min(height * .40, 214.0));
     final footerHeight = math.max(54.0, math.min(height * .14, 74.0));
     final photoDiameter = math.max(116.0, math.min(width * .48, 150.0));
     final photoTop = headerHeight - photoDiameter * .55;
     final bodyTopPadding = photoDiameter * .5;
-    final logoSize = math.max(54.0, math.min(width * .22, 68.0));
+    final logoSize = math.max(58.0, math.min(width * .23, 70.0));
     final companyFontSize = math.max(12.0, math.min(width * .043, 15.0));
     final nameFontSize = math.max(22.0, math.min(width * .09, 28.0));
     final nipFontSize = math.max(14.0, math.min(width * .058, 18.0));
@@ -299,13 +328,13 @@ class _FrontCard extends StatelessWidget {
         children: [
           _FrontGeometricBackground(headerHeight: headerHeight),
           Positioned(
-            top: 16,
-            left: 0,
-            right: 0,
+            top: 14,
+            left: 18,
+            right: 18,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _MpLogo(size: logoSize),
+                _CompanyLogoMark(branding: branding, size: logoSize),
                 SizedBox(height: math.max(8.0, logoSize * .12)),
                 Text(
                   _kDefaultCompanyName,
@@ -316,7 +345,7 @@ class _FrontCard extends StatelessWidget {
                     fontSize: companyFontSize,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2.2,
-                    color: Colors.white.withValues(alpha: .97),
+                    color: Colors.white.withValues(alpha: .98),
                     shadows: [
                       Shadow(
                         color: Colors.black.withValues(alpha: .18),
@@ -326,6 +355,21 @@ class _FrontCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (showCompanyName) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    companyName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: math.max(10.8, math.min(width * .037, 13.5)),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: Colors.white.withValues(alpha: .92),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -363,7 +407,7 @@ class _FrontCard extends StatelessWidget {
                   const _TechDivider(),
                   SizedBox(height: math.max(8.0, width * .03)),
                   Text(
-                    'NIP $nip',
+                    'NIP: $employeeId',
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -397,18 +441,27 @@ class _FrontCard extends StatelessWidget {
 }
 
 class _BackCard extends StatelessWidget {
+  final AppSession session;
   final String payload;
+  final CompanyBrandingConfig? branding;
   final double width;
   final double height;
 
   const _BackCard({
+    required this.session,
     required this.payload,
+    required this.branding,
     required this.width,
     required this.height,
   });
 
   @override
   Widget build(BuildContext context) {
+    final companyName = _companyNameForCard(branding);
+    final displayCompanyName = companyName.toUpperCase();
+    final showCompanyName = displayCompanyName != _kDefaultCompanyName;
+    final employeeId = _employeeIdForCard(session);
+    final employeeName = _employeeNameForCard(session);
     final headerHeight = math.max(92.0, math.min(height * .21, 110.0));
     final footerHeight = math.max(54.0, math.min(height * .14, 74.0));
     final qrBoxSize = math.max(180.0, math.min(width * .72, 220.0));
@@ -452,6 +505,21 @@ class _BackCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (showCompanyName) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    displayCompanyName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: math.max(10.6, math.min(width * .036, 13.2)),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: Colors.white.withValues(alpha: .92),
+                    ),
+                  ),
+                ],
                 SizedBox(height: math.max(4.0, width * .015)),
                 Text(
                   _kBackSlogan,
@@ -512,6 +580,19 @@ class _BackCard extends StatelessWidget {
                     ),
                     SizedBox(height: math.max(12.0, width * .04)),
                     Text(
+                      '$employeeName \u2022 $employeeId',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: math.max(10.8, math.min(width * .035, 12.5)),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                        color: kCardDarkTeal.withValues(alpha: .88),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
                       'SCAN TO VERIFY',
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -525,7 +606,7 @@ class _BackCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'This ID is the property of\n$_kDefaultCompanyName.',
+                      'This ID is the property of\n$displayCompanyName.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: propertyFontSize,
@@ -850,53 +931,61 @@ class _TrianglePatternPainter extends CustomPainter {
   }
 }
 
-class _MpLogo extends StatelessWidget {
+class _CompanyLogoMark extends StatelessWidget {
+  final CompanyBrandingConfig? branding;
   final double size;
 
-  const _MpLogo({required this.size});
+  const _CompanyLogoMark({required this.branding, required this.size});
 
   @override
   Widget build(BuildContext context) {
+    final logoUrl = branding?.logoUrl.trim() ?? '';
+    final hasLogo = branding?.hasLogo == true;
+
     return Container(
       width: size,
       height: size,
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: .72), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .18),
-            blurRadius: 16,
+            blurRadius: 14,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: size * .14,
-            bottom: size * .16,
-            child: Container(
-              width: size * .18,
-              height: size * .18,
-              decoration: const BoxDecoration(
-                color: kCardGreen,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Text(
-            'MP',
-            style: TextStyle(
-              fontSize: size * .34,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -2,
-              color: kCardDarkTeal,
-            ),
-          ),
-        ],
+      child: ClipOval(
+        child: hasLogo
+            ? Image.network(
+                logoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const _MpLogoFallback(),
+              )
+            : const _MpLogoFallback(),
+      ),
+    );
+  }
+}
+
+class _MpLogoFallback extends StatelessWidget {
+  const _MpLogoFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      alignment: Alignment.center,
+      child: const Text(
+        'MP',
+        style: TextStyle(
+          color: kCardDarkTeal,
+          fontSize: 26,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1,
+        ),
       ),
     );
   }
@@ -1301,9 +1390,20 @@ String _displayNameForCard(AppSession session) {
   return value.isEmpty ? '-' : value;
 }
 
-String _nipForCard(AppSession session) {
+String _companyNameForCard(CompanyBrandingConfig? branding) {
+  final value = branding?.companyName.trim();
+  if (value != null && value.isNotEmpty) return value;
+  return _kDefaultCompanyName;
+}
+
+String _employeeIdForCard(AppSession session) {
   final value = session.nip.trim();
-  return value.isEmpty ? '-' : value;
+  return value.isEmpty ? '-' : value.toUpperCase();
+}
+
+String _employeeNameForCard(AppSession session) {
+  final value = session.displayName.trim();
+  return value.isEmpty ? '-' : value.toUpperCase();
 }
 
 String _initialForAvatar(String source) {
