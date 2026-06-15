@@ -52,8 +52,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
-    appId: '1:911576285238:android:ffb8f7fa90396016cf5897',
+    apiKey: 'AIzaSyBul0726wptj6rG3_Q_TSCKl99ajdlb-SI',
+    appId: '1:911576285238:android:cb4bce033e9d6b80cf5897',
     messagingSenderId: '911576285238',
     projectId: 'mypresence-db',
     databaseURL:
