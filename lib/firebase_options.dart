@@ -41,61 +41,55 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDO2Zv_Yz4cxPIVdH18dGxS3HVKiIRvbc0',
-    appId: '1:112547967654:web:9fe43de206bda7da237a67',
-    messagingSenderId: '112547967654',
-    projectId: 'inventory-410f4',
-    authDomain: 'inventory-410f4.firebaseapp.com',
+    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
+    appId: '1:911576285238:web:ffb8f7fa90396016cf5897',
+    messagingSenderId: '911576285238',
+    projectId: 'mypresence-db',
+    authDomain: 'mypresence-db.firebaseapp.com',
     databaseURL:
-        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'inventory-410f4.firebasestorage.app',
+        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-db.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAyx1X14ZL9NM9plEHPrLiFxFgbHj3iTvE',
-    appId: '1:112547967654:android:c862030a1105b4b2237a67',
-    messagingSenderId: '112547967654',
-    projectId: 'inventory-410f4',
+    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
+    appId: '1:911576285238:android:ffb8f7fa90396016cf5897',
+    messagingSenderId: '911576285238',
+    projectId: 'mypresence-db',
     databaseURL:
-        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'inventory-410f4.firebasestorage.app',
+        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-db.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyADvRB_6gYftQ5VSkBPzL0e4DnTRbRFeK8',
-    appId: '1:112547967654:ios:bbd9445014336057237a67',
-    messagingSenderId: '112547967654',
-    projectId: 'inventory-410f4',
+    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
+    appId: '1:911576285238:ios:ffb8f7fa90396016cf5897',
+    messagingSenderId: '911576285238',
+    projectId: 'mypresence-db',
     databaseURL:
-        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'inventory-410f4.firebasestorage.app',
-    iosClientId:
-        '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
-    iosBundleId: 'com.mypresence',
+        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-db.firebasestorage.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyADvRB_6gYftQ5VSkBPzL0e4DnTRbRFeK8',
-    appId: '1:112547967654:ios:bbd9445014336057237a67',
-    messagingSenderId: '112547967654',
-    projectId: 'inventory-410f4',
+    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
+    appId: '1:911576285238:ios:ffb8f7fa90396016cf5897',
+    messagingSenderId: '911576285238',
+    projectId: 'mypresence-db',
     databaseURL:
-        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'inventory-410f4.firebasestorage.app',
-    iosClientId:
-        '112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com',
-    iosBundleId: 'com.mypresence',
+        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-db.firebasestorage.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDO2Zv_Yz4cxPIVdH18dGxS3HVKiIRvbc0',
-    appId: '1:112547967654:web:9601b3649980091a237a67',
-    messagingSenderId: '112547967654',
-    projectId: 'inventory-410f4',
-    authDomain: 'inventory-410f4.firebaseapp.com',
+    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
+    appId: '1:911576285238:web:ffb8f7fa90396016cf5897',
+    messagingSenderId: '911576285238',
+    projectId: 'mypresence-db',
+    authDomain: 'mypresence-db.firebaseapp.com',
     databaseURL:
-        'https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'inventory-410f4.firebasestorage.app',
-    measurementId: 'G-XN0DW6D60V',
+        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-db.firebasestorage.app',
+    measurementId: 'G-SRL5QS4CCB',
   );
 }

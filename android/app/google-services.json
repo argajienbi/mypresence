@@ -1,46 +1,23 @@
 {
   "project_info": {
-    "project_number": "112547967654",
-    "firebase_url": "https://inventory-410f4-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "inventory-410f4",
-    "storage_bucket": "inventory-410f4.firebasestorage.app"
+    "project_number": "911576285238",
+    "firebase_url": "https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "mypresence-db",
+    "storage_bucket": "mypresence-db.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:112547967654:android:c862030a1105b4b2237a67",
+        "mobilesdk_app_id": "1:911576285238:android:ffb8f7fa90396016cf5897",
         "android_client_info": {
           "package_name": "com.mypresence"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "112547967654-kus769pj9qiqdin9tn5ff3lqmhluqt1o.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAyx1X14ZL9NM9plEHPrLiFxFgbHj3iTvE"
+          "current_key": "AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU"
         }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "112547967654-kus769pj9qiqdin9tn5ff3lqmhluqt1o.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "112547967654-gfoaflr90n42c2m3pgft8sid9ep4nhhv.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.mypresence"
-              }
-            }
-          ]
-        }
-      }
+      ]
     }
   ],
   "configuration_version": "1"
