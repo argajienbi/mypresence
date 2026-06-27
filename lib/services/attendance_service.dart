@@ -30,7 +30,8 @@ class AttendanceService {
     final ts = now.millisecondsSinceEpoch;
 
     final schedule = await _schedule.resolveToday(session, now: now);
-    final window = _schedule.validateAction(schedule: schedule, actionType: actionType, now: now);
+    final window = _schedule.validateAction(
+        schedule: schedule, actionType: actionType, now: now);
     if (!window.allowed) {
       throw Exception(window.message);
     }
@@ -42,14 +43,20 @@ class AttendanceService {
     }
 
     final loc = await _location.currentLocation();
-    final distance = _location.distanceMeter(fromLat: loc.latitude, fromLng: loc.longitude, toLat: session.officeLatitude, toLng: session.officeLongitude);
+    final distance = _location.distanceMeter(
+        fromLat: loc.latitude,
+        fromLng: loc.longitude,
+        toLat: session.officeLatitude,
+        toLng: session.officeLongitude);
     final inside = distance <= session.officeRadiusMeter;
     if (!inside) {
-      throw Exception('Anda berada di luar radius kantor (${distance.toStringAsFixed(0)} m dari kantor).');
+      throw Exception(
+          'Anda berada di luar radius kantor (${distance.toStringAsFixed(0)} m dari kantor).');
     }
     final locationAssessment = _location.assessLocation(loc);
 
-    final photoPath = FirebasePaths.attendancePhoto(session.companyId, session.uid, date, actionType, ts);
+    final photoPath = FirebasePaths.attendancePhoto(
+        session.companyId, session.uid, date, actionType, ts);
     final photoUrl =
         await _storage.uploadFile(path: photoPath, file: uploadPhotoFile);
 
@@ -74,7 +81,8 @@ class AttendanceService {
       'photo_url': photoUrl,
       'photo_path': photoPath,
       'photo_quality_status': photoQualityResult.status,
-      'photo_quality_warning': photoQualityResult.hasWarning ? photoQualityResult.message : '',
+      'photo_quality_warning':
+          photoQualityResult.hasWarning ? photoQualityResult.message : '',
       'photo_file_size': photoQualityResult.fileSize,
       'photo_width': photoQualityResult.width,
       'photo_height': photoQualityResult.height,
@@ -112,7 +120,10 @@ class AttendanceService {
       'updated_at': ts,
     };
 
-    await _rtdb.set(FirebasePaths.attendanceRecord(session.companyId, session.uid, date, actionType), payload);
+    await _rtdb.set(
+        FirebasePaths.attendanceRecord(
+            session.companyId, session.uid, date, actionType),
+        payload);
 
     return PresenceSubmissionResult(
       photoQualityStatus: photoQualityResult.status,
@@ -128,35 +139,64 @@ class AttendanceService {
     );
   }
 
-  Future<Map<String, dynamic>?> todayAttendance(AppSession session) => _rtdb.getMap(FirebasePaths.attendanceDate(session.companyId, session.uid, AppDate.dateKey()));
-  Future<Map<String, dynamic>?> attendanceAll(AppSession session) => _rtdb.getMap(FirebasePaths.attendanceUser(session.companyId, session.uid));
+  Future<Map<String, dynamic>?> todayAttendance(AppSession session) =>
+      _rtdb.getMap(FirebasePaths.attendanceDate(
+          session.companyId, session.uid, AppDate.dateKey()));
+  Future<Map<String, dynamic>?> attendanceAll(AppSession session) => _rtdb
+      .getMap(FirebasePaths.attendanceUser(session.companyId, session.uid));
 
   Future<TodayAttendance> getTodayAttendance(AppSession session) async {
     final map = await todayAttendance(session) ?? <String, dynamic>{};
-    final masukMap = map['masuk'] is Map ? Map<String, dynamic>.from((map['masuk'] as Map).map((k, v) => MapEntry(k.toString(), v))) : null;
-    final pulangMap = map['pulang'] is Map ? Map<String, dynamic>.from((map['pulang'] as Map).map((k, v) => MapEntry(k.toString(), v))) : null;
+    final masukMap = map['masuk'] is Map
+        ? Map<String, dynamic>.from(
+            (map['masuk'] as Map).map((k, v) => MapEntry(k.toString(), v)))
+        : null;
+    final pulangMap = map['pulang'] is Map
+        ? Map<String, dynamic>.from(
+            (map['pulang'] as Map).map((k, v) => MapEntry(k.toString(), v)))
+        : null;
     return TodayAttendance(
-      masuk: masukMap == null ? null : AttendanceRecord.fromMap('masuk', masukMap),
-      pulang: pulangMap == null ? null : AttendanceRecord.fromMap('pulang', pulangMap),
+      masuk:
+          masukMap == null ? null : AttendanceRecord.fromMap('masuk', masukMap),
+      pulang: pulangMap == null
+          ? null
+          : AttendanceRecord.fromMap('pulang', pulangMap),
     );
   }
 
-  Future<List<Map<String, dynamic>>> getMonthlyHistory({required AppSession session, required DateTime month}) async {
-    final all = await attendanceAll(session) ?? <String, dynamic>{};
+  Future<List<Map<String, dynamic>>> getMonthlyHistory(
+      {required AppSession session, required DateTime month}) async {
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
+    final startKey = AppDate.dateKey(firstDay);
+    final endKey = AppDate.dateKey(lastDay);
+
+    final scoped = await _rtdb.getMapByKeyRange(
+          FirebasePaths.attendanceUser(session.companyId, session.uid),
+          startKey: startKey,
+          endKey: endKey,
+        ) ??
+        <String, dynamic>{};
+
     final rows = <Map<String, dynamic>>[];
-    for (final entry in all.entries) {
+
+    for (final entry in scoped.entries) {
       final date = entry.key;
       final value = entry.value;
       if (value is! Map) continue;
-      final parsed = DateTime.tryParse(date);
-      if (parsed == null || parsed.year != month.year || parsed.month != month.month) continue;
+
       rows.add({
         'date': date,
         ...value.map((k, v) => MapEntry(k.toString(), v)),
       });
     }
-    rows.sort((a, b) => (b['date'] ?? '').toString().compareTo((a['date'] ?? '').toString()));
+
+    rows.sort(
+      (a, b) => (b['date'] ?? '').toString().compareTo(
+            (a['date'] ?? '').toString(),
+          ),
+    );
+
     return rows;
   }
-
 }

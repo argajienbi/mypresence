@@ -6,6 +6,16 @@ import '../core/firebase_paths.dart';
 import '../core/models/app_session.dart';
 import 'rtdb_service.dart';
 
+class MonthlyLeaveHistory {
+  final List<Map<String, dynamic>> leaveRows;
+  final List<Map<String, dynamic>> overtimeRows;
+
+  const MonthlyLeaveHistory({
+    required this.leaveRows,
+    required this.overtimeRows,
+  });
+}
+
 class LeaveService {
   final RtdbService _rtdb = RtdbService();
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -34,7 +44,9 @@ class LeaveService {
       throw Exception('Tanggal mulai dan tanggal selesai wajib diisi.');
     }
     if (normalizedReason.isEmpty) {
-      throw Exception(normalizedType == 'lembur' ? 'Alasan / pekerjaan lembur wajib diisi.' : 'Alasan wajib diisi.');
+      throw Exception(normalizedType == 'lembur'
+          ? 'Alasan / pekerjaan lembur wajib diisi.'
+          : 'Alasan wajib diisi.');
     }
 
     final startDate = DateTime.tryParse(normalizedStart);
@@ -43,7 +55,8 @@ class LeaveService {
       throw Exception('Format tanggal tidak valid. Gunakan yyyy-mm-dd.');
     }
     if (endDate.isBefore(startDate)) {
-      throw Exception('Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
+      throw Exception(
+          'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
     }
 
     if (normalizedType == 'sakit' && attachmentFile == null) {
@@ -51,8 +64,11 @@ class LeaveService {
     }
 
     if (normalizedType == 'lembur') {
-      if (overtimeDate.trim().isEmpty || overtimeStartTime.trim().isEmpty || overtimeEndTime.trim().isEmpty) {
-        throw Exception('Tanggal, jam mulai, dan jam selesai lembur wajib diisi.');
+      if (overtimeDate.trim().isEmpty ||
+          overtimeStartTime.trim().isEmpty ||
+          overtimeEndTime.trim().isEmpty) {
+        throw Exception(
+            'Tanggal, jam mulai, dan jam selesai lembur wajib diisi.');
       }
       if (overtimeDurationMinute <= 0) {
         throw Exception('Jam selesai lembur harus lebih besar dari jam mulai.');
@@ -73,8 +89,10 @@ class LeaveService {
     String attachmentPath = '';
     String savedAttachmentName = '';
     if (attachmentFile != null) {
-      savedAttachmentName = attachmentName.isEmpty ? 'attachment_$ts.jpg' : attachmentName;
-      attachmentPath = FirebasePaths.leaveAttachment(session.companyId, session.uid, requestId, savedAttachmentName);
+      savedAttachmentName =
+          attachmentName.isEmpty ? 'attachment_$ts.jpg' : attachmentName;
+      attachmentPath = FirebasePaths.leaveAttachment(
+          session.companyId, session.uid, requestId, savedAttachmentName);
       final ref = _storage.ref(attachmentPath);
       await ref.putFile(attachmentFile);
       attachmentUrl = await ref.getDownloadURL();
@@ -96,9 +114,12 @@ class LeaveService {
       'attachment_required': normalizedType == 'sakit',
       'attachment_type': attachmentFile == null ? '' : 'image',
       'overtime_date': normalizedType == 'lembur' ? overtimeDate.trim() : '',
-      'overtime_start_time': normalizedType == 'lembur' ? overtimeStartTime.trim() : '',
-      'overtime_end_time': normalizedType == 'lembur' ? overtimeEndTime.trim() : '',
-      'overtime_duration_minute': normalizedType == 'lembur' ? overtimeDurationMinute : 0,
+      'overtime_start_time':
+          normalizedType == 'lembur' ? overtimeStartTime.trim() : '',
+      'overtime_end_time':
+          normalizedType == 'lembur' ? overtimeEndTime.trim() : '',
+      'overtime_duration_minute':
+          normalizedType == 'lembur' ? overtimeDurationMinute : 0,
       'status': 'pending',
       'admin_uid': '',
       'admin_name': '',
@@ -121,7 +142,8 @@ class LeaveService {
       'created_at': ts,
       'updated_at': ts,
     };
-    await _rtdb.set(FirebasePaths.leaveRequest(session.companyId, requestId), payload);
+    await _rtdb.set(
+        FirebasePaths.leaveRequest(session.companyId, requestId), payload);
   }
 
   Future<void> _ensureNoActiveOverlap({
@@ -133,7 +155,9 @@ class LeaveService {
     required String overtimeStartTime,
     required String overtimeEndTime,
   }) async {
-    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+    final root =
+        await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ??
+            <String, dynamic>{};
     final start = DateTime.parse(dateStart);
     final end = DateTime.parse(dateEnd);
 
@@ -146,29 +170,41 @@ class LeaveService {
       if (!_isActiveRequest((map['status'] ?? '').toString())) continue;
 
       if (type == 'lembur') {
-        final existingDate = (map['overtime_date'] ?? map['date_start'] ?? '').toString();
+        final existingDate =
+            (map['overtime_date'] ?? map['date_start'] ?? '').toString();
         final existingStart = (map['overtime_start_time'] ?? '').toString();
         final existingEnd = (map['overtime_end_time'] ?? '').toString();
-        if (existingDate == overtimeDate && existingStart.isNotEmpty && existingEnd.isNotEmpty) {
-          if (_timeRangeOverlap(overtimeStartTime, overtimeEndTime, existingStart, existingEnd)) {
-            throw Exception('Sudah ada pengajuan lembur aktif yang overlap pada tanggal dan jam tersebut.');
+        if (existingDate == overtimeDate &&
+            existingStart.isNotEmpty &&
+            existingEnd.isNotEmpty) {
+          if (_timeRangeOverlap(
+              overtimeStartTime, overtimeEndTime, existingStart, existingEnd)) {
+            throw Exception(
+                'Sudah ada pengajuan lembur aktif yang overlap pada tanggal dan jam tersebut.');
           }
         }
         continue;
       }
 
-      final existingStart = DateTime.tryParse((map['date_start'] ?? map['date'] ?? '').toString());
-      final existingEnd = DateTime.tryParse((map['date_end'] ?? map['date_start'] ?? map['date'] ?? '').toString());
+      final existingStart = DateTime.tryParse(
+          (map['date_start'] ?? map['date'] ?? '').toString());
+      final existingEnd = DateTime.tryParse(
+          (map['date_end'] ?? map['date_start'] ?? map['date'] ?? '')
+              .toString());
       if (existingStart == null || existingEnd == null) continue;
       if (_dateRangeOverlap(start, end, existingStart, existingEnd)) {
-        throw Exception('Sudah ada pengajuan ${_typeLabel(type)} aktif pada rentang tanggal tersebut.');
+        throw Exception(
+            'Sudah ada pengajuan ${_typeLabel(type)} aktif pada rentang tanggal tersebut.');
       }
     }
   }
 
   bool _isActiveRequest(String status) {
     final normalized = status.toLowerCase();
-    return normalized == 'pending' || normalized == 'approved' || normalized == 'validated' || normalized == 'processing';
+    return normalized == 'pending' ||
+        normalized == 'approved' ||
+        normalized == 'validated' ||
+        normalized == 'processing';
   }
 
   bool _isApprovedRequest(String status) {
@@ -176,16 +212,20 @@ class LeaveService {
     return normalized == 'approved' || normalized == 'validated';
   }
 
-  bool _dateRangeOverlap(DateTime startA, DateTime endA, DateTime startB, DateTime endB) {
+  bool _dateRangeOverlap(
+      DateTime startA, DateTime endA, DateTime startB, DateTime endB) {
     return !startA.isAfter(endB) && !startB.isAfter(endA);
   }
 
-  bool _timeRangeOverlap(String startA, String endA, String startB, String endB) {
+  bool _timeRangeOverlap(
+      String startA, String endA, String startB, String endB) {
     final aStart = _minuteOfDay(startA);
     final aEnd = _minuteOfDay(endA);
     final bStart = _minuteOfDay(startB);
     final bEnd = _minuteOfDay(endB);
-    if (aStart == null || aEnd == null || bStart == null || bEnd == null) return false;
+    if (aStart == null || aEnd == null || bStart == null || bEnd == null) {
+      return false;
+    }
     return aStart < bEnd && bStart < aEnd;
   }
 
@@ -211,20 +251,33 @@ class LeaveService {
     }
   }
 
-  Future<Map<String, dynamic>?> getApprovedLeaveForDate({required AppSession session, required DateTime date}) async {
-    final key = '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+  Future<Map<String, dynamic>?> getApprovedLeaveForDate(
+      {required AppSession session, required DateTime date}) async {
+    final key =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final root =
+        await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ??
+            <String, dynamic>{};
     for (final entry in root.entries) {
       final value = entry.value;
       if (value is! Map) continue;
       final map = value.map((k, v) => MapEntry(k.toString(), v));
       if ((map['uid'] ?? '').toString() != session.uid) continue;
-      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      final type =
+          (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
       if (type == 'lembur') continue;
       if (type != 'izin' && type != 'sakit' && type != 'cuti') continue;
       if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
-      final start = DateTime.tryParse((map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
-      final end = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final start = DateTime.tryParse(
+          (map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '')
+              .toString());
+      final end = DateTime.tryParse((map['date_end'] ??
+              map['tanggal_selesai'] ??
+              map['date_start'] ??
+              map['tanggal_mulai'] ??
+              map['date'] ??
+              '')
+          .toString());
       final target = DateTime.tryParse(key);
       if (start == null || end == null || target == null) continue;
       if (_dateRangeOverlap(target, target, start, end)) {
@@ -234,8 +287,11 @@ class LeaveService {
     return null;
   }
 
-  Future<List<Map<String, dynamic>>> getMonthlyRequests({required AppSession session, required DateTime month}) async {
-    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+  Future<List<Map<String, dynamic>>> getMonthlyRequests(
+      {required AppSession session, required DateTime month}) async {
+    final root =
+        await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ??
+            <String, dynamic>{};
     final rows = <Map<String, dynamic>>[];
     final monthStart = DateTime(month.year, month.month, 1);
     final monthEnd = DateTime(month.year, month.month + 1, 0);
@@ -245,20 +301,147 @@ class LeaveService {
       final map = value.map((k, v) => MapEntry(k.toString(), v));
       if ((map['uid'] ?? '').toString() != session.uid) continue;
       if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
-      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      final type =
+          (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
       if (type == 'lembur') continue;
-      final start = DateTime.tryParse((map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
-      final end = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final start = DateTime.tryParse(
+          (map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '')
+              .toString());
+      final end = DateTime.tryParse((map['date_end'] ??
+              map['tanggal_selesai'] ??
+              map['date_start'] ??
+              map['tanggal_mulai'] ??
+              map['date'] ??
+              '')
+          .toString());
       if (start == null || end == null) continue;
       if (!_dateRangeOverlap(monthStart, monthEnd, start, end)) continue;
       rows.add({'request_id': entry.key, ...map});
     }
-    rows.sort((a, b) => (b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
+    rows.sort((a, b) => (b['date_start'] ??
+            b['tanggal_mulai'] ??
+            b['date'] ??
+            '')
+        .toString()
+        .compareTo((a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '')
+            .toString()));
     return rows;
   }
 
-  Future<List<Map<String, dynamic>>> getMonthlyApprovedOvertime({required AppSession session, required DateTime month}) async {
-    final root = await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ?? <String, dynamic>{};
+  Future<MonthlyLeaveHistory> getMonthlyApprovedHistory({
+    required AppSession session,
+    required DateTime month,
+  }) async {
+    final root =
+        await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ??
+            <String, dynamic>{};
+
+    final leaveRows = <Map<String, dynamic>>[];
+    final overtimeRows = <Map<String, dynamic>>[];
+
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = DateTime(month.year, month.month + 1, 0);
+
+    for (final entry in root.entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+
+      final map = value.map((k, v) => MapEntry(k.toString(), v));
+
+      if ((map['uid'] ?? '').toString() != session.uid) continue;
+      if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
+
+      final type =
+          (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+
+      if (type == 'lembur') {
+        final dateStart = DateTime.tryParse(
+          (map['overtime_date'] ??
+                  map['date_start'] ??
+                  map['tanggal_mulai'] ??
+                  map['date'] ??
+                  '')
+              .toString(),
+        );
+        final dateEnd = DateTime.tryParse(
+          (map['date_end'] ??
+                  map['tanggal_selesai'] ??
+                  map['overtime_date'] ??
+                  map['date_start'] ??
+                  map['tanggal_mulai'] ??
+                  map['date'] ??
+                  '')
+              .toString(),
+        );
+
+        if (dateStart == null || dateEnd == null) continue;
+        if (!_dateRangeOverlap(monthStart, monthEnd, dateStart, dateEnd)) {
+          continue;
+        }
+
+        overtimeRows.add({'request_id': entry.key, ...map});
+        continue;
+      }
+
+      if (type != 'izin' && type != 'sakit' && type != 'cuti') continue;
+
+      final start = DateTime.tryParse(
+        (map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '')
+            .toString(),
+      );
+      final end = DateTime.tryParse(
+        (map['date_end'] ??
+                map['tanggal_selesai'] ??
+                map['date_start'] ??
+                map['tanggal_mulai'] ??
+                map['date'] ??
+                '')
+            .toString(),
+      );
+
+      if (start == null || end == null) continue;
+      if (!_dateRangeOverlap(monthStart, monthEnd, start, end)) continue;
+
+      leaveRows.add({'request_id': entry.key, ...map});
+    }
+
+    leaveRows.sort(
+      (a, b) => (b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '')
+          .toString()
+          .compareTo(
+            (a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '')
+                .toString(),
+          ),
+    );
+
+    overtimeRows.sort(
+      (a, b) => (b['overtime_date'] ??
+              b['date_start'] ??
+              b['tanggal_mulai'] ??
+              b['date'] ??
+              '')
+          .toString()
+          .compareTo(
+            (a['overtime_date'] ??
+                    a['date_start'] ??
+                    a['tanggal_mulai'] ??
+                    a['date'] ??
+                    '')
+                .toString(),
+          ),
+    );
+
+    return MonthlyLeaveHistory(
+      leaveRows: leaveRows,
+      overtimeRows: overtimeRows,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getMonthlyApprovedOvertime(
+      {required AppSession session, required DateTime month}) async {
+    final root =
+        await _rtdb.getMap(FirebasePaths.leaveRequests(session.companyId)) ??
+            <String, dynamic>{};
     final rows = <Map<String, dynamic>>[];
     final monthStart = DateTime(month.year, month.month, 1);
     final monthEnd = DateTime(month.year, month.month + 1, 0);
@@ -268,15 +451,41 @@ class LeaveService {
       final map = value.map((k, v) => MapEntry(k.toString(), v));
       if ((map['uid'] ?? '').toString() != session.uid) continue;
       if (!_isApprovedRequest((map['status'] ?? '').toString())) continue;
-      final type = (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
+      final type =
+          (map['type'] ?? map['leave_type'] ?? '').toString().toLowerCase();
       if (type != 'lembur') continue;
-      final dateStart = DateTime.tryParse((map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
-      final dateEnd = DateTime.tryParse((map['date_end'] ?? map['tanggal_selesai'] ?? map['overtime_date'] ?? map['date_start'] ?? map['tanggal_mulai'] ?? map['date'] ?? '').toString());
+      final dateStart = DateTime.tryParse((map['overtime_date'] ??
+              map['date_start'] ??
+              map['tanggal_mulai'] ??
+              map['date'] ??
+              '')
+          .toString());
+      final dateEnd = DateTime.tryParse((map['date_end'] ??
+              map['tanggal_selesai'] ??
+              map['overtime_date'] ??
+              map['date_start'] ??
+              map['tanggal_mulai'] ??
+              map['date'] ??
+              '')
+          .toString());
       if (dateStart == null || dateEnd == null) continue;
-      if (!_dateRangeOverlap(monthStart, monthEnd, dateStart, dateEnd)) continue;
+      if (!_dateRangeOverlap(monthStart, monthEnd, dateStart, dateEnd)) {
+        continue;
+      }
       rows.add({'request_id': entry.key, ...map});
     }
-    rows.sort((a, b) => (b['overtime_date'] ?? b['date_start'] ?? b['tanggal_mulai'] ?? b['date'] ?? '').toString().compareTo((a['overtime_date'] ?? a['date_start'] ?? a['tanggal_mulai'] ?? a['date'] ?? '').toString()));
+    rows.sort((a, b) => (b['overtime_date'] ??
+            b['date_start'] ??
+            b['tanggal_mulai'] ??
+            b['date'] ??
+            '')
+        .toString()
+        .compareTo((a['overtime_date'] ??
+                a['date_start'] ??
+                a['tanggal_mulai'] ??
+                a['date'] ??
+                '')
+            .toString()));
     return rows;
   }
 }

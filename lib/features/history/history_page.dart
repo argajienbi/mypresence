@@ -27,6 +27,8 @@ class _HistoryPageState extends State<HistoryPage> {
 
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   bool _loading = true;
+  bool _scheduleLoading = false;
+  int _loadVersion = 0;
   List<Map<String, dynamic>> _leaveRows = [];
   List<Map<String, dynamic>> _overtimeRows = [];
   List<DailyHistoryStatus> _dailyStatuses = [];
@@ -38,23 +40,74 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    final version = ++_loadVersion;
+
+    setState(() {
+      _loading = true;
+      _scheduleLoading = false;
+    });
+
+    final firstDay = DateTime(_month.year, _month.month, 1);
+    final lastDay = DateTime(_month.year, _month.month + 1, 0);
+
+    List<Map<String, dynamic>> attendanceRows = [];
+    List<Map<String, dynamic>> leaveRows = [];
+    List<Map<String, dynamic>> overtimeRows = [];
+
     try {
-      final firstDay = DateTime(_month.year, _month.month, 1);
-      final lastDay = DateTime(_month.year, _month.month + 1, 0);
       final results = await Future.wait([
         _attendance.getMonthlyHistory(session: widget.session, month: _month),
-        _leave.getMonthlyRequests(session: widget.session, month: _month),
-        _leave.getMonthlyApprovedOvertime(session: widget.session, month: _month),
-        _schedule.resolveRange(widget.session, firstDay, lastDay),
+        _leave.getMonthlyApprovedHistory(
+            session: widget.session, month: _month),
       ]);
 
-      final attendanceRows = List<Map<String, dynamic>>.from(results[0] as List);
-      final leaveRows = List<Map<String, dynamic>>.from(results[1] as List);
-      final overtimeRows = List<Map<String, dynamic>>.from(results[2] as List);
-      final schedules = List<DailySchedule>.from(results[3] as List);
+      if (!mounted || version != _loadVersion) return;
 
-      final dailyStatuses = _buildDailyStatuses(
+      attendanceRows = List<Map<String, dynamic>>.from(results[0] as List);
+      final leaveHistory = results[1] as MonthlyLeaveHistory;
+      leaveRows = leaveHistory.leaveRows;
+      overtimeRows = leaveHistory.overtimeRows;
+
+      final quickStatuses = _buildDailyStatuses(
+        firstDay: firstDay,
+        lastDay: lastDay,
+        attendanceRows: attendanceRows,
+        leaveRows: leaveRows,
+        overtimeRows: overtimeRows,
+        schedules: const <DailySchedule>[],
+      );
+
+      setState(() {
+        _leaveRows = leaveRows;
+        _overtimeRows = overtimeRows;
+        _dailyStatuses = quickStatuses;
+        _loading = false;
+        _scheduleLoading = true;
+      });
+    } catch (_) {
+      if (!mounted || version != _loadVersion) return;
+
+      setState(() {
+        _leaveRows = [];
+        _overtimeRows = [];
+        _dailyStatuses = [];
+        _loading = false;
+        _scheduleLoading = false;
+      });
+
+      return;
+    }
+
+    try {
+      final schedules = await _schedule.resolveRangeOptimized(
+        widget.session,
+        firstDay,
+        lastDay,
+      );
+
+      if (!mounted || version != _loadVersion) return;
+
+      final resolvedStatuses = _buildDailyStatuses(
         firstDay: firstDay,
         lastDay: lastDay,
         attendanceRows: attendanceRows,
@@ -63,21 +116,16 @@ class _HistoryPageState extends State<HistoryPage> {
         schedules: schedules,
       );
 
-      if (!mounted) return;
       setState(() {
-        _leaveRows = leaveRows;
-        _overtimeRows = overtimeRows;
-        _dailyStatuses = dailyStatuses;
+        _dailyStatuses = resolvedStatuses;
+        _scheduleLoading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
+
       setState(() {
-        _leaveRows = [];
-        _overtimeRows = [];
-        _dailyStatuses = [];
+        _scheduleLoading = false;
       });
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -129,17 +177,27 @@ class _HistoryPageState extends State<HistoryPage> {
       firstDay: DateTime(_month.year, _month.month, 1),
       lastDay: DateTime(_month.year, _month.month + 1, 0),
       startKeys: const ['overtime_date', 'date_start', 'tanggal_mulai', 'date'],
-      endKeys: const ['date_end', 'tanggal_selesai', 'overtime_date', 'date_start', 'tanggal_mulai', 'date'],
+      endKeys: const [
+        'date_end',
+        'tanggal_selesai',
+        'overtime_date',
+        'date_start',
+        'tanggal_mulai',
+        'date'
+      ],
     );
     for (final date in overtimeMap.keys) {
       datesByKey['lembur']!.add(date);
     }
     for (final row in _overtimeRows) {
-      overtimeMinute += int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ?? 0;
+      overtimeMinute +=
+          int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ??
+              0;
     }
 
     final resolvedDates = <String, List<String>>{
-      for (final entry in datesByKey.entries) entry.key: (entry.value.toList()..sort()),
+      for (final entry in datesByKey.entries)
+        entry.key: (entry.value.toList()..sort()),
     };
 
     return _MonthSummary(
@@ -201,22 +259,38 @@ class _HistoryPageState extends State<HistoryPage> {
       firstDay: firstDay,
       lastDay: lastDay,
       startKeys: const ['date_start', 'tanggal_mulai', 'date'],
-      endKeys: const ['date_end', 'tanggal_selesai', 'date_start', 'tanggal_mulai', 'date'],
+      endKeys: const [
+        'date_end',
+        'tanggal_selesai',
+        'date_start',
+        'tanggal_mulai',
+        'date'
+      ],
     );
     final overtimeByDate = _expandDateRows(
       overtimeRows,
       firstDay: firstDay,
       lastDay: lastDay,
       startKeys: const ['overtime_date', 'date_start', 'tanggal_mulai', 'date'],
-      endKeys: const ['date_end', 'tanggal_selesai', 'overtime_date', 'date_start', 'tanggal_mulai', 'date'],
+      endKeys: const [
+        'date_end',
+        'tanggal_selesai',
+        'overtime_date',
+        'date_start',
+        'tanggal_mulai',
+        'date'
+      ],
     );
     final today = DateTime.now();
     final todayKey = AppDate.dateKey(today);
     final items = <DailyHistoryStatus>[];
 
-    for (var current = lastDay; !current.isBefore(firstDay); current = current.subtract(const Duration(days: 1))) {
+    for (var current = lastDay;
+        !current.isBefore(firstDay);
+        current = current.subtract(const Duration(days: 1))) {
       final index = current.difference(firstDay).inDays;
-      final schedule = index >= 0 && index < schedules.length ? schedules[index] : null;
+      final schedule =
+          index >= 0 && index < schedules.length ? schedules[index] : null;
       final dateKey = AppDate.dateKey(current);
       final attendanceRow = attendanceByDate[dateKey];
       final leaveRow = leaveByDate[dateKey];
@@ -261,7 +335,9 @@ class _HistoryPageState extends State<HistoryPage> {
       final normalizedStart = start.isBefore(firstDay) ? firstDay : start;
       final normalizedEnd = end.isAfter(lastDay) ? lastDay : end;
       if (normalizedStart.isAfter(normalizedEnd)) continue;
-      for (var current = normalizedStart; !current.isAfter(normalizedEnd); current = current.add(const Duration(days: 1))) {
+      for (var current = normalizedStart;
+          !current.isAfter(normalizedEnd);
+          current = current.add(const Duration(days: 1))) {
         result[AppDate.dateKey(current)] = row;
       }
     }
@@ -305,8 +381,8 @@ class _HistoryPageState extends State<HistoryPage> {
       return schedule.source == 'none' ? 'tanpa_data' : 'libur';
     }
 
-    final canEvaluateAlpa =
-        _checkInStartMinute(schedule) != null && _checkInEndMinute(schedule) != null;
+    final canEvaluateAlpa = _checkInStartMinute(schedule) != null &&
+        _checkInEndMinute(schedule) != null;
     if (!canEvaluateAlpa) return 'jadwal';
 
     if (dateKey.compareTo(todayKey) > 0) return 'jadwal';
@@ -323,14 +399,19 @@ class _HistoryPageState extends State<HistoryPage> {
     final hasPulang = pulang is Map;
     if (hasMasuk && _isLate(masuk)) return 'telat';
     if (hasMasuk || hasPulang) return 'hadir';
-    final direct = (row['attendance_status'] ?? row['status'] ?? '').toString().toLowerCase();
-    if (direct == 'terlambat' || direct == 'telat' || direct == 'late') return 'telat';
+    final direct = (row['attendance_status'] ?? row['status'] ?? '')
+        .toString()
+        .toLowerCase();
+    if (direct == 'terlambat' || direct == 'telat' || direct == 'late') {
+      return 'telat';
+    }
     if (direct == 'hadir') return 'hadir';
     return '';
   }
 
   String _leaveStatus(Map<String, dynamic> row) {
-    final type = (row['type'] ?? row['leave_type'] ?? 'izin').toString().toLowerCase();
+    final type =
+        (row['type'] ?? row['leave_type'] ?? 'izin').toString().toLowerCase();
     switch (type) {
       case 'sakit':
         return 'sakit';
@@ -375,7 +456,9 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   static bool _isLate(Map<dynamic, dynamic> masuk) {
-    final status = (masuk['attendance_status'] ?? masuk['status'] ?? '').toString().toLowerCase();
+    final status = (masuk['attendance_status'] ?? masuk['status'] ?? '')
+        .toString()
+        .toLowerCase();
     return status == 'terlambat' || status == 'telat' || status == 'late';
   }
 
@@ -388,7 +471,8 @@ class _HistoryPageState extends State<HistoryPage> {
     return hour * 60 + minute;
   }
 
-  static bool _isTimeInWindow(DateTime dateTime, int startMinute, int endMinute) {
+  static bool _isTimeInWindow(
+      DateTime dateTime, int startMinute, int endMinute) {
     final current = dateTime.hour * 60 + dateTime.minute;
     if (startMinute <= endMinute) {
       return current >= startMinute && current <= endMinute;
@@ -470,13 +554,18 @@ class _HistoryPageState extends State<HistoryPage> {
     final summary = _summary();
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
-    final visibleDailyStatuses = _dailyStatuses.where((item) {
-      final dateOnly = DateTime(item.date.year, item.date.month, item.date.day);
-      if (dateOnly.isAfter(todayOnly)) return false;
-      return item.status != 'libur' && item.status != 'tanpa_data';
-    }).take(7).toList(growable: false);
-    final hasAnyData =
-        visibleDailyStatuses.isNotEmpty || _leaveRows.isNotEmpty || _overtimeRows.isNotEmpty;
+    final visibleDailyStatuses = _dailyStatuses
+        .where((item) {
+          final dateOnly =
+              DateTime(item.date.year, item.date.month, item.date.day);
+          if (dateOnly.isAfter(todayOnly)) return false;
+          return item.status != 'libur' && item.status != 'tanpa_data';
+        })
+        .take(7)
+        .toList(growable: false);
+    final hasAnyData = visibleDailyStatuses.isNotEmpty ||
+        _leaveRows.isNotEmpty ||
+        _overtimeRows.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -496,6 +585,11 @@ class _HistoryPageState extends State<HistoryPage> {
                 _CalendarButton(onTap: _showCalendarSheet, month: _month),
                 const SizedBox(height: 16),
                 const _SectionTitle('Ringkasan Bulan Ini'),
+                if (_scheduleLoading) ...[
+                  const SizedBox(height: 4),
+                  const _SectionNote(
+                      'Ringkasan akan diperbarui otomatis setelah jadwal selesai dimuat.'),
+                ],
                 const SizedBox(height: 10),
                 _SummaryHorizontalList(
                   summary: summary,
@@ -508,14 +602,19 @@ class _HistoryPageState extends State<HistoryPage> {
                 const SizedBox(height: 18),
                 const _SectionTitle('Daftar Presensi Terbaru'),
                 const SizedBox(height: 4),
-                const _SectionNote('Menampilkan 7 hari terakhir.'),
+                _SectionNote(
+                  _scheduleLoading
+                      ? 'Menampilkan data awal. Status jadwal sedang disempurnakan...'
+                      : 'Menampilkan 7 hari terakhir.',
+                ),
                 const SizedBox(height: 10),
                 if (_loading)
                   const AppCard(
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(color: AppColors.primary),
+                        child:
+                            CircularProgressIndicator(color: AppColors.primary),
                       ),
                     ),
                   )
@@ -525,7 +624,8 @@ class _HistoryPageState extends State<HistoryPage> {
                       padding: EdgeInsets.all(22),
                       child: Column(
                         children: [
-                          Icon(Icons.inbox_rounded, color: AppColors.muted, size: 38),
+                          Icon(Icons.inbox_rounded,
+                              color: AppColors.muted, size: 38),
                           SizedBox(height: 10),
                           Text(
                             'Belum ada presensi dalam 7 hari terakhir.',
@@ -695,7 +795,8 @@ class _MonthFilter extends StatelessWidget {
           ),
           IconButton(
             onPressed: onNext,
-            icon: const Icon(Icons.chevron_right_rounded, color: AppColors.text),
+            icon:
+                const Icon(Icons.chevron_right_rounded, color: AppColors.text),
           ),
         ],
       ),
@@ -723,7 +824,8 @@ class _CalendarButton extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: .12),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.calendar_month_rounded, color: AppColors.primary),
+          child: const Icon(Icons.calendar_month_rounded,
+              color: AppColors.primary),
         ),
         title: const Text(
           'Lihat Kehadiran 1 Bulan',
@@ -731,9 +833,11 @@ class _CalendarButton extends StatelessWidget {
         ),
         subtitle: Text(
           'Ringkasan kehadiran harian ${AppDate.monthLabel(month)}',
-          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.muted),
+          style: const TextStyle(
+              fontWeight: FontWeight.w700, color: AppColors.muted),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+        trailing:
+            const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
       ),
     );
   }
@@ -751,13 +855,20 @@ class _SummaryHorizontalList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cards = [
-      _SummaryData('hadir', 'Hadir', summary.hadir, AppColors.green, const Color(0xFFEAFBF2), Icons.check_circle_rounded),
-      _SummaryData('telat', 'Telat', summary.telat, AppColors.orange, const Color(0xFFFFF8E8), Icons.schedule_rounded),
-      _SummaryData('izin', 'Izin', summary.izin, AppColors.blue, const Color(0xFFEFF6FF), Icons.event_note_rounded),
-      _SummaryData('sakit', 'Sakit', summary.sakit, AppColors.red, const Color(0xFFFFF0F3), Icons.medical_services_rounded),
-      _SummaryData('cuti', 'Cuti', summary.cuti, const Color(0xFFCE7A00), const Color(0xFFFFF8E8), Icons.work_history_rounded),
-      _SummaryData('lembur', 'Lembur', summary.lembur, AppColors.primary, const Color(0xFFEAF7FA), Icons.timelapse_rounded),
-      _SummaryData('alpa', 'Alpa', summary.alpa, AppColors.red, const Color(0xFFFFEEF1), Icons.person_off_rounded),
+      _SummaryData('hadir', 'Hadir', summary.hadir, AppColors.green,
+          const Color(0xFFEAFBF2), Icons.check_circle_rounded),
+      _SummaryData('telat', 'Telat', summary.telat, AppColors.orange,
+          const Color(0xFFFFF8E8), Icons.schedule_rounded),
+      _SummaryData('izin', 'Izin', summary.izin, AppColors.blue,
+          const Color(0xFFEFF6FF), Icons.event_note_rounded),
+      _SummaryData('sakit', 'Sakit', summary.sakit, AppColors.red,
+          const Color(0xFFFFF0F3), Icons.medical_services_rounded),
+      _SummaryData('cuti', 'Cuti', summary.cuti, const Color(0xFFCE7A00),
+          const Color(0xFFFFF8E8), Icons.work_history_rounded),
+      _SummaryData('lembur', 'Lembur', summary.lembur, AppColors.primary,
+          const Color(0xFFEAF7FA), Icons.timelapse_rounded),
+      _SummaryData('alpa', 'Alpa', summary.alpa, AppColors.red,
+          const Color(0xFFFFEEF1), Icons.person_off_rounded),
     ];
 
     return SizedBox(
@@ -856,7 +967,9 @@ class _DailyHistoryItem extends StatelessWidget {
   String _timeOf(Map<String, dynamic>? row, String key) {
     if (row == null) return '--:--';
     final value = row[key];
-    if (value is Map) return (value['time'] ?? value['waktu'] ?? '--:--').toString();
+    if (value is Map) {
+      return (value['time'] ?? value['waktu'] ?? '--:--').toString();
+    }
     return '--:--';
   }
 
@@ -865,10 +978,18 @@ class _DailyHistoryItem extends StatelessWidget {
     if (attendance == null) return null;
     final masuk = attendance['masuk'];
     if (masuk is! Map) return null;
-    final direct = int.tryParse((masuk['late_minute'] ?? masuk['late_minutes'] ?? masuk['minutes_late'] ?? '').toString());
+    final direct = int.tryParse((masuk['late_minute'] ??
+            masuk['late_minutes'] ??
+            masuk['minutes_late'] ??
+            '')
+        .toString());
     if (direct != null && direct > 0) return direct;
     final actual = _minutes(_timeOf(attendance, 'masuk'));
-    final workStart = _minutes((masuk['work_start'] ?? attendance['work_start'] ?? item.schedule?.workStart ?? '').toString());
+    final workStart = _minutes((masuk['work_start'] ??
+            attendance['work_start'] ??
+            item.schedule?.workStart ??
+            '')
+        .toString());
     if (actual == null || workStart == null) return null;
     final diff = actual - workStart;
     return diff > 0 ? diff : null;
@@ -887,14 +1008,24 @@ class _DailyHistoryItem extends StatelessWidget {
     switch (item.status) {
       case 'hadir':
       case 'telat':
-        final text = 'Masuk ${_timeOf(item.attendanceRow, 'masuk')} - Pulang ${_timeOf(item.attendanceRow, 'pulang')}';
+        final text =
+            'Masuk ${_timeOf(item.attendanceRow, 'masuk')} - Pulang ${_timeOf(item.attendanceRow, 'pulang')}';
         return text;
       case 'izin':
       case 'sakit':
       case 'cuti':
-        final start = (item.leaveRow?['date_start'] ?? item.leaveRow?['tanggal_mulai'] ?? item.dateKey).toString();
-        final end = (item.leaveRow?['date_end'] ?? item.leaveRow?['tanggal_selesai'] ?? start).toString();
-        final reason = (item.leaveRow?['reason'] ?? item.leaveRow?['alasan'] ?? '').toString().trim();
+        final start = (item.leaveRow?['date_start'] ??
+                item.leaveRow?['tanggal_mulai'] ??
+                item.dateKey)
+            .toString();
+        final end = (item.leaveRow?['date_end'] ??
+                item.leaveRow?['tanggal_selesai'] ??
+                start)
+            .toString();
+        final reason =
+            (item.leaveRow?['reason'] ?? item.leaveRow?['alasan'] ?? '')
+                .toString()
+                .trim();
         final period = end.isEmpty || end == start ? start : '$start - $end';
         if (reason.isEmpty) return period;
         return '$period - $reason';
@@ -902,7 +1033,9 @@ class _DailyHistoryItem extends StatelessWidget {
         return 'Tidak ada presensi dan tidak ada keterangan.';
       case 'jadwal':
         final message = item.schedule?.message.trim() ?? '';
-        return message.isEmpty ? 'Jadwal tersedia. Belum waktunya absen.' : message;
+        return message.isEmpty
+            ? 'Jadwal tersedia. Belum waktunya absen.'
+            : message;
       case 'libur':
         final message = item.schedule?.message.trim() ?? '';
         return message.isEmpty ? 'Hari libur.' : message;
@@ -912,9 +1045,13 @@ class _DailyHistoryItem extends StatelessWidget {
   }
 
   String? _secondaryText() {
-    if (item.status != 'telat') return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
+    if (item.status != 'telat') {
+      return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
+    }
     final lateMinute = _lateMinute();
-    if (lateMinute == null) return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
+    if (lateMinute == null) {
+      return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
+    }
     return 'Telat $lateMinute menit';
   }
 
@@ -976,7 +1113,9 @@ class _DailyHistoryItem extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: item.status == 'telat' ? AppColors.orange : AppColors.primary,
+                            color: item.status == 'telat'
+                                ? AppColors.orange
+                                : AppColors.primary,
                           ),
                         ),
                       ],
@@ -985,7 +1124,8 @@ class _DailyHistoryItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: .12),
                     borderRadius: BorderRadius.circular(999),
@@ -1012,7 +1152,8 @@ class _LeaveHistoryItem extends StatelessWidget {
   final Map<String, dynamic> row;
   const _LeaveHistoryItem(this.row);
 
-  String get _type => (row['type'] ?? row['leave_type'] ?? 'izin').toString().toLowerCase();
+  String get _type =>
+      (row['type'] ?? row['leave_type'] ?? 'izin').toString().toLowerCase();
 
   String get _label {
     switch (_type) {
@@ -1049,7 +1190,9 @@ class _LeaveHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = (row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '-').toString();
+    final start =
+        (row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '-')
+            .toString();
     final end = (row['date_end'] ?? row['tanggal_selesai'] ?? start).toString();
     final reason = (row['reason'] ?? row['alasan'] ?? '').toString().trim();
     final dateText = end.isEmpty || end == start ? start : '$start - $end';
@@ -1137,11 +1280,17 @@ class _OvertimeHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = (row['overtime_date'] ?? row['date_start'] ?? row['tanggal_mulai'] ?? row['date'] ?? '-').toString();
+    final date = (row['overtime_date'] ??
+            row['date_start'] ??
+            row['tanggal_mulai'] ??
+            row['date'] ??
+            '-')
+        .toString();
     final start = (row['overtime_start_time'] ?? '').toString();
     final end = (row['overtime_end_time'] ?? '').toString();
     final reason = (row['reason'] ?? row['alasan'] ?? '').toString().trim();
-    final duration = int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ?? 0;
+    final duration =
+        int.tryParse((row['overtime_duration_minute'] ?? '0').toString()) ?? 0;
     final durationText = _formatDuration(duration);
 
     return Padding(
@@ -1158,7 +1307,8 @@ class _OvertimeHistoryItem extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: const Icon(Icons.timelapse_rounded, color: AppColors.primary),
+              child:
+                  const Icon(Icons.timelapse_rounded, color: AppColors.primary),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1264,8 +1414,20 @@ class _CalendarSheet extends StatelessWidget {
         overtimeRows,
         firstDay: DateTime(month.year, month.month, 1),
         lastDay: DateTime(month.year, month.month + 1, 0),
-        startKeys: const ['overtime_date', 'date_start', 'tanggal_mulai', 'date'],
-        endKeys: const ['date_end', 'tanggal_selesai', 'overtime_date', 'date_start', 'tanggal_mulai', 'date'],
+        startKeys: const [
+          'overtime_date',
+          'date_start',
+          'tanggal_mulai',
+          'date'
+        ],
+        endKeys: const [
+          'date_end',
+          'tanggal_selesai',
+          'overtime_date',
+          'date_start',
+          'tanggal_mulai',
+          'date'
+        ],
       ).entries)
         entry.key: entry.value,
     };
@@ -1293,7 +1455,9 @@ class _CalendarSheet extends StatelessWidget {
           case 'libur':
             return const Color(0xFFD9E1EA);
           case 'tanpa_data':
-            return overtime != null ? AppColors.primary : const Color(0xFFE9EEF4);
+            return overtime != null
+                ? AppColors.primary
+                : const Color(0xFFE9EEF4);
         }
       }
       if (overtime != null) return AppColors.primary;
@@ -1361,7 +1525,8 @@ class _CalendarSheet extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: total,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 7,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
@@ -1375,7 +1540,8 @@ class _CalendarSheet extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: .14),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: color.withValues(alpha: .45)),
+                          border:
+                              Border.all(color: color.withValues(alpha: .45)),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -1460,7 +1626,8 @@ class _DateListSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final parsedDates = dates.map(DateTime.tryParse).whereType<DateTime>().toList()..sort();
+    final parsedDates =
+        dates.map(DateTime.tryParse).whereType<DateTime>().toList()..sort();
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.bg,
@@ -1514,7 +1681,8 @@ class _DateListSheet extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Tidak ada tanggal pada kategori ini.',
-                  style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.muted),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, color: AppColors.muted),
                 ),
               )
             else
@@ -1522,10 +1690,12 @@ class _DateListSheet extends StatelessWidget {
                 (date) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: AppCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_rounded, color: color, size: 18),
+                        Icon(Icons.calendar_today_rounded,
+                            color: color, size: 18),
                         const SizedBox(width: 10),
                         Text(
                           AppDate.dayDate(date),

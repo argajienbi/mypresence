@@ -9,7 +9,26 @@ class RtdbService {
     final snap = await ref(path).get();
     if (!snap.exists || snap.value == null) return null;
     final value = snap.value;
-    if (value is Map) return value.map((key, val) => MapEntry(key.toString(), val));
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getMapByKeyRange(
+    String path, {
+    required String startKey,
+    required String endKey,
+  }) async {
+    final snap =
+        await ref(path).orderByKey().startAt(startKey).endAt(endKey).get();
+    if (!snap.exists || snap.value == null) return null;
+
+    final value = snap.value;
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+
     return null;
   }
 
@@ -19,7 +38,10 @@ class RtdbService {
   }
 
   Stream<DatabaseEvent> onValue(String path) => ref(path).onValue;
-  Future<void> set(String path, Map<String, dynamic> data) => ref(path).set(data);
-  Future<void> update(String path, Map<String, dynamic> data) => ref(path).update(data);
-  Future<String> pushKey(String path) async => ref(path).push().key ?? DateTime.now().millisecondsSinceEpoch.toString();
+  Future<void> set(String path, Map<String, dynamic> data) =>
+      ref(path).set(data);
+  Future<void> update(String path, Map<String, dynamic> data) =>
+      ref(path).update(data);
+  Future<String> pushKey(String path) async =>
+      ref(path).push().key ?? DateTime.now().millisecondsSinceEpoch.toString();
 }

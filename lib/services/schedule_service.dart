@@ -57,9 +57,15 @@ class DailySchedule {
   });
 
   String get periodLabel {
-    if (assignmentStartDate.isEmpty && assignmentEndDate.isEmpty) return 'Belum tersedia';
-    final start = assignmentStartDate.isEmpty ? 'Mulai belum diatur' : _formatDateLabel(assignmentStartDate);
-    final end = assignmentEndDate.isEmpty ? 'Seterusnya' : _formatDateLabel(assignmentEndDate);
+    if (assignmentStartDate.isEmpty && assignmentEndDate.isEmpty) {
+      return 'Belum tersedia';
+    }
+    final start = assignmentStartDate.isEmpty
+        ? 'Mulai belum diatur'
+        : _formatDateLabel(assignmentStartDate);
+    final end = assignmentEndDate.isEmpty
+        ? 'Seterusnya'
+        : _formatDateLabel(assignmentEndDate);
     return '$start - $end';
   }
 
@@ -67,8 +73,18 @@ class DailySchedule {
     final date = DateTime.tryParse(value);
     if (date == null) return value;
     const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
     ];
     return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
   }
@@ -97,7 +113,14 @@ class DailySchedule {
     );
   }
 
-  static DailySchedule off(String message, {String source = 'none', String assignmentId = '', String assignmentStartDate = '', String assignmentEndDate = '', String shiftId = '', String shiftName = '', bool scheduleReady = false}) {
+  static DailySchedule off(String message,
+      {String source = 'none',
+      String assignmentId = '',
+      String assignmentStartDate = '',
+      String assignmentEndDate = '',
+      String shiftId = '',
+      String shiftName = '',
+      bool scheduleReady = false}) {
     return DailySchedule(
       scheduleReady: scheduleReady,
       isWorkday: false,
@@ -133,7 +156,9 @@ class DailySchedule {
       scheduleReady: true,
       isWorkday: true,
       isHoliday: false,
-      message: holidayWork ? 'Jadwal lembur aktif pada hari libur.' : 'Jadwal lembur aktif.',
+      message: holidayWork
+          ? 'Jadwal lembur aktif pada hari libur.'
+          : 'Jadwal lembur aktif.',
       source: 'overtime_schedule',
       assignmentId: scheduleId,
       assignmentStartDate: date,
@@ -150,7 +175,8 @@ class DailySchedule {
       checkOutEnd: asString(item['check_out_end']),
       lateToleranceMinute: asInt(item['late_tolerance_minute']),
       earlyOutToleranceMinute: asInt(item['early_out_tolerance_minute']),
-      crossesMidnight: _timeCrossesMidnight(asString(item['work_start']), asString(item['work_end'])),
+      crossesMidnight: _timeCrossesMidnight(
+          asString(item['work_start']), asString(item['work_end'])),
       overtimeFlag: true,
       overtimeScheduleId: scheduleId,
       isHolidayWork: holidayWork,
@@ -232,7 +258,8 @@ class ScheduleService {
     return resolveForDate(session, now ?? DateTime.now());
   }
 
-  Future<List<DailySchedule>> resolveRange(AppSession session, DateTime start, DateTime end) async {
+  Future<List<DailySchedule>> resolveRange(
+      AppSession session, DateTime start, DateTime end) async {
     final from = DateTime(start.year, start.month, start.day);
     final to = DateTime(end.year, end.month, end.day);
     final rows = <DailySchedule>[];
@@ -244,15 +271,142 @@ class ScheduleService {
     return rows;
   }
 
-  Future<DailySchedule> resolveForDate(AppSession session, DateTime dateTime) async {
-    final date = AppDate.dateKey(dateTime);
-    final companyUser = await _rtdb.getMap(FirebasePaths.companyUser(session.companyId, session.uid));
+  Future<List<DailySchedule>> resolveRangeOptimized(
+    AppSession session,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final from = DateTime(start.year, start.month, start.day);
+    final to = DateTime(end.year, end.month, end.day);
+
+    final companyUser = await _rtdb.getMap(
+      FirebasePaths.companyUser(session.companyId, session.uid),
+    );
+
     final context = _ScheduleContext(
       session: session,
       groupId: asString(companyUser?['group_id'], session.groupId),
     );
 
-    final holiday = await _rtdb.getMap(FirebasePaths.holiday(context.companyId, date));
+    final results = await Future.wait([
+      _rtdb.getMap(FirebasePaths.holidays(context.companyId)),
+      _rtdb.getMap(FirebasePaths.overtimeSchedules(context.companyId)),
+      _rtdb.getMap(FirebasePaths.scheduleSpecials(context.companyId)),
+      _rtdb.getMap(FirebasePaths.scheduleAssignments(context.companyId)),
+      _rtdb.getMap(FirebasePaths.shifts(context.companyId)),
+      _rtdb.getMap(FirebasePaths.timetables(context.companyId)),
+    ]);
+
+    final holidaysRoot = _normalizeRootMap(results[0]);
+    final overtimeRoot = _normalizeRootMap(results[1]);
+    final specialsRoot = _normalizeRootMap(results[2]);
+    final assignmentsRoot = _normalizeRootMap(results[3]);
+    final shiftsRoot = _normalizeRootMap(results[4]);
+    final timetablesRoot = _normalizeRootMap(results[5]);
+
+    final rows = <DailySchedule>[];
+
+    for (var current = from;
+        !current.isAfter(to);
+        current = current.add(const Duration(days: 1))) {
+      final date = AppDate.dateKey(current);
+
+      final holiday = asMap(holidaysRoot[date]);
+      final isHoliday = holiday.isNotEmpty && _isActive(holiday);
+
+      final overtime = _findOvertimeScheduleFromRoot(
+        overtimeRoot,
+        context,
+        date,
+      );
+
+      if (overtime != null) {
+        rows.add(
+          DailySchedule.overtime(
+            item: overtime,
+            scheduleId: asString(overtime['id']),
+            date: date,
+            holidayWork: isHoliday,
+          ),
+        );
+        continue;
+      }
+
+      final special = _findSpecialScheduleFromRoot(
+        specialsRoot,
+        context,
+        date,
+      );
+
+      if (special != null) {
+        rows.add(
+          _resolveShiftFromRoots(
+            context: context,
+            shiftId: asString(special['shift_id']),
+            dateTime: current,
+            source: 'special_schedule',
+            assignmentId: asString(special['id']),
+            assignmentStartDate: asString(special['date']),
+            assignmentEndDate: asString(special['date']),
+            shiftsRoot: shiftsRoot,
+            timetablesRoot: timetablesRoot,
+          ),
+        );
+        continue;
+      }
+
+      if (isHoliday) {
+        final title = asString(holiday['title'], 'Hari libur');
+        rows.add(DailySchedule.holiday(title));
+        continue;
+      }
+
+      final assignment = _findAssignmentFromRoot(
+        assignmentsRoot,
+        context,
+        date,
+      );
+
+      if (assignment == null) {
+        rows.add(
+            DailySchedule.off('Jadwal kerja belum diatur untuk hari ini.'));
+        continue;
+      }
+
+      final source = asString(assignment['type']) == 'user'
+          ? 'user_assignment'
+          : 'group_assignment';
+
+      rows.add(
+        _resolveShiftFromRoots(
+          context: context,
+          shiftId: asString(assignment['shift_id']),
+          dateTime: current,
+          source: source,
+          assignmentId: asString(assignment['id']),
+          assignmentStartDate: asString(assignment['start_date']),
+          assignmentEndDate: asString(assignment['end_date']),
+          shiftsRoot: shiftsRoot,
+          timetablesRoot: timetablesRoot,
+        ),
+      );
+    }
+
+    return rows;
+  }
+
+  Future<DailySchedule> resolveForDate(
+      AppSession session, DateTime dateTime) async {
+    final date = AppDate.dateKey(dateTime);
+    final companyUser = await _rtdb
+        .getMap(FirebasePaths.companyUser(session.companyId, session.uid));
+    final context = _ScheduleContext(
+      session: session,
+      groupId: asString(companyUser?['group_id'], session.groupId),
+    );
+
+    final holiday =
+        await _rtdb.getMap(FirebasePaths.holiday(context.companyId, date));
     final isHoliday = holiday != null && _isActive(holiday);
 
     final overtime = await _findOvertimeSchedule(context, date);
@@ -288,7 +442,9 @@ class ScheduleService {
       return DailySchedule.off('Jadwal kerja belum diatur untuk hari ini.');
     }
 
-    final source = asString(assignment['type']) == 'user' ? 'user_assignment' : 'group_assignment';
+    final source = asString(assignment['type']) == 'user'
+        ? 'user_assignment'
+        : 'group_assignment';
     return _resolveShift(
       context: context,
       shiftId: asString(assignment['shift_id']),
@@ -300,8 +456,10 @@ class ScheduleService {
     );
   }
 
-  Future<Map<String, dynamic>?> _findOvertimeSchedule(_ScheduleContext context, String date) async {
-    final root = await _rtdb.getMap(FirebasePaths.overtimeSchedules(context.companyId));
+  Future<Map<String, dynamic>?> _findOvertimeSchedule(
+      _ScheduleContext context, String date) async {
+    final root =
+        await _rtdb.getMap(FirebasePaths.overtimeSchedules(context.companyId));
     if (root == null || root.isEmpty) return null;
 
     final matches = <Map<String, dynamic>>[];
@@ -318,16 +476,20 @@ class ScheduleService {
     }
 
     if (matches.isEmpty) return null;
-    matches.sort((a, b) => asInt(b['updated_at'], asInt(b['created_at'])).compareTo(asInt(a['updated_at'], asInt(a['created_at']))));
+    matches.sort((a, b) => asInt(b['updated_at'], asInt(b['created_at']))
+        .compareTo(asInt(a['updated_at'], asInt(a['created_at']))));
     return matches.first;
   }
 
   bool _dateMatchesOvertime(Map<String, dynamic> item, String date) {
     final dates = asMap(item['dates']);
-    if (dates.isNotEmpty) return dates[date] == true || asString(dates[date]) == 'true';
+    if (dates.isNotEmpty) {
+      return dates[date] == true || asString(dates[date]) == 'true';
+    }
     final directDate = asString(item['date']);
     if (directDate.isNotEmpty) return directDate == date;
-    return _dateInRange(date, asString(item['date_start']), asString(item['date_end']));
+    return _dateInRange(
+        date, asString(item['date_start']), asString(item['date_end']));
   }
 
   bool _targetMatches(Map<String, dynamic> targets, String uid) {
@@ -335,8 +497,10 @@ class ScheduleService {
     return targets[uid] == true || asString(targets[uid]) == 'true';
   }
 
-  Future<Map<String, dynamic>?> _findSpecialSchedule(_ScheduleContext context, String date) async {
-    final specials = await _rtdb.getMap(FirebasePaths.scheduleSpecials(context.companyId));
+  Future<Map<String, dynamic>?> _findSpecialSchedule(
+      _ScheduleContext context, String date) async {
+    final specials =
+        await _rtdb.getMap(FirebasePaths.scheduleSpecials(context.companyId));
     if (specials == null || specials.isEmpty) return null;
 
     final matches = <Map<String, dynamic>>[];
@@ -348,7 +512,8 @@ class ScheduleService {
       final type = asString(item['type']);
       final targetId = asString(item['target_id']);
       final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch = type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final groupMatch =
+          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
         matches.add(item);
@@ -365,20 +530,26 @@ class ScheduleService {
     return matches.first;
   }
 
-  Future<Map<String, dynamic>?> _findAssignment(_ScheduleContext context, String date) async {
-    final assignments = await _rtdb.getMap(FirebasePaths.scheduleAssignments(context.companyId));
+  Future<Map<String, dynamic>?> _findAssignment(
+      _ScheduleContext context, String date) async {
+    final assignments = await _rtdb
+        .getMap(FirebasePaths.scheduleAssignments(context.companyId));
     if (assignments == null || assignments.isEmpty) return null;
 
     final matches = <Map<String, dynamic>>[];
     for (final entry in assignments.entries) {
       final item = asMap(entry.value);
       if (!_isActive(item)) continue;
-      if (!_dateInRange(date, asString(item['start_date']), asString(item['end_date']))) continue;
+      if (!_dateInRange(
+          date, asString(item['start_date']), asString(item['end_date']))) {
+        continue;
+      }
 
       final type = asString(item['type']);
       final targetId = asString(item['target_id']);
       final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch = type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final groupMatch =
+          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
         matches.add(item);
@@ -405,12 +576,24 @@ class ScheduleService {
     String assignmentEndDate = '',
   }) async {
     if (shiftId.isEmpty) {
-      return DailySchedule.off('Shift belum dipilih.', source: source, assignmentId: assignmentId, assignmentStartDate: assignmentStartDate, assignmentEndDate: assignmentEndDate, scheduleReady: false);
+      return DailySchedule.off('Shift belum dipilih.',
+          source: source,
+          assignmentId: assignmentId,
+          assignmentStartDate: assignmentStartDate,
+          assignmentEndDate: assignmentEndDate,
+          scheduleReady: false);
     }
 
-    final shift = await _rtdb.getMap(FirebasePaths.shift(context.companyId, shiftId));
+    final shift =
+        await _rtdb.getMap(FirebasePaths.shift(context.companyId, shiftId));
     if (shift == null || !_isActive(shift)) {
-      return DailySchedule.off('Shift tidak aktif atau tidak ditemukan.', source: source, assignmentId: assignmentId, assignmentStartDate: assignmentStartDate, assignmentEndDate: assignmentEndDate, shiftId: shiftId, scheduleReady: false);
+      return DailySchedule.off('Shift tidak aktif atau tidak ditemukan.',
+          source: source,
+          assignmentId: assignmentId,
+          assignmentStartDate: assignmentStartDate,
+          assignmentEndDate: assignmentEndDate,
+          shiftId: shiftId,
+          scheduleReady: false);
     }
 
     final dayKey = _weekdayKey(dateTime);
@@ -431,12 +614,27 @@ class ScheduleService {
 
     final timetableId = asString(day['timetable_id']);
     if (timetableId.isEmpty) {
-      return DailySchedule.off('Timetable belum dipilih untuk hari ini.', source: source, assignmentId: assignmentId, assignmentStartDate: assignmentStartDate, assignmentEndDate: assignmentEndDate, shiftId: shiftId, shiftName: asString(shift['name']), scheduleReady: true);
+      return DailySchedule.off('Timetable belum dipilih untuk hari ini.',
+          source: source,
+          assignmentId: assignmentId,
+          assignmentStartDate: assignmentStartDate,
+          assignmentEndDate: assignmentEndDate,
+          shiftId: shiftId,
+          shiftName: asString(shift['name']),
+          scheduleReady: true);
     }
 
-    final timetable = await _rtdb.getMap(FirebasePaths.timetable(context.companyId, timetableId));
+    final timetable = await _rtdb
+        .getMap(FirebasePaths.timetable(context.companyId, timetableId));
     if (timetable == null || !_isActive(timetable)) {
-      return DailySchedule.off('Jam kerja tidak aktif atau tidak ditemukan.', source: source, assignmentId: assignmentId, assignmentStartDate: assignmentStartDate, assignmentEndDate: assignmentEndDate, shiftId: shiftId, shiftName: asString(shift['name']), scheduleReady: false);
+      return DailySchedule.off('Jam kerja tidak aktif atau tidak ditemukan.',
+          source: source,
+          assignmentId: assignmentId,
+          assignmentStartDate: assignmentStartDate,
+          assignmentEndDate: assignmentEndDate,
+          shiftId: shiftId,
+          shiftName: asString(shift['name']),
+          scheduleReady: false);
     }
 
     return DailySchedule(
@@ -460,7 +658,246 @@ class ScheduleService {
       checkOutEnd: asString(timetable['check_out_end']),
       lateToleranceMinute: asInt(timetable['late_tolerance_minute']),
       earlyOutToleranceMinute: asInt(timetable['early_out_tolerance_minute']),
-      crossesMidnight: timetable['crosses_midnight'] == true || asString(timetable['crosses_midnight']) == 'true',
+      crossesMidnight: timetable['crosses_midnight'] == true ||
+          asString(timetable['crosses_midnight']) == 'true',
+    );
+  }
+
+  Map<String, dynamic> _normalizeRootMap(Map<String, dynamic>? root) {
+    if (root == null || root.isEmpty) return <String, dynamic>{};
+
+    return root.map((key, value) {
+      if (value is Map) {
+        return MapEntry(
+          key.toString(),
+          value.map((k, v) => MapEntry(k.toString(), v)),
+        );
+      }
+
+      return MapEntry(key.toString(), value);
+    });
+  }
+
+  Map<String, dynamic>? _findOvertimeScheduleFromRoot(
+    Map<String, dynamic> root,
+    _ScheduleContext context,
+    String date,
+  ) {
+    if (root.isEmpty) return null;
+
+    final matches = <Map<String, dynamic>>[];
+
+    for (final entry in root.entries) {
+      final item = asMap(entry.value);
+      if (!_isActive(item)) continue;
+
+      final status = asString(item['status'], 'active').toLowerCase();
+      if (status == 'inactive' || status == 'disabled') continue;
+      if (!_dateMatchesOvertime(item, date)) continue;
+
+      final targets = asMap(item['target_uids']);
+      if (!_targetMatches(targets, context.uid)) continue;
+
+      item['id'] = asString(item['schedule_id'], entry.key);
+      matches.add(item);
+    }
+
+    if (matches.isEmpty) return null;
+
+    matches.sort(
+      (a, b) => asInt(
+        b['updated_at'],
+        asInt(b['created_at']),
+      ).compareTo(
+        asInt(a['updated_at'], asInt(a['created_at'])),
+      ),
+    );
+
+    return matches.first;
+  }
+
+  Map<String, dynamic>? _findSpecialScheduleFromRoot(
+    Map<String, dynamic> root,
+    _ScheduleContext context,
+    String date,
+  ) {
+    if (root.isEmpty) return null;
+
+    final matches = <Map<String, dynamic>>[];
+
+    for (final entry in root.entries) {
+      final item = asMap(entry.value);
+      if (!_isActive(item)) continue;
+      if (asString(item['date']) != date) continue;
+
+      final type = asString(item['type']);
+      final targetId = asString(item['target_id']);
+      final userMatch = type == 'user' && targetId == context.uid;
+      final groupMatch =
+          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+
+      if (userMatch || groupMatch) {
+        item['id'] = asString(item['id'], entry.key);
+        matches.add(item);
+      }
+    }
+
+    if (matches.isEmpty) return null;
+
+    matches.sort((a, b) {
+      final aUser = asString(a['type']) == 'user' ? 1 : 0;
+      final bUser = asString(b['type']) == 'user' ? 1 : 0;
+      if (aUser != bUser) return bUser.compareTo(aUser);
+      return asInt(b['created_at']).compareTo(asInt(a['created_at']));
+    });
+
+    return matches.first;
+  }
+
+  Map<String, dynamic>? _findAssignmentFromRoot(
+    Map<String, dynamic> root,
+    _ScheduleContext context,
+    String date,
+  ) {
+    if (root.isEmpty) return null;
+
+    final matches = <Map<String, dynamic>>[];
+
+    for (final entry in root.entries) {
+      final item = asMap(entry.value);
+      if (!_isActive(item)) continue;
+      if (!_dateInRange(
+          date, asString(item['start_date']), asString(item['end_date']))) {
+        continue;
+      }
+
+      final type = asString(item['type']);
+      final targetId = asString(item['target_id']);
+      final userMatch = type == 'user' && targetId == context.uid;
+      final groupMatch =
+          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+
+      if (userMatch || groupMatch) {
+        item['id'] = asString(item['id'], entry.key);
+        matches.add(item);
+      }
+    }
+
+    if (matches.isEmpty) return null;
+
+    matches.sort((a, b) {
+      final aUser = asString(a['type']) == 'user' ? 1 : 0;
+      final bUser = asString(b['type']) == 'user' ? 1 : 0;
+      if (aUser != bUser) return bUser.compareTo(aUser);
+      return asString(b['start_date']).compareTo(asString(a['start_date']));
+    });
+
+    return matches.first;
+  }
+
+  DailySchedule _resolveShiftFromRoots({
+    required _ScheduleContext context,
+    required String shiftId,
+    required DateTime dateTime,
+    required String source,
+    required String assignmentId,
+    String assignmentStartDate = '',
+    String assignmentEndDate = '',
+    required Map<String, dynamic> shiftsRoot,
+    required Map<String, dynamic> timetablesRoot,
+  }) {
+    if (shiftId.isEmpty) {
+      return DailySchedule.off(
+        'Shift belum dipilih.',
+        source: source,
+        assignmentId: assignmentId,
+        assignmentStartDate: assignmentStartDate,
+        assignmentEndDate: assignmentEndDate,
+        scheduleReady: false,
+      );
+    }
+
+    final shift = asMap(shiftsRoot[shiftId]);
+    if (shift.isEmpty || !_isActive(shift)) {
+      return DailySchedule.off(
+        'Shift tidak aktif atau tidak ditemukan.',
+        source: source,
+        assignmentId: assignmentId,
+        assignmentStartDate: assignmentStartDate,
+        assignmentEndDate: assignmentEndDate,
+        shiftId: shiftId,
+        scheduleReady: false,
+      );
+    }
+
+    final dayKey = _weekdayKey(dateTime);
+    final days = asMap(shift['days']);
+    final day = asMap(days[dayKey]);
+
+    if (!_isActive(day)) {
+      return DailySchedule.off(
+        'Hari ini bukan hari kerja pada shift ${asString(shift['name'], shiftId)}.',
+        source: source,
+        assignmentId: assignmentId,
+        assignmentStartDate: assignmentStartDate,
+        assignmentEndDate: assignmentEndDate,
+        shiftId: shiftId,
+        shiftName: asString(shift['name']),
+        scheduleReady: true,
+      );
+    }
+
+    final timetableId = asString(day['timetable_id']);
+    if (timetableId.isEmpty) {
+      return DailySchedule.off(
+        'Timetable belum dipilih untuk hari ini.',
+        source: source,
+        assignmentId: assignmentId,
+        assignmentStartDate: assignmentStartDate,
+        assignmentEndDate: assignmentEndDate,
+        shiftId: shiftId,
+        shiftName: asString(shift['name']),
+        scheduleReady: true,
+      );
+    }
+
+    final timetable = asMap(timetablesRoot[timetableId]);
+    if (timetable.isEmpty || !_isActive(timetable)) {
+      return DailySchedule.off(
+        'Jam kerja tidak aktif atau tidak ditemukan.',
+        source: source,
+        assignmentId: assignmentId,
+        assignmentStartDate: assignmentStartDate,
+        assignmentEndDate: assignmentEndDate,
+        shiftId: shiftId,
+        shiftName: asString(shift['name']),
+        scheduleReady: false,
+      );
+    }
+
+    return DailySchedule(
+      scheduleReady: true,
+      isWorkday: true,
+      isHoliday: false,
+      message: 'Jadwal tersedia.',
+      source: source,
+      assignmentId: assignmentId,
+      assignmentStartDate: assignmentStartDate,
+      assignmentEndDate: assignmentEndDate,
+      shiftId: shiftId,
+      shiftName: asString(shift['name']),
+      timetableId: timetableId,
+      timetableName: asString(timetable['name']),
+      workStart: asString(timetable['work_start']),
+      workEnd: asString(timetable['work_end']),
+      checkInStart: asString(timetable['check_in_start']),
+      checkInEnd: asString(timetable['check_in_end']),
+      checkOutStart: asString(timetable['check_out_start']),
+      checkOutEnd: asString(timetable['check_out_end']),
+      lateToleranceMinute: asInt(timetable['late_tolerance_minute']),
+      earlyOutToleranceMinute: asInt(timetable['early_out_tolerance_minute']),
+      crossesMidnight: timetable['crosses_midnight'] == true ||
+          asString(timetable['crosses_midnight']) == 'true',
     );
   }
 
@@ -471,23 +908,30 @@ class ScheduleService {
   }) {
     final current = now ?? DateTime.now();
     if (schedule.isHoliday) {
-      return AttendanceWindowResult(allowed: false, status: 'libur', message: 'Hari ini libur: ${schedule.message}');
+      return AttendanceWindowResult(
+          allowed: false,
+          status: 'libur',
+          message: 'Hari ini libur: ${schedule.message}');
     }
     if (!schedule.isWorkday) {
-      return AttendanceWindowResult(allowed: false, status: 'no_schedule', message: schedule.message);
+      return AttendanceWindowResult(
+          allowed: false, status: 'no_schedule', message: schedule.message);
     }
 
     if (actionType == 'masuk') {
-      final inWindow = _isTimeInWindow(current, schedule.checkInStart, schedule.checkInEnd);
+      final inWindow =
+          _isTimeInWindow(current, schedule.checkInStart, schedule.checkInEnd);
       if (!inWindow) {
         return AttendanceWindowResult(
           allowed: false,
           status: 'outside_check_in_window',
-          message: 'Absen masuk hanya dapat dilakukan pukul ${schedule.checkInStart} - ${schedule.checkInEnd}.',
+          message:
+              'Absen masuk hanya dapat dilakukan pukul ${schedule.checkInStart} - ${schedule.checkInEnd}.',
         );
       }
 
-      final lateLimit = _minutesOfDay(schedule.workStart) + schedule.lateToleranceMinute;
+      final lateLimit =
+          _minutesOfDay(schedule.workStart) + schedule.lateToleranceMinute;
       final nowMinute = current.hour * 60 + current.minute;
       final isLate = lateLimit >= 0 && nowMinute > lateLimit;
       return AttendanceWindowResult(
@@ -498,18 +942,23 @@ class ScheduleService {
     }
 
     if (actionType == 'pulang') {
-      final inWindow = _isTimeInWindow(current, schedule.checkOutStart, schedule.checkOutEnd);
+      final inWindow = _isTimeInWindow(
+          current, schedule.checkOutStart, schedule.checkOutEnd);
       if (!inWindow) {
         return AttendanceWindowResult(
           allowed: false,
           status: 'outside_check_out_window',
-          message: 'Absen pulang hanya dapat dilakukan pukul ${schedule.checkOutStart} - ${schedule.checkOutEnd}.',
+          message:
+              'Absen pulang hanya dapat dilakukan pukul ${schedule.checkOutStart} - ${schedule.checkOutEnd}.',
         );
       }
 
-      final earlyLimit = _minutesOfDay(schedule.workEnd) - schedule.earlyOutToleranceMinute;
+      final earlyLimit =
+          _minutesOfDay(schedule.workEnd) - schedule.earlyOutToleranceMinute;
       final nowMinute = current.hour * 60 + current.minute;
-      final isEarly = !schedule.crossesMidnight && earlyLimit >= 0 && nowMinute < earlyLimit;
+      final isEarly = !schedule.crossesMidnight &&
+          earlyLimit >= 0 &&
+          nowMinute < earlyLimit;
       return AttendanceWindowResult(
         allowed: true,
         status: 'hadir',
@@ -518,7 +967,8 @@ class ScheduleService {
       );
     }
 
-    return const AttendanceWindowResult(allowed: true, status: 'hadir', message: 'Valid');
+    return const AttendanceWindowResult(
+        allowed: true, status: 'hadir', message: 'Valid');
   }
 
   bool _isActive(Map<String, dynamic> data) {
@@ -561,7 +1011,9 @@ class ScheduleService {
     final current = dateTime.hour * 60 + dateTime.minute;
 
     if (startMinute < 0 || endMinute < 0) return true;
-    if (startMinute <= endMinute) return current >= startMinute && current <= endMinute;
+    if (startMinute <= endMinute) {
+      return current >= startMinute && current <= endMinute;
+    }
     return current >= startMinute || current <= endMinute;
   }
 
