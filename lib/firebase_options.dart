@@ -41,55 +41,56 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
-    appId: '1:911576285238:web:ffb8f7fa90396016cf5897',
-    messagingSenderId: '911576285238',
-    projectId: 'mypresence-db',
-    authDomain: 'mypresence-db.firebaseapp.com',
+    apiKey: 'AIzaSyCMRvCSBe1qjJ1bGMxoHqD1M572lDQ_x4w',
+    appId: '1:1099105297287:web:544b5af3ac0acfa7296922',
+    messagingSenderId: '1099105297287',
+    projectId: 'mypresence-prod',
+    authDomain: 'mypresence-prod.firebaseapp.com',
     databaseURL:
-        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'mypresence-db.firebasestorage.app',
+        'https://mypresence-prod-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-prod.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBul0726wptj6rG3_Q_TSCKl99ajdlb-SI',
-    appId: '1:911576285238:android:cb4bce033e9d6b80cf5897',
-    messagingSenderId: '911576285238',
-    projectId: 'mypresence-db',
+    apiKey: 'AIzaSyCMRvCSBe1qjJ1bGMxoHqD1M572lDQ_x4w',
+    appId: '1:1099105297287:android:1d72b4cb141dfa6a296922',
+    messagingSenderId: '1099105297287',
+    projectId: 'mypresence-prod',
     databaseURL:
-        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'mypresence-db.firebasestorage.app',
+        'https://mypresence-prod-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-prod.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
-    appId: '1:911576285238:ios:ffb8f7fa90396016cf5897',
-    messagingSenderId: '911576285238',
-    projectId: 'mypresence-db',
+    apiKey: 'AIzaSyCMRvCSBe1qjJ1bGMxoHqD1M572lDQ_x4w',
+    appId: '1:1099105297287:ios:acb3754a14381b40296922',
+    messagingSenderId: '1099105297287',
+    projectId: 'mypresence-prod',
     databaseURL:
-        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'mypresence-db.firebasestorage.app',
+        'https://mypresence-prod-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-prod.firebasestorage.app',
+    iosBundleId: 'com.mypresence',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
-    appId: '1:911576285238:ios:ffb8f7fa90396016cf5897',
-    messagingSenderId: '911576285238',
-    projectId: 'mypresence-db',
+    apiKey: 'AIzaSyCMRvCSBe1qjJ1bGMxoHqD1M572lDQ_x4w',
+    appId: '1:1099105297287:ios:acb3754a14381b40296922',
+    messagingSenderId: '1099105297287',
+    projectId: 'mypresence-prod',
     databaseURL:
-        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'mypresence-db.firebasestorage.app',
+        'https://mypresence-prod-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-prod.firebasestorage.app',
+    iosBundleId: 'com.mypresence',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDxXHZ_pri4MYjuS0PehuGOiOe4FLCSGDU',
-    appId: '1:911576285238:web:ffb8f7fa90396016cf5897',
-    messagingSenderId: '911576285238',
-    projectId: 'mypresence-db',
-    authDomain: 'mypresence-db.firebaseapp.com',
+    apiKey: 'AIzaSyCMRvCSBe1qjJ1bGMxoHqD1M572lDQ_x4w',
+    appId: '1:1099105297287:web:544b5af3ac0acfa7296922',
+    messagingSenderId: '1099105297287',
+    projectId: 'mypresence-prod',
+    authDomain: 'mypresence-prod.firebaseapp.com',
     databaseURL:
-        'https://mypresence-db-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'mypresence-db.firebasestorage.app',
-    measurementId: 'G-SRL5QS4CCB',
+        'https://mypresence-prod-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'mypresence-prod.firebasestorage.app',
   );
 }
