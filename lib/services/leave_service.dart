@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:firebase_storage/firebase_storage.dart';
+import 'storage_service.dart';
 
 import '../core/firebase_paths.dart';
 import '../core/models/app_session.dart';
@@ -18,7 +18,7 @@ class MonthlyLeaveHistory {
 
 class LeaveService {
   final RtdbService _rtdb = RtdbService();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final StorageService _storage = StorageService();
 
   Future<void> submitLeave({
     required AppSession session,
@@ -93,9 +93,8 @@ class LeaveService {
           attachmentName.isEmpty ? 'attachment_$ts.jpg' : attachmentName;
       attachmentPath = FirebasePaths.leaveAttachment(
           session.companyId, session.uid, requestId, savedAttachmentName);
-      final ref = _storage.ref(attachmentPath);
-      await ref.putFile(attachmentFile);
-      attachmentUrl = await ref.getDownloadURL();
+      attachmentUrl =
+          await _storage.uploadFile(path: attachmentPath, file: attachmentFile);
     }
 
     final payload = {
