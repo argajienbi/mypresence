@@ -43,6 +43,12 @@ String friendlyError(Object error) {
   }
   if (lower.contains('permission')) return 'Akses data ditolak. Cek akun atau hubungi admin.';
   if (lower.contains('firebase')) return 'Terjadi kendala layanan. Coba lagi.';
+  // Cek error upload/penyimpanan DULU: pesan error R2 mengandung kata
+  // "Credential" (mis. "Credential access key has length 53") dan tidak boleh
+  // disalahartikan sebagai error login.
+  if (lower.contains('cloudflare') || lower.contains('gagal upload')) {
+    return 'Gagal mengunggah foto ke penyimpanan. Coba lagi.';
+  }
   if (lower.contains('credential')) return 'Email atau password tidak sesuai.';
   return raw.isEmpty ? 'Terjadi kendala. Coba lagi.' : raw;
 }
