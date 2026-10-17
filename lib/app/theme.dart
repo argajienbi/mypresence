@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
+
 class AppColors {
-  static const background = Color(0xFFEAF8FA);
-  static const headerCurve = Color(0xFFD8F2F5);
-  static const primary = Color(0xFF0E8FA3);
-  static const primaryDark = Color(0xFF086F7E);
-  static const green = Color(0xFF2ECC71);
-  static const orange = Color(0xFFF5A623);
-  static const red = Color(0xFFE74C3C);
-  static const blue = Color(0xFF1E9BD7);
-  static const purple = Color(0xFF8E44AD);
-  static const text = Color(0xFF1F2933);
-  static const muted = Color(0xFF6B7C8F);
-  static const card = Color(0xFFFFFFFF);
-  static const line = Color(0xFFE5E7EB);
+  static const background = Color(0xFFFAF6EF);
+  static const headerCurve = Color(0xFFF3ECDF);
+  static const primary = Color(0xFFE07856);
+  static const primaryDark = Color(0xFFC85A3A);
+  static const green = Color(0xFF3D8B57);
+  static const orange = Color(0xFFA67C2E);
+  static const red = Color(0xFFD9534A);
+  static const blue = Color(0xFF5B8A9E);
+  static const purple = Color(0xFF9B7EBD);
+  static const text = Color(0xFF2D2A26);
+  static const muted = Color(0xFF8A7F72);
+  static const card = Color(0xFFFFFDF8);
+  static const line = Color(0xFFEDE4D3);
 }
+
 
 class AppTheme {
   static ThemeData light() {
