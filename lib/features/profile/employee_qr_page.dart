@@ -553,7 +553,7 @@ class _BackCard extends StatelessWidget {
                         color: kCardWhite,
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: const Color(0xFFDDE7EA),
+                          color: const Color(0xFFEDE4D3),
                           width: 1,
                         ),
                         boxShadow: [
