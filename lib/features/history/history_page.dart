@@ -497,9 +497,9 @@ class _HistoryPageState extends State<HistoryPage> {
       case 'jadwal':
         return AppColors.muted;
       case 'libur':
-        return const Color(0xFFD9E1EA);
+        return const Color(0xFFE8DDC8);
       default:
-        return const Color(0xFFE9EEF4);
+        return const Color(0xFFF0E8D8);
     }
   }
 
@@ -866,7 +866,7 @@ class _SummaryHorizontalList extends StatelessWidget {
       _SummaryData('cuti', 'Cuti', summary.cuti, const Color(0xFFCE7A00),
           const Color(0xFFFFF8E8), Icons.work_history_rounded),
       _SummaryData('lembur', 'Lembur', summary.lembur, AppColors.primary,
-          const Color(0xFFEAF7FA), Icons.timelapse_rounded),
+          const Color(0xFFFDF0E4), Icons.timelapse_rounded),
       _SummaryData('alpa', 'Alpa', summary.alpa, AppColors.red,
           const Color(0xFFFFEEF1), Icons.person_off_rounded),
     ];
@@ -1453,15 +1453,15 @@ class _CalendarSheet extends StatelessWidget {
           case 'jadwal':
             return overtime != null ? AppColors.primary : AppColors.muted;
           case 'libur':
-            return const Color(0xFFD9E1EA);
+            return const Color(0xFFE8DDC8);
           case 'tanpa_data':
             return overtime != null
                 ? AppColors.primary
-                : const Color(0xFFE9EEF4);
+                : const Color(0xFFF0E8D8);
         }
       }
       if (overtime != null) return AppColors.primary;
-      return const Color(0xFFE9EEF4);
+      return const Color(0xFFF0E8D8);
     }
 
     return DraggableScrollableSheet(
@@ -1569,8 +1569,8 @@ class _CalendarSheet extends StatelessWidget {
                       _Legend(color: AppColors.primary, label: 'LEMBUR'),
                       _Legend(color: AppColors.muted, label: 'JADWAL'),
                       _Legend(color: AppColors.red, label: 'ALPA'),
-                      _Legend(color: Color(0xFFD9E1EA), label: 'LIBUR'),
-                      _Legend(color: Color(0xFFE9EEF4), label: 'TANPA DATA'),
+                      _Legend(color: Color(0xFFE8DDC8), label: 'LIBUR'),
+                      _Legend(color: Color(0xFFF0E8D8), label: 'TANPA DATA'),
                     ],
                   ),
                 ],
