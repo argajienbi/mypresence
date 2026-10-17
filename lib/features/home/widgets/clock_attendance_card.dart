@@ -45,12 +45,12 @@ class ClockAttendanceCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF29B766),
-          Color(0xFF0C8E53),
+          Color(0xFF6BAE7A),
+          Color(0xFF4A8B5C),
         ],
       );
-      shadowColor = const Color(0xFF0C8E53).withValues(alpha: .34);
-      accentColor = const Color(0xFF169A58);
+      shadowColor = const Color(0xFF4A8B5C).withValues(alpha: .34);
+      accentColor = const Color(0xFF5A9A6A);
     } else if (isClockOut) {
       title = 'Absen Pulang';
       subtitle = 'Tap untuk selfie presensi pulang';
@@ -59,12 +59,12 @@ class ClockAttendanceCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF0E9ADA),
-          Color(0xFF17B4C2),
+          Color(0xFF7BA7BC),
+          Color(0xFF5B8A9E),
         ],
       );
-      shadowColor = const Color(0xFF0E9ADA).withValues(alpha: .32);
-      accentColor = const Color(0xFF0D94D4);
+      shadowColor = const Color(0xFF5B8A9E).withValues(alpha: .32);
+      accentColor = const Color(0xFF6B96AB);
     } else {
       title = 'Absen Masuk';
       subtitle = 'Tap untuk selfie presensi masuk';
@@ -73,12 +73,12 @@ class ClockAttendanceCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF1FB55F),
-          Color(0xFF0D9053),
+          Color(0xFFE07856),
+          Color(0xFFC85A3A),
         ],
       );
-      shadowColor = const Color(0xFF1FB55F).withValues(alpha: .32);
-      accentColor = const Color(0xFF18A55A);
+      shadowColor = const Color(0xFFC85A3A).withValues(alpha: .32);
+      accentColor = const Color(0xFFD4694E);
     }
 
     final contentKey = ValueKey('$nextAction|$checkIn|$checkOut');
