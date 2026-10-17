@@ -39,7 +39,7 @@ class QuickMenu extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            _Item(label: 'Lembur', icon: Icons.more_time_rounded, color: const Color(0xFF7C3AED), onTap: onLembur),
+            _Item(label: 'Lembur', icon: Icons.more_time_rounded, color: const Color(0xFF9B7EBD), onTap: onLembur),
             const SizedBox(width: 10),
             _Item(label: 'QR', icon: Icons.qr_code_2_rounded, color: AppColors.green, onTap: onQrTeman),
             const SizedBox(width: 10),
