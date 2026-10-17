@@ -52,7 +52,7 @@ class LayeredCurveCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.radius = 28,
-    this.layerColor = const Color(0xFFBFEFF7),
+    this.layerColor = const Color(0xFFF0E2CC),
     this.color = Colors.white,
     this.margin,
   });
@@ -111,7 +111,7 @@ class NeumorphicSoftCard extends StatelessWidget {
     this.onTap,
     this.padding = const EdgeInsets.all(16),
     this.radius = 30,
-    this.background = const Color(0xFFEAF8FA),
+    this.background = const Color(0xFFFAF6EF),
   });
 
   @override
@@ -133,7 +133,7 @@ class NeumorphicSoftCard extends StatelessWidget {
                   blurRadius: 16,
                   offset: const Offset(-7, -7)),
               BoxShadow(
-                  color: const Color(0xFF9FB7C3).withValues(alpha: .34),
+                  color: const Color(0xFFC9B896).withValues(alpha: .34),
                   blurRadius: 20,
                   offset: const Offset(8, 9)),
             ],
