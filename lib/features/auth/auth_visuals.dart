@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 class AuthUi {
-  static const Color bgTop = Color(0xFFEAF8F2);
-  static const Color bgBottom = Color(0xFFF7FCFA);
-  static const Color headerGreen = Color(0xFF12975B);
-  static const Color green = Color(0xFF18B765);
-  static const Color greenDark = Color(0xFF0F7E4D);
-  static const Color deepTeal = Color(0xFF146B58);
-  static const Color softGreen = Color(0xFFE6F8EF);
-  static const Color paleGreen = Color(0xFFF1FBF6);
-  static const Color text = Color(0xFF10211A);
-  static const Color muted = Color(0xFF66746E);
+  static const Color bgTop = Color(0xFFFAF3E8);
+  static const Color bgBottom = Color(0xFFFFFDF8);
+  static const Color headerGreen = Color(0xFFE07856);
+  static const Color green = Color(0xFFD4694E);
+  static const Color greenDark = Color(0xFFC85A3A);
+  static const Color deepTeal = Color(0xFFA65A3E);
+  static const Color softGreen = Color(0xFFFDF0E4);
+  static const Color paleGreen = Color(0xFFFAF6EF);
+  static const Color text = Color(0xFF2D2A26);
+  static const Color muted = Color(0xFF8A7F72);
   static const Color line = Color(0xFFE2ECE7);
   static const String appLogoAsset = 'assets/images/app_logo.png';
   static const String authIllustrationAsset = 'assets/images/auth_illustration.png';
