@@ -40,13 +40,13 @@ class AttendanceSegmentButton extends StatelessWidget {
         : checkInTarget
             ? AppColors.green
             : checkInDone
-                ? const Color(0xFF7A8793)
-                : const Color(0xFF9CA3AF);
+                ? const Color(0xFF8A7F72)
+                : const Color(0xFFA89C8D);
     final rightColor = done
         ? AppColors.green
         : checkOutTarget
             ? AppColors.green
-            : const Color(0xFF8F969E);
+            : const Color(0xFF9A8F80);
 
     return SizedBox(
       height: 118,
