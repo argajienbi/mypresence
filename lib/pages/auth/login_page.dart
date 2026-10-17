@@ -126,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                         const Text(
                           'Email',
                           style: TextStyle(
-                            color: Color(0xFF34495E),
+                            color: Color(0xFF2D2A26),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -142,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                         const Text(
                           'Password',
                           style: TextStyle(
-                            color: Color(0xFF34495E),
+                            color: Color(0xFF2D2A26),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
