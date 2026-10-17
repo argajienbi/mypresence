@@ -25,7 +25,7 @@ class SoftHeaderBackground extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFD9F6FA), Color(0xFFE6F8FF), Color(0xFFD8ECFF)],
+              colors: [Color(0xFFFDF6EC), Color(0xFFFAF0DD), Color(0xFFF5E6CC)],
             ),
           ),
           child: Stack(
