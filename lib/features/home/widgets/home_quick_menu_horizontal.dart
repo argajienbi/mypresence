@@ -24,12 +24,12 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
   });
 
   List<_MenuAction> get _actions => [
-        _MenuAction('Status', Icons.assignment_turned_in_rounded, const Color(0xFF7A8793), onStatus),
+        _MenuAction('Status', Icons.assignment_turned_in_rounded, const Color(0xFF8A7F72), onStatus),
         _MenuAction('Detail Jadwal', Icons.event_available_rounded, AppColors.primary, onSchedule),
         _MenuAction('Izin', Icons.event_note_rounded, AppColors.primary, onIzin),
         _MenuAction('Sakit', Icons.medical_services_rounded, AppColors.red, onSakit),
         _MenuAction('Cuti', Icons.work_rounded, AppColors.orange, onCuti),
-        _MenuAction('Lembur', Icons.more_time_rounded, const Color(0xFF7C3AED), onLembur),
+        _MenuAction('Lembur', Icons.more_time_rounded, const Color(0xFF9B7EBD), onLembur),
         _MenuAction('QR', Icons.qr_code_2_rounded, AppColors.green, onQrTeman),
       ];
 
