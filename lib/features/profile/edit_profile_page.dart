@@ -81,7 +81,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   height: 52,
                   child: ElevatedButton(
                     onPressed: _save,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                     child: const Text('Simpan Data Pribadi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
                   ),
                 ),
@@ -106,7 +106,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AppColors.header.withValues(alpha: .70), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: AppColors.header.withValues(alpha: .70), borderRadius: BorderRadius.circular(10)),
                     child: const Text('Data perusahaan, jabatan, kantor, departemen, grup, dan NIP hanya dapat diubah admin.', style: AppText.subtitle),
                   ),
                 ],

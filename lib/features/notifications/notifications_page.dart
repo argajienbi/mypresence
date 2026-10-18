@@ -288,45 +288,48 @@ class _NotificationHeader extends StatelessWidget {
       height: 54,
       child: Row(
         children: [
-          _CircleIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
+          _SquareIconButton(
+              icon: Icons.arrow_back_rounded, onTap: onBack),
           const Expanded(
             child: Center(
               child: Text(
                 'Notifikasi',
                 style: TextStyle(
                   color: AppColors.text,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.3,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
           ),
-          const _CircleIconButton(icon: Icons.tune_rounded),
+          const _SquareIconButton(icon: Icons.tune_rounded),
         ],
       ),
     );
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
+class _SquareIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
 
-  const _CircleIconButton({required this.icon, this.onTap});
+  const _SquareIconButton({required this.icon, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: .76),
-      shape: const CircleBorder(),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: AppColors.line),
+      ),
       child: InkWell(
-        customBorder: const CircleBorder(),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: SizedBox(
           width: 44,
           height: 44,
-          child: Icon(icon, color: AppColors.text, size: 25),
+          child: Icon(icon, color: AppColors.text, size: 22),
         ),
       ),
     );
@@ -358,23 +361,20 @@ class _SearchField extends StatelessWidget {
                 icon: const Icon(Icons.close_rounded, color: AppColors.muted),
               ),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: .92),
+        fillColor: Colors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide:
-              BorderSide(color: AppColors.primary.withValues(alpha: .10)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide:
-              BorderSide(color: AppColors.primary.withValues(alpha: .10)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(
-              color: AppColors.primary.withValues(alpha: .35), width: 1.4),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
         ),
       ),
       style:
@@ -400,13 +400,13 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.primary.withValues(alpha: .10)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.line),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: .07),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -463,12 +463,12 @@ class _SummaryCard extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              disabledBackgroundColor: AppColors.line,
+              disabledBackgroundColor: const Color(0xFFE2E8F0),
               disabledForegroundColor: AppColors.muted,
               minimumSize: const Size(0, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 13),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(10)),
             ),
             child: markingAll
                 ? const SizedBox(
@@ -569,15 +569,15 @@ class _FilterChip extends StatelessWidget {
 
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 13),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: border),
           ),
           child: Row(
@@ -611,14 +611,14 @@ class _NotificationTile extends StatelessWidget {
 
     return Material(
       color: unread ? category.color.withValues(alpha: .08) : Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: unread
                   ? category.color.withValues(alpha: .28)
