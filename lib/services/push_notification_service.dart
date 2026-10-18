@@ -317,12 +317,16 @@ class PushNotificationService {
       'last_seen_at': now,
     };
 
-    await _firestore
-        .doc(FirestorePaths.fcmToken(session.companyId, session.uid, tokenId))
-        .set(payload, SetOptions(merge: true));
+    try {
+      await _firestore
+          .doc(FirestorePaths.fcmToken(session.companyId, session.uid, tokenId))
+          .set(payload, SetOptions(merge: true));
+    } catch (_) {
+      // Firestore unavailable — lanjut ke RTDB.
+    }
 
     await _database
-        .ref('companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId')
+        .ref("companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId")
         .update(payload)
         .catchError((_) {});
   }
@@ -393,18 +397,25 @@ class PushNotificationService {
       rtdbPayload['invalid_reason'] = 'notification_permission_denied';
     }
 
-    await ref.set(firestorePayload, SetOptions(merge: true));
-    if (shouldClearInvalidReason) {
-      await ref
-          .set({'invalid_reason': FieldValue.delete()}, SetOptions(merge: true))
-          .catchError((_) {});
+    // Firestore: jangan biarkan kegagalan menggagalkan RTDB write.
+    // (RTDB adalah yang dibaca oleh FCM Worker.)
+    try {
+      await ref.set(firestorePayload, SetOptions(merge: true));
+      if (shouldClearInvalidReason) {
+        await ref
+            .set({'invalid_reason': FieldValue.delete()}, SetOptions(merge: true))
+            .catchError((_) {});
+      }
+    } catch (_) {
+      // Firestore unavailable — lanjut ke RTDB.
     }
 
     // Mirror ringan ke RTDB untuk debugging mobile/admin.
+    // (Dibaca oleh Cloudflare FCM Worker.)
     final rtdbRef =
-        _database.ref('companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId');
+        _database.ref("companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId");
     await _database
-        .ref('companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId')
+        .ref("companies/${session.companyId}/users/${session.uid}/fcm_tokens/$tokenId")
         .set(rtdbPayload)
         .catchError((_) {});
     if (shouldClearInvalidReason) {
@@ -440,7 +451,7 @@ class PushNotificationService {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     await _database
-        .ref('companies/${session.companyId}/users/${session.uid}/fcm_token_status')
+        .ref("companies/${session.companyId}/users/${session.uid}/fcm_token_status")
         .set({
       'status': status,
       'permission_status': permissionStatus,
@@ -538,7 +549,7 @@ class PushNotificationService {
             .catchError((_) {});
         await _database
             .ref(
-              'companies/${session.companyId}/users/${session.uid}/fcm_tokens/${doc.id}',
+              "companies/${session.companyId}/users/${session.uid}/fcm_tokens/${doc.id}",
             )
             .update(inactivePayload)
             .catchError((_) {});
