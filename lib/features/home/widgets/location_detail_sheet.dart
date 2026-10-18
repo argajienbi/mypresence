@@ -72,163 +72,227 @@ class _LocationDetailSheet extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.88,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 52,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+            const SizedBox(height: 10),
+            Container(
+              width: 52,
+              height: 5,
+              decoration: BoxDecoration(
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Detail Lokasi Absensi',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
+            Expanded(
+              child: CustomScrollView(
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  // Header sticky + peta parallax (mockup card-lokasi-v4).
+                  SliverAppBar(
+                    pinned: true,
+                    expandedHeight: 300,
+                    collapsedHeight: 68,
+                    toolbarHeight: 68,
+                    backgroundColor: Colors.white,
+                    surfaceTintColor: Colors.white,
+                    elevation: 0,
+                    automaticallyImplyLeading: false,
+                    titleSpacing: 18,
+                    title: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Detail Lokasi Absensi',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: .14),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(statusIcon,
+                                  color: statusColor, size: 14),
+                              const SizedBox(width: 5),
+                              Text(
+                                statusLabel,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(statusIcon, color: statusColor, size: 15),
-                      const SizedBox(width: 5),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
+                    actions: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded,
+                            color: AppColors.muted),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.bg,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 10),
                     ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      collapseMode: CollapseMode.parallax,
+                      background: Padding(
+                        padding:
+                            const EdgeInsets.only(top: 68, left: 18, right: 18),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: LeafletMapView(
+                              officeLat: data.officeLat,
+                              officeLng: data.officeLng,
+                              radiusMeter: data.radiusMeter,
+                              userLat: data.userLat,
+                              userLng: data.userLng,
+                              distanceMeter: data.distanceMeter,
+                              inside: data.inside,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              data.officeName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              data.address,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: SizedBox(
-                height: 256,
-                width: double.infinity,
-                child: LeafletMapView(
-                  officeLat: data.officeLat,
-                  officeLng: data.officeLng,
-                  radiusMeter: data.radiusMeter,
-                  userLat: data.userLat,
-                  userLng: data.userLng,
-                  distanceMeter: data.distanceMeter,
-                  inside: data.inside,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    label: 'Radius kantor',
-                    value: '${data.radiusMeter.round()} m',
-                    icon: Icons.my_location_rounded,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _StatCard(
-                    label: 'Jarak user',
-                    value: distanceLabel,
-                    icon: Icons.directions_walk_rounded,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            AppCard(
-              padding: const EdgeInsets.all(14),
-              radius: 22,
-              child: Column(
-                children: [
-                  _InfoRow(
-                    label: 'Koordinat kantor',
-                    value: officeLocation,
-                  ),
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: 'Koordinat user',
-                    value: userLocation,
-                  ),
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: 'Status lokasi',
-                    value: statusLabel,
-                  ),
-                  const SizedBox(height: 10),
-                  _InfoRow(
-                    label: 'Jarak dari kantor',
-                    value: distanceLabel,
+                  // Kartu-kartu bertumpuk menutupi peta saat scroll.
+                  SliverToBoxAdapter(
+                    child: Transform.translate(
+                      offset: const Offset(0, -22),
+                      child: Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppCard(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data.officeName,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.text,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    data.address,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _StatCard(
+                                    label: 'Radius kantor',
+                                    value:
+                                        '${data.radiusMeter.round()} m',
+                                    icon: Icons.my_location_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _StatCard(
+                                    label: 'Jarak user',
+                                    value: distanceLabel,
+                                    icon:
+                                        Icons.directions_walk_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            AppCard(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                children: [
+                                  _InfoRow(
+                                    label: 'Koordinat kantor',
+                                    value: officeLocation,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _InfoRow(
+                                    label: 'Koordinat user',
+                                    value: userLocation,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _InfoRow(
+                                    label: 'Status lokasi',
+                                    value: statusLabel,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _InfoRow(
+                                    label: 'Jarak dari kantor',
+                                    value: distanceLabel,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (data.loading) ...[
+                              const SizedBox(height: 12),
+                              const _HintBox(
+                                icon: Icons.sync_rounded,
+                                text:
+                                    'Lokasi pengguna masih dimuat. Preview map tetap menampilkan titik kantor dan radius absensi.',
+                              ),
+                            ] else if (data.userLat == null ||
+                                data.userLng == null) ...[
+                              const SizedBox(height: 12),
+                              const _HintBox(
+                                icon: Icons.gps_off_rounded,
+                                text:
+                                    'Lokasi pengguna belum tersedia, jadi jarak dan titik user bisa tampil sebagai placeholder.',
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            if (data.loading) ...[
-              const SizedBox(height: 12),
-              const _HintBox(
-                icon: Icons.sync_rounded,
-                text: 'Lokasi pengguna masih dimuat. Preview map tetap menampilkan titik kantor dan radius absensi.',
-              ),
-            ] else if (data.userLat == null || data.userLng == null) ...[
-              const SizedBox(height: 12),
-              const _HintBox(
-                icon: Icons.gps_off_rounded,
-                text: 'Lokasi pengguna belum tersedia, jadi jarak dan titik user bisa tampil sebagai placeholder.',
-              ),
-            ],
           ],
         ),
       ),
@@ -258,7 +322,7 @@ class _StatCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.line.withValues(alpha: .65)),
       ),
       child: Column(
@@ -356,7 +420,7 @@ class _HintBox extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.primary.withValues(alpha: .10)),
       ),
       child: Row(

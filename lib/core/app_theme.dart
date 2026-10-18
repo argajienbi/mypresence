@@ -1,18 +1,45 @@
 import 'package:flutter/material.dart';
 
+/// Palet "Fintech Fusion" — kombinasi BRIMO (biru profesional),
+/// Shopee (oranye energik), Jago (minimalis bersih), Kredivo (kartu rapi).
+/// Dikunci 2026-10-19 sesuai mockup ~/workspace/mockup-fintech/.
 class AppColors {
-  static const bg = Color(0xFFFAF6EF);
-  static const header = Color(0xFFF3ECDF);
-  static const primary = Color(0xFFE07856);
-  static const green = Color(0xFF3D8B57);
-  static const orange = Color(0xFFA67C2E);
-  static const red = Color(0xFFD9534A);
-  static const blue = Color(0xFF5B8A9E);
-  static const purple = Color(0xFF9B7EBD);
-  static const text = Color(0xFF2D2A26);
-  static const muted = Color(0xFF8A7F72);
-  static const line = Color(0xFFEDE4D3);
-  static const card = Color(0xFFFFFDF8);
+  // Brand
+  static const primary = Color(0xFF0B5ED7);
+  static const primaryDark = Color(0xFF084298);
+  static const primarySoft = Color(0xFFE3EEFD);
+  static const accent = Color(0xFFFF6B35);
+  static const accentDark = Color(0xFFE8590C);
+  static const accentSoft = Color(0xFFFFEDE4);
+
+  // Surface
+  static const bg = Color(0xFFF1F5F9);
+  static const header = Color(0xFF0B5ED7);
+  static const card = Color(0xFFFFFFFF);
+  static const line = Color(0xFFE2E8F0);
+
+  // Text
+  static const text = Color(0xFF0F172A);
+  static const muted = Color(0xFF64748B);
+
+  // Status
+  static const green = Color(0xFF16A34A);
+  static const greenSoft = Color(0xFFDCFCE7);
+  static const orange = Color(0xFFF59E0B);
+  static const orangeSoft = Color(0xFFFEF3C7);
+  static const red = Color(0xFFDC2626);
+  static const redSoft = Color(0xFFFEE2E2);
+  static const blue = Color(0xFF0B5ED7);
+  static const blueSoft = Color(0xFFE3EEFD);
+  static const purple = Color(0xFF7C3AED);
+  static const purpleSoft = Color(0xFFEDE9FE);
+
+  // Header gradient (BRIMO style)
+  static const headerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
+  );
 }
 
 class AppTheme {
@@ -25,7 +52,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
-        secondary: AppColors.green,
+        secondary: AppColors.accent,
         surface: AppColors.card,
       ),
       appBarTheme: const AppBarTheme(
@@ -36,33 +63,36 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.card,
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: AppColors.line, width: 1),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
         ),
       ),
-            inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );

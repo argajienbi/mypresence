@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/models/app_session.dart';
 
+/// Header Home gaya BRIMO: gradient biru, teks putih.
+/// Seluruh logika (salam, avatar, foto, badge notifikasi) dipertahankan.
 class HomeStickyProfileHeader extends StatelessWidget {
   final AppSession session;
   final String date;
@@ -39,115 +41,72 @@ class HomeStickyProfileHeader extends StatelessWidget {
       session.photoPath.trim(),
     );
 
-    return SizedBox(
-      height: 184,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _HeaderPainter(),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _ProfileAvatar(firstName: firstName, photoUrl: photoUrl),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$greeting, $firstName',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 20,
-                            height: 1.08,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 9),
-                        Text(
-                          date,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.text.withValues(alpha: .82),
-                            fontSize: 14,
-                            height: 1.05,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _ProfileAvatar(firstName: firstName, photoUrl: photoUrl),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$greeting, $firstName',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        height: 1.08,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _NotificationButton(
-                    count: unreadNotifications,
-                    onPressed: onNotificationPressed,
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      date,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .85),
+                        fontSize: 13,
+                        height: 1.05,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              _NotificationButton(
+                count: unreadNotifications,
+                onPressed: onNotificationPressed,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _HeaderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFFE07856), Color(0xFFD9A441)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(rect);
-
-    final path = Path()
-      ..lineTo(0, size.height - 36)
-      ..quadraticBezierTo(
-        size.width * .50,
-        size.height + 18,
-        size.width,
-        size.height - 36,
-      )
-      ..lineTo(size.width, 0)
-      ..close();
-
-    canvas.drawPath(path, paint);
-
-    final accentPaint = Paint()
-      ..color = Colors.white.withValues(alpha: .06)
-      ..style = PaintingStyle.fill;
-    final accentPath = Path()
-      ..moveTo(size.width * .42, 0)
-      ..cubicTo(
-        size.width * .72,
-        20,
-        size.width * .86,
-        78,
-        size.width,
-        58,
-      )
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(accentPath, accentPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+String _displayPhotoUrl(String photoUrl, String photoPath) {
+  if (photoUrl.trim().isEmpty) return '';
+  final cacheKey =
+      photoPath.trim().isEmpty ? photoUrl.trim() : photoPath.trim();
+  final separator = photoUrl.contains('?') ? '&' : '?';
+  return '${photoUrl.trim()}${separator}v=${Uri.encodeComponent(cacheKey)}';
 }
 
 class _ProfileAvatar extends StatelessWidget {
@@ -161,17 +120,17 @@ class _ProfileAvatar extends StatelessWidget {
     final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
-      width: 72,
-      height: 72,
-      padding: const EdgeInsets.all(4),
+      width: 64,
+      height: 64,
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: .18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -180,20 +139,12 @@ class _ProfileAvatar extends StatelessWidget {
             ? Image.network(
                 photoUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    _InitialAvatar(firstName: firstName),
+                errorBuilder: (_, __, ___) => _InitialAvatar(firstName: firstName),
               )
             : _InitialAvatar(firstName: firstName),
       ),
     );
   }
-}
-
-String _displayPhotoUrl(String photoUrl, String photoPath) {
-  if (photoUrl.trim().isEmpty) return '';
-  final cacheKey = photoPath.trim().isEmpty ? photoUrl.trim() : photoPath.trim();
-  final separator = photoUrl.contains('?') ? '&' : '?';
-  return '${photoUrl.trim()}${separator}v=${Uri.encodeComponent(cacheKey)}';
 }
 
 class _InitialAvatar extends StatelessWidget {
@@ -208,13 +159,13 @@ class _InitialAvatar extends StatelessWidget {
         : firstName.characters.first.toUpperCase();
 
     return Container(
-      color: AppColors.primary.withValues(alpha: .32),
+      color: AppColors.primary,
       alignment: Alignment.center,
       child: Text(
         initial,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 28,
+          fontSize: 26,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -233,25 +184,31 @@ class _NotificationButton extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        IconButton(
-          onPressed: onPressed,
-          icon: const Icon(
-            Icons.notifications_rounded,
-            color: Colors.white,
-            size: 34,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .18),
+            borderRadius: BorderRadius.circular(14),
           ),
-          padding: const EdgeInsets.all(8),
-          constraints: const BoxConstraints(minWidth: 50, minHeight: 50),
+          child: IconButton(
+            onPressed: onPressed,
+            icon: const Icon(
+              Icons.notifications_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+            padding: const EdgeInsets.all(10),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          ),
         ),
         if (count > 0)
           Positioned(
-            right: 2,
-            top: 2,
+            right: -4,
+            top: -4,
             child: Container(
-              constraints: const BoxConstraints(minWidth: 23, minHeight: 23),
+              constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
               padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(
-                color: AppColors.red,
+                color: AppColors.accent,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: Colors.white, width: 2),
               ),

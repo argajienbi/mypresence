@@ -274,6 +274,28 @@ class _HomePageState extends State<HomePage> {
   bool get hasIn => _today?['masuk'] is Map;
   bool get hasOut => _today?['pulang'] is Map;
 
+  /// Label info "Terakhir" untuk kartu tiket.
+  String? get _lastLabel {
+    if (hasOut) return null; // kartu pakai fallback 'Pulang $pulang'
+    if (hasIn) return null; // kartu pakai fallback 'Masuk $masuk'
+    return null; // belum ada data kemarin -> kartu tampil '-'
+  }
+
+  /// Label info "Berikutnya" untuk kartu tiket (dari jadwal).
+  String get _nextLabel {
+    final s = _schedule;
+    final ws = s == null
+        ? ''
+        : (s.workStart.isNotEmpty ? s.workStart : s.checkInStart);
+    final we = s == null
+        ? ''
+        : (s.workEnd.isNotEmpty ? s.workEnd : s.checkOutEnd);
+    String t(String v) => v.isEmpty ? '--:--' : v;
+    if (!hasIn) return 'Masuk ${t(ws)}';
+    if (!hasOut) return 'Pulang ${t(we)}';
+    return 'Besok ${t(ws)}';
+  }
+
   String get nextAction {
     if (!hasIn) return 'masuk';
     if (!hasOut) return 'pulang';
@@ -417,14 +439,59 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: ListView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 188, 18, 128),
-              children: [
-                RadiusCard(
+      body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
+        slivers: [
+          // Header biru: collapse + parallax saat scroll (mockup).
+          SliverAppBar(
+            expandedHeight: 176,
+            collapsedHeight: 0,
+            toolbarHeight: 0,
+            pinned: false,
+            floating: false,
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: StreamBuilder<List<AppNotification>>(
+                stream:
+                    _notificationService.watchFirestoreInbox(widget.session),
+                builder: (context, firestoreSnapshot) {
+                  final firestoreItems =
+                      firestoreSnapshot.data ?? const <AppNotification>[];
+                  return StreamBuilder<List<AppNotification>>(
+                    stream:
+                        _notificationService.watchRtdbFallback(widget.session),
+                    builder: (context, rtdbSnapshot) {
+                      final rtdbItems =
+                          rtdbSnapshot.data ?? const <AppNotification>[];
+                      final allItems = _notificationService.mergeInbox(
+                          firestoreItems, rtdbItems);
+                      final unreadCount =
+                          allItems.where((item) => !item.read).length;
+
+                      return HomeStickyProfileHeader(
+                        session: widget.session,
+                        date: _date,
+                        unreadNotifications: unreadCount,
+                        onNotificationPressed: _openNotifications,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          // Kartu lokasi: sticky di atas saat header menghilang (mockup).
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyCardDelegate(
+              height: 128,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+                child: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
                   officeLat: widget.session.officeLatitude,
@@ -453,61 +520,43 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                ClockAttendanceCard(
-                  nextAction: nextAction,
-                  insideRadius: _insideRadius,
-                  hasIn: hasIn,
-                  hasOut: hasOut,
-                  checkInTime: masuk,
-                  checkOutTime: pulang,
-                  onPressed: _openAttendance,
-                ),
-                const SizedBox(height: 16),
-                HomeQuickMenuHorizontal(
-                  onStatus: () => _showStatusDetails(
-                    status: status,
-                    masuk: masuk,
-                    pulang: pulang,
-                  ),
-                  onSchedule: _showScheduleDetails,
-                  onIzin: () => _openLeave('izin'),
-                  onSakit: () => _openLeave('sakit'),
-                  onCuti: () => _openLeave('cuti'),
-                  onLembur: () => _openLeave('lembur'),
-                  onQrTeman: _openQrTeman,
-                ),
-                const SizedBox(height: 16),
-                HomeAnnouncementCard(session: widget.session),
-              ],
+              ),
             ),
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: StreamBuilder<List<AppNotification>>(
-              stream: _notificationService.watchFirestoreInbox(widget.session),
-              builder: (context, firestoreSnapshot) {
-                final firestoreItems = firestoreSnapshot.data ?? const <AppNotification>[];
-                return StreamBuilder<List<AppNotification>>(
-                  stream: _notificationService.watchRtdbFallback(widget.session),
-                  builder: (context, rtdbSnapshot) {
-                    final rtdbItems = rtdbSnapshot.data ?? const <AppNotification>[];
-                    final allItems = _notificationService.mergeInbox(firestoreItems, rtdbItems);
-                    final unreadCount = allItems
-                        .where((item) => !item.read)
-                        .length;
-
-                    return HomeStickyProfileHeader(
-                      session: widget.session,
-                      date: _date,
-                      unreadNotifications: unreadCount,
-                      onNotificationPressed: _openNotifications,
-                    );
-                  },
-                );
-              },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(
+                [
+                  ClockAttendanceCard(
+                    nextAction: nextAction,
+                    insideRadius: _insideRadius,
+                    hasIn: hasIn,
+                    hasOut: hasOut,
+                    checkInTime: masuk,
+                    checkOutTime: pulang,
+                    lastLabel: _lastLabel,
+                    nextLabel: _nextLabel,
+                    onPressed: _openAttendance,
+                  ),
+                  const SizedBox(height: 14),
+                  HomeQuickMenuHorizontal(
+                    onStatus: () => _showStatusDetails(
+                      status: status,
+                      masuk: masuk,
+                      pulang: pulang,
+                    ),
+                    onSchedule: _showScheduleDetails,
+                    onIzin: () => _openLeave('izin'),
+                    onSakit: () => _openLeave('sakit'),
+                    onCuti: () => _openLeave('cuti'),
+                    onLembur: () => _openLeave('lembur'),
+                    onQrTeman: _openQrTeman,
+                  ),
+                  const SizedBox(height: 16),
+                  HomeAnnouncementCard(session: widget.session),
+                ],
+              ),
             ),
           ),
         ],
@@ -541,5 +590,31 @@ class _HomePageState extends State<HomePage> {
       default:
         return 'Izin';
     }
+  }
+}
+
+/// Delegate untuk kartu lokasi yang sticky di atas (mockup: berhenti di
+/// header, tidak ikut menghilang saat scroll).
+class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  const _StickyCardDelegate({required this.child, required this.height});
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox(height: height, child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyCardDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.height != height;
   }
 }

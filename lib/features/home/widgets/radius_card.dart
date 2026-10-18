@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../widgets/app_card.dart';
-import 'leaflet_map_view.dart';
 
+/// Kartu lokasi V4 "Banner Biru" (dikunci 2026-10-19, mockup card-lokasi-v4).
+/// Banner gradient biru + baris metrik putih. Peta pindah ke bottom sheet.
+/// Seluruh props & perilaku onTap dipertahankan.
 class RadiusCard extends StatelessWidget {
   final String officeName;
   final String address;
@@ -35,135 +36,121 @@ class RadiusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = loading
-        ? 'Memuat Lokasi'
-        : (inside ? 'Lokasi Valid' : 'Di Luar Radius');
-    final badgeColor =
-        loading ? AppColors.muted : (inside ? AppColors.green : AppColors.orange);
-    final canOpenDetail = onTap != null;
+        ? 'MEMUAT'
+        : (inside ? 'DALAM RADIUS' : 'DI LUAR RADIUS');
+    final distanceLabel =
+        distanceMeter == null ? '--' : '${distanceMeter!.round()} m';
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: LayeredCurveCard(
-          padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-          radius: 24,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: .22),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.location_on_rounded,
-                      color: AppColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Lokasi & Radius Absensi',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                      ),
-                    ),
+              // Banner biru
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 15,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.headerGradient,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(10),
                   ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: .14),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          inside ? Icons.check_circle_rounded : Icons.info_rounded,
-                          size: 15,
-                          color: badgeColor,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          label,
-                          style: TextStyle(
-                            color: badgeColor,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (canOpenDetail) ...[
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.muted, size: 20),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Stack(
+                ),
+                child: Row(
                   children: [
-                    SizedBox(
-                      height: 126,
-                      width: double.infinity,
-                      child: LeafletMapView(
-                        officeLat: officeLat,
-                        officeLng: officeLng,
-                        radiusMeter: radiusMeter,
-                        userLat: userLat,
-                        userLng: userLng,
-                        distanceMeter: distanceMeter,
-                        inside: inside,
-                      ),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      color: Colors.white,
+                      size: 22,
                     ),
-                    if (canOpenDetail)
-                      Positioned.fill(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: onTap,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Lokasi & Radius Absensi',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .20),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .4,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Metric(
-                      icon: Icons.my_location_rounded,
-                      label: 'Radius: ${radiusMeter.round()} m',
-                    ),
-                  ),
-                  Container(width: 1, height: 22, color: AppColors.line),
-                  Expanded(
-                    child: _Metric(
-                      icon: Icons.directions_walk_rounded,
-                      label:
-                          'Jarak: ${distanceMeter == null ? '--' : distanceMeter!.round()} m',
-                      alignEnd: true,
-                    ),
-                  ),
-                ],
-              ),
-              if (canOpenDetail) ...[
-                const SizedBox(height: 4),
-                const Text(
-                  'Tap card untuk lihat detail lokasi.',
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+              // Baris metrik putih
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-              ],
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(10),
+                  ),
+                  border: Border.all(color: AppColors.line, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _Metric(
+                        label: 'RADIUS',
+                        value: '${radiusMeter.round()} m',
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: AppColors.line,
+                    ),
+                    Expanded(
+                      child: _Metric(
+                        label: 'JARAK ANDA',
+                        value: distanceLabel,
+                        highlight: !loading && !inside,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -173,34 +160,39 @@ class RadiusCard extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  final IconData icon;
   final String label;
-  final bool alignEnd;
+  final String value;
+  final bool highlight;
 
   const _Metric({
-    required this.icon,
     required this.label,
-    this.alignEnd = false,
+    required this.value,
+    this.highlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment:
-          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: AppColors.text,
-            ),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: highlight ? AppColors.accentDark : AppColors.text,
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ],

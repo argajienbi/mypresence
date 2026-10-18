@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 
-
+/// Palet "Fintech Fusion" — diselaraskan dengan lib/core/app_theme.dart.
+/// Nama field dipertahankan agar kompatibel dengan 5 file konsumen.
 class AppColors {
-  static const background = Color(0xFFFAF6EF);
-  static const headerCurve = Color(0xFFF3ECDF);
-  static const primary = Color(0xFFE07856);
-  static const primaryDark = Color(0xFFC85A3A);
-  static const green = Color(0xFF3D8B57);
-  static const orange = Color(0xFFA67C2E);
-  static const red = Color(0xFFD9534A);
-  static const blue = Color(0xFF5B8A9E);
-  static const purple = Color(0xFF9B7EBD);
-  static const text = Color(0xFF2D2A26);
-  static const muted = Color(0xFF8A7F72);
-  static const card = Color(0xFFFFFDF8);
-  static const line = Color(0xFFEDE4D3);
+  static const background = Color(0xFFF1F5F9);
+  static const headerCurve = Color(0xFF0B5ED7);
+  static const primary = Color(0xFF0B5ED7);
+  static const primaryDark = Color(0xFF084298);
+  static const green = Color(0xFF16A34A);
+  static const orange = Color(0xFFF59E0B);
+  static const red = Color(0xFFDC2626);
+  static const blue = Color(0xFF0B5ED7);
+  static const purple = Color(0xFF7C3AED);
+  static const text = Color(0xFF0F172A);
+  static const muted = Color(0xFF64748B);
+  static const card = Color(0xFFFFFFFF);
+  static const line = Color(0xFFE2E8F0);
 }
-
 
 class AppTheme {
   static ThemeData light() {
@@ -41,16 +41,16 @@ class AppTheme {
         fillColor: AppColors.card,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -60,7 +60,7 @@ class AppTheme {
           elevation: 0,
           minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         ),

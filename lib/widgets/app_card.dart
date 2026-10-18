@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_theme.dart';
+
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -12,7 +14,7 @@ class AppCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.margin,
-    this.radius = 22,
+    this.radius = 10,
     this.color = Colors.white,
   });
 
@@ -24,8 +26,7 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: .96),
         borderRadius: BorderRadius.circular(radius),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: .72), width: 1),
+        border: Border.all(color: AppColors.line, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .08),
@@ -51,7 +52,7 @@ class LayeredCurveCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.radius = 28,
+    this.radius = 10,
     this.layerColor = const Color(0xFFF0E2CC),
     this.color = Colors.white,
     this.margin,
