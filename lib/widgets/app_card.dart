@@ -111,8 +111,8 @@ class NeumorphicSoftCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.padding = const EdgeInsets.all(16),
-    this.radius = 30,
-    this.background = const Color(0xFFFAF6EF),
+    this.radius = 10,
+    this.background = const Color(0xFFF1F5F9),
   });
 
   @override

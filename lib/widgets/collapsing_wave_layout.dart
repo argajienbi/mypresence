@@ -94,7 +94,7 @@ class _CollapsingWaveDelegate extends SliverPersistentHeaderDelegate {
     final horizontal = lerpDouble(18, 14, t);
 
     return Material(
-      color: const Color(0xFFFAF6EF),
+      color: const Color(0xFFF1F5F9),
       elevation: overlapsContent ? 3 : 0,
       child: Stack(
         fit: StackFit.expand,
@@ -109,7 +109,7 @@ class _CollapsingWaveDelegate extends SliverPersistentHeaderDelegate {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFE07856), Color(0xFFD9A441)],
+                    colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
                   ),
                 ),
               ),
