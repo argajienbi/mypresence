@@ -503,29 +503,6 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  static IconData _statusIcon(String status) {
-    switch (status) {
-      case 'hadir':
-        return Icons.event_available_rounded;
-      case 'telat':
-        return Icons.schedule_rounded;
-      case 'izin':
-        return Icons.event_note_rounded;
-      case 'sakit':
-        return Icons.medical_services_rounded;
-      case 'cuti':
-        return Icons.work_history_rounded;
-      case 'alpa':
-        return Icons.person_off_rounded;
-      case 'jadwal':
-        return Icons.event_available_rounded;
-      case 'libur':
-        return Icons.beach_access_rounded;
-      default:
-        return Icons.inbox_rounded;
-    }
-  }
-
   static String _statusLabel(String status) {
     switch (status) {
       case 'hadir':
@@ -973,37 +950,6 @@ class _DailyHistoryItem extends StatelessWidget {
     return '--:--';
   }
 
-  int? _lateMinute() {
-    final attendance = item.attendanceRow;
-    if (attendance == null) return null;
-    final masuk = attendance['masuk'];
-    if (masuk is! Map) return null;
-    final direct = int.tryParse((masuk['late_minute'] ??
-            masuk['late_minutes'] ??
-            masuk['minutes_late'] ??
-            '')
-        .toString());
-    if (direct != null && direct > 0) return direct;
-    final actual = _minutes(_timeOf(attendance, 'masuk'));
-    final workStart = _minutes((masuk['work_start'] ??
-            attendance['work_start'] ??
-            item.schedule?.workStart ??
-            '')
-        .toString());
-    if (actual == null || workStart == null) return null;
-    final diff = actual - workStart;
-    return diff > 0 ? diff : null;
-  }
-
-  int? _minutes(String value) {
-    final parts = value.split(':');
-    if (parts.length < 2) return null;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return null;
-    return hour * 60 + minute;
-  }
-
   String _subtitle() {
     switch (item.status) {
       case 'hadir':
@@ -1042,17 +988,6 @@ class _DailyHistoryItem extends StatelessWidget {
       default:
         return 'Tidak ada jadwal maupun presensi.';
     }
-  }
-
-  String? _secondaryText() {
-    if (item.status != 'telat') {
-      return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
-    }
-    final lateMinute = _lateMinute();
-    if (lateMinute == null) {
-      return item.overtimeRow != null ? 'Lembur terjadwal.' : null;
-    }
-    return 'Telat $lateMinute menit';
   }
 
   @override
