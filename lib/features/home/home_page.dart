@@ -496,9 +496,7 @@ class _HomePageState extends State<HomePage> {
                     final rtdbItems = rtdbSnapshot.data ?? const <AppNotification>[];
                     final allItems = _notificationService.mergeInbox(firestoreItems, rtdbItems);
                     final unreadCount = allItems
-                        .where((item) =>
-                            !item.read &&
-                            _notificationService.isPersonalNotification(item))
+                        .where((item) => !item.read)
                         .length;
 
                     return HomeStickyProfileHeader(
