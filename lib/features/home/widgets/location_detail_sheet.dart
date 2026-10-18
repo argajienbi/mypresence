@@ -159,8 +159,8 @@ class _LocationDetailSheet extends StatelessWidget {
                     flexibleSpace: FlexibleSpaceBar(
                       collapseMode: CollapseMode.parallax,
                       background: Padding(
-                        padding:
-                            const EdgeInsets.only(top: 68, left: 18, right: 18),
+                        padding: const EdgeInsets.only(
+                            top: 68, left: 18, right: 18, bottom: 12),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: SizedBox(

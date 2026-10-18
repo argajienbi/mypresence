@@ -122,71 +122,96 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
                   ),
                 ),
               ),
-              if (_isExpanded && hasAnnouncements) ...[
-                Container(height: 1, color: AppColors.line),
-                ...List.generate(
-                  displayItems.length,
-                  (index) {
-                    final item = displayItems[index];
-                    final isLast = index == displayItems.length - 1;
-                    final color = _getTypeColor(item.type);
+              if (hasAnnouncements) ...[
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeInOut,
+                  child: _isExpanded
+                      ? Column(
+                          children: [
+                            Container(height: 1, color: AppColors.line),
+                            ...List.generate(
+                              displayItems.length,
+                              (index) {
+                                final item = displayItems[index];
+                                final isLast = index == displayItems.length - 1;
+                                final color = _getTypeColor(item.type);
 
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Center(
-                                  child: Icon(_getTypeIcon(item.type), color: color, size: 20),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                return Column(
                                   children: [
-                                    Text(
-                                      item.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.text,
-                                        height: 1.25,
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 12),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: color.withValues(
+                                                  alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Center(
+                                              child: Icon(
+                                                  _getTypeIcon(item.type),
+                                                  color: color,
+                                                  size: 20),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.title,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w900,
+                                                    color: AppColors.text,
+                                                    height: 1.25,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 5),
+                                                Text(
+                                                  item.body,
+                                                  maxLines: 5,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight:
+                                                        FontWeight.w700,
+                                                    color: AppColors.muted,
+                                                    height: 1.45,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      item.body,
-                                      maxLines: 5,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.muted,
-                                        height: 1.45,
-                                      ),
-                                    ),
+                                    if (!isLast)
+                                      Container(
+                                          height: 1,
+                                          color: AppColors.line),
                                   ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isLast) Container(height: 1, color: AppColors.line),
-                      ],
-                    );
-                  },
+                                );
+                              },
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
                 ),
               ],
             ],
