@@ -15,12 +15,12 @@ import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../../widgets/sticky_curve_layout.dart';
 
-const Color kCardDarkTeal = Color(0xFF053B40);
-const Color kCardDeepTeal = Color(0xFF075E66);
-const Color kCardTeal = Color(0xFF0797A5);
-const Color kCardCyan = Color(0xFF12C7C9);
-const Color kCardGreen = Color(0xFF56C943);
-const Color kCardSoftGray = Color(0xFFF4F7F8);
+const Color kCardDarkTeal = Color(0xFF084298);
+const Color kCardDeepTeal = Color(0xFF0B5ED7);
+const Color kCardTeal = Color(0xFF0B5ED7);
+const Color kCardCyan = Color(0xFF3B82F6);
+const Color kCardGreen = Color(0xFF16A34A);
+const Color kCardSoftGray = Color(0xFFF1F5F9);
 const Color kCardWhite = Color(0xFFFFFFFF);
 
 const String _kDefaultCompanyName = 'MYPRESENCE';
@@ -28,7 +28,7 @@ const String _kBackSlogan = 'TOGETHER. INNOVATE. GROW.';
 const String _kFrontFooterLabel = 'PROFESSIONAL IDENTITY';
 const String _kBackFooterLabel = 'SECURE & VERIFIABLE';
 
-const double _kCardRadius = 32;
+const double _kCardRadius = 10;
 
 class EmployeeQrPage extends StatefulWidget {
   final AppSession session;
@@ -245,7 +245,7 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
                       shadowColor: kCardTeal.withValues(alpha: .24),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       minimumSize: const Size.fromHeight(56),
                       textStyle: const TextStyle(
@@ -266,7 +266,7 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
                       side: const BorderSide(color: kCardTeal, width: 1.4),
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       minimumSize: const Size.fromHeight(56),
                       textStyle: const TextStyle(
@@ -551,9 +551,9 @@ class _BackCard extends StatelessWidget {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: kCardWhite,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0xFFEDE4D3),
+                          color: AppColors.line,
                           width: 1,
                         ),
                         boxShadow: [
@@ -653,7 +653,7 @@ class _EmployeeCardShell extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(_kCardRadius),
-        border: Border.all(color: const Color(0xFFD9E5E8), width: 1),
+        border: Border.all(color: AppColors.line, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .20),

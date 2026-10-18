@@ -101,7 +101,7 @@ class HelpCenterPage extends StatelessWidget {
               children: [
                 AppCard(
                   padding: const EdgeInsets.all(16),
-                  radius: 22,
+                  radius: 10,
                   child: const Text(
                     'Berikut jawaban singkat untuk pertanyaan yang paling sering muncul saat menggunakan aplikasi presensi.',
                     style: TextStyle(
@@ -143,7 +143,7 @@ class _FaqCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.all(16),
-      radius: 22,
+      radius: 10,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
