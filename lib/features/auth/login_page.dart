@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/app_theme.dart';
 import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../services/auth_service.dart';
@@ -132,122 +133,202 @@ class _LoginPageState extends State<LoginPage> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: AuthUi.bgBottom,
+        systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: AppLoadingOverlay(
         visible: _loading,
         message: 'Memproses akun...',
         child: Scaffold(
-          extendBodyBehindAppBar: true,
-          body: Container(
-            decoration: AuthUi.screenGradient(),
-            child: Stack(
+          backgroundColor: AppColors.bg,
+          body: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
               children: [
-                AuthHeaderBackground(
-                  height: 212 + topInset,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(24, topInset + 26, 24, 0),
-                    child: const Align(
-                      alignment: Alignment.topLeft,
-                      child: AuthBrandTitle(),
+                // Header gradient biru dengan logo (mockup 04)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(24, topInset + 56, 24, 64),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.primary, AppColors.primaryDark],
                     ),
                   ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .12),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Text('📍', style: TextStyle(fontSize: 34)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'MyPresence',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Absensi cerdas untuk tim Anda',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .85),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(24, topInset + 122, 24, 24 + bottomInset),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: media.size.height - topInset - bottomInset - 146,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                // White card overlapping (mockup 04)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, -34, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.line),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .06),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Selamat Datang 👋',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Masuk untuk mencatat kehadiran Anda',
+                        style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Email',
+                        style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      AuthTextField(
+                        controller: _email,
+                        hint: 'nama@perusahaan.com',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Kata Sandi',
+                        style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      AuthTextField(
+                        controller: _password,
+                        hint: '••••••••',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _hidePassword,
+                        textInputAction: TextInputAction.done,
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => _hidePassword = !_hidePassword),
+                          icon: Icon(
+                            _hidePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _showResetPassword,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.only(top: 10),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Lupa kata sandi?',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      AuthErrorBanner(message: _error),
+                      const SizedBox(height: 14),
+                      _BlueGradientButton(
+                          label: 'Masuk', onPressed: _login, loading: _loading),
+                    ],
+                  ),
+                ),
+                // Footer (mockup 04)
+                Padding(
+                  padding:
+                      EdgeInsets.fromLTRB(24, 18, 24, 24 + bottomInset),
+                  child: Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        AuthCard(
-                          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                          radius: 24,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Masuk ke Akun',
-                                style: TextStyle(
-                                  color: AuthUi.text,
-                                  fontSize: 25,
-                                  height: 1.05,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -.7,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Gunakan email dan kata sandi yang terdaftar.',
-                                style: TextStyle(color: AuthUi.muted, fontSize: 13, fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 18),
-                              AuthTextField(
-                                controller: _email,
-                                hint: 'Email',
-                                icon: Icons.email_outlined,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                              ),
-                              const SizedBox(height: 12),
-                              AuthTextField(
-                                controller: _password,
-                                hint: 'Kata Sandi',
-                                icon: Icons.lock_outline_rounded,
-                                obscureText: _hidePassword,
-                                textInputAction: TextInputAction.done,
-                                suffixIcon: IconButton(
-                                  onPressed: () => setState(() => _hidePassword = !_hidePassword),
-                                  icon: Icon(
-                                    _hidePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                    color: AuthUi.muted,
-                                  ),
-                                ),
-                              ),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: _showResetPassword,
-                                  child: const Text(
-                                    'Lupa Password?',
-                                    style: TextStyle(fontWeight: FontWeight.w900, color: AuthUi.deepTeal),
-                                  ),
-                                ),
-                              ),
-                              AuthErrorBanner(message: _error),
-                              const SizedBox(height: 14),
-                              GreenPrimaryButton(label: 'Masuk', onPressed: _login, loading: _loading),
-                            ],
+                        const Text(
+                          'Belum punya akun? ',
+                          style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500),
+                        ),
+                        GestureDetector(
+                          onTap: _loading
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => const RegisterPage())),
+                          child: const Text(
+                            'Daftar di sini',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800),
                           ),
                         ),
-                        const SizedBox(height: 18),
-                        Center(
-                          child: Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              const Text(
-                                'Belum punya akun? ',
-                                style: TextStyle(color: AuthUi.muted, fontWeight: FontWeight.w700),
-                              ),
-                              GestureDetector(
-                                onTap: _loading
-                                    ? null
-                                    : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPage())),
-                                child: const Text(
-                                  'Daftar',
-                                  style: TextStyle(color: AuthUi.deepTeal, fontWeight: FontWeight.w900),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        const _LoginInfoBox(),
                       ],
                     ),
                   ),
@@ -261,96 +342,57 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class _LoginInfoBox extends StatelessWidget {
-  const _LoginInfoBox();
-
-  @override
-  Widget build(BuildContext context) {
-    return AuthCard(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      radius: 22,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AuthUi.softGreen,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.verified_user_outlined, color: AuthUi.deepTeal, size: 21),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Presensi aman untuk karyawan',
-                      style: TextStyle(color: AuthUi.text, fontSize: 13.5, fontWeight: FontWeight.w900),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Akun hanya dapat digunakan oleh karyawan yang terdaftar pada perusahaan.',
-                      style: TextStyle(color: AuthUi.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _InfoPill(icon: Icons.location_on_outlined, label: 'Lokasi tervalidasi'),
-              _InfoPill(icon: Icons.photo_camera_outlined, label: 'Selfie presensi'),
-              _InfoPill(icon: Icons.history_rounded, label: 'Riwayat tersimpan'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(height: 1, color: AuthUi.line),
-          const SizedBox(height: 10),
-          const Text(
-            'Butuh bantuan masuk? Hubungi admin perusahaan Anda untuk aktivasi akun atau reset akses.',
-            style: TextStyle(color: AuthUi.muted, fontSize: 11.8, height: 1.35, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  final IconData icon;
+/// Tombol gradient biru sesuai mockup 04 (lokal, tidak mengubah auth_visuals.dart).
+class _BlueGradientButton extends StatelessWidget {
   final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
 
-  const _InfoPill({required this.icon, required this.label});
+  const _BlueGradientButton({
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AuthUi.paleGreen,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AuthUi.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AuthUi.deepTeal, size: 14),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(color: AuthUi.deepTeal, fontSize: 11.5, fontWeight: FontWeight.w900),
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, AppColors.primaryDark],
           ),
-        ],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: ElevatedButton(
+          onPressed: loading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+          child: loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: Colors.white),
+                )
+              : Text(
+                  label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900),
+                ),
+        ),
       ),
     );
   }

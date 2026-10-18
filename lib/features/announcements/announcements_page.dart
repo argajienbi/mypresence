@@ -61,7 +61,7 @@ class AnnouncementDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.black.withValues(alpha: .06)),
             ),
             child: Column(
@@ -95,15 +95,20 @@ class _AnnouncementCard extends StatelessWidget {
     final color = _typeColor(item.type);
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.black.withValues(alpha: .06)),
+            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              left: BorderSide(color: color, width: 4),
+              top: BorderSide(color: Colors.black.withValues(alpha: .06)),
+              right: BorderSide(color: Colors.black.withValues(alpha: .06)),
+              bottom: BorderSide(color: Colors.black.withValues(alpha: .06)),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/app_theme.dart';
 import '../../core/error_mapper.dart';
 import '../../core/firebase_paths.dart';
 import '../../services/auth_service.dart';
@@ -133,196 +134,329 @@ class _RegisterPageState extends State<RegisterPage> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: AuthUi.bgBottom,
+        systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: AppLoadingOverlay(
         visible: _loading,
         message: 'Mendaftarkan akun...',
         child: Scaffold(
-          extendBodyBehindAppBar: true,
-          body: Container(
-            decoration: AuthUi.screenGradient(),
-            child: Stack(
+          backgroundColor: AppColors.bg,
+          body: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
               children: [
-                AuthHeaderBackground(
-                  height: 212 + topInset,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(56, topInset + 26, 24, 0),
-                    child: const Align(
-                      alignment: Alignment.topLeft,
-                      child: AuthBrandTitle(),
+                // Header gradient biru + tombol kembali + logo (mockup 06)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(24, topInset + 44, 24, 40),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.primary, AppColors.primaryDark],
                     ),
                   ),
-                ),
-                Positioned(
-                  left: 8,
-                  top: topInset + 8,
-                  child: IconButton(
-                    onPressed: _loading ? null : () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: _loading
+                                ? null
+                                : () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.arrow_back_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .12),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const Center(
+                              child:
+                                  Text('📍', style: TextStyle(fontSize: 34)),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'MyPresence',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Absensi cerdas untuk tim Anda',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: .85),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(24, topInset + 122, 24, 24 + bottomInset),
+                // White card overlapping (mockup 06)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, -34, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.line),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .06),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AuthCard(
-                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-                        radius: 24,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Daftar Akun',
-                              style: TextStyle(
-                                color: AuthUi.text,
-                                fontSize: 25,
-                                height: 1.05,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -.7,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Masukkan kode perusahaan dan data karyawan.',
-                              style: TextStyle(color: AuthUi.muted, fontSize: 13, fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 18),
-                            AuthTextField(
-                              controller: _invite,
-                              hint: 'Kode Perusahaan / Undangan',
-                              icon: Icons.badge_outlined,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _name,
-                              hint: 'Nama Lengkap',
-                              icon: Icons.person_outline_rounded,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _nip,
-                              hint: 'NIP / ID Karyawan',
-                              icon: Icons.credit_card_rounded,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _email,
-                              hint: 'Email',
-                              icon: Icons.mail_outline_rounded,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _phone,
-                              hint: 'Nomor HP',
-                              icon: Icons.phone_android_rounded,
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _password,
-                              hint: 'Kata Sandi',
-                              icon: Icons.lock_outline_rounded,
-                              obscureText: _hidePassword,
-                              textInputAction: TextInputAction.next,
-                              suffixIcon: IconButton(
-                                splashRadius: 20,
-                                onPressed: () => setState(() => _hidePassword = !_hidePassword),
-                                icon: Icon(
-                                  _hidePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                  color: AuthUi.muted,
-                                  size: 20,
+                      const Text(
+                        'Daftar Akun',
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Masukkan kode perusahaan dan data karyawan',
+                        style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Kode Perusahaan / Undangan'),
+                      AuthTextField(
+                        controller: _invite,
+                        hint: 'cth: FMI-2026',
+                        icon: Icons.badge_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Nama Lengkap'),
+                      AuthTextField(
+                        controller: _name,
+                        hint: 'Nama sesuai KTP',
+                        icon: Icons.person_outline_rounded,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('NIP / ID Karyawan'),
+                      AuthTextField(
+                        controller: _nip,
+                        hint: 'Nomor induk karyawan',
+                        icon: Icons.credit_card_rounded,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Email'),
+                      AuthTextField(
+                        controller: _email,
+                        hint: 'nama@perusahaan.com',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Nomor HP'),
+                      AuthTextField(
+                        controller: _phone,
+                        hint: '08xxxxxxxxxx',
+                        icon: Icons.phone_android_rounded,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Kata Sandi'),
+                      AuthTextField(
+                        controller: _password,
+                        hint: 'Minimal 6 karakter',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _hidePassword,
+                        textInputAction: TextInputAction.next,
+                        suffixIcon: IconButton(
+                          splashRadius: 20,
+                          onPressed: () =>
+                              setState(() => _hidePassword = !_hidePassword),
+                          icon: Icon(
+                            _hidePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.muted,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _FieldLabel('Konfirmasi Kata Sandi'),
+                      AuthTextField(
+                        controller: _confirm,
+                        hint: 'Ulangi kata sandi',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _hideConfirm,
+                        textInputAction: TextInputAction.done,
+                        suffixIcon: IconButton(
+                          splashRadius: 20,
+                          onPressed: () =>
+                              setState(() => _hideConfirm = !_hideConfirm),
+                          icon: Icon(
+                            _hideConfirm
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.muted,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: _loading
+                            ? null
+                            : () => setState(() => _agree = !_agree),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: _agree,
+                                  activeColor: AppColors.green,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5)),
+                                  onChanged: _loading
+                                      ? null
+                                      : (v) =>
+                                          setState(() => _agree = v ?? false),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            AuthTextField(
-                              controller: _confirm,
-                              hint: 'Konfirmasi Kata Sandi',
-                              icon: Icons.lock_outline_rounded,
-                              obscureText: _hideConfirm,
-                              textInputAction: TextInputAction.done,
-                              suffixIcon: IconButton(
-                                splashRadius: 20,
-                                onPressed: () => setState(() => _hideConfirm = !_hideConfirm),
-                                icon: Icon(
-                                  _hideConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                  color: AuthUi.muted,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: _loading ? null : () => setState(() => _agree = !_agree),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Wrap(
                                   children: [
-                                    SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: Checkbox(
-                                        value: _agree,
-                                        activeColor: AuthUi.green,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                                        onChanged: _loading ? null : (v) => setState(() => _agree = v ?? false),
-                                      ),
+                                    Text(
+                                      'Saya setuju dengan ',
+                                      style: TextStyle(
+                                          color: AppColors.text,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600),
                                     ),
-                                    const SizedBox(width: 10),
-                                    const Expanded(
-                                      child: Text(
-                                        'Saya setuju dengan syarat & ketentuan',
-                                        style: TextStyle(color: AuthUi.text, fontSize: 12.5, fontWeight: FontWeight.w700),
-                                      ),
+                                    Text(
+                                      'syarat & ketentuan',
+                                      style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                            AuthErrorBanner(message: _error),
-                            const SizedBox(height: 14),
-                            GreenPrimaryButton(label: 'Daftar', onPressed: _register, loading: _loading),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Text(
-                              'Sudah punya akun? ',
-                              style: TextStyle(color: AuthUi.text, fontSize: 13, fontWeight: FontWeight.w800),
-                            ),
-                            GestureDetector(
-                              onTap: _loading ? null : () => Navigator.of(context).maybePop(),
-                              child: const Text(
-                                'Masuk',
-                                style: TextStyle(color: AuthUi.deepTeal, fontSize: 13, fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      AuthErrorBanner(message: _error),
+                      const SizedBox(height: 14),
+                      GreenPrimaryButton(
+                          label: 'Daftar',
+                          onPressed: _register,
+                          loading: _loading),
                     ],
+                  ),
+                ),
+                // Footer (mockup 06)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24, 18, 24, 24 + bottomInset),
+                  child: Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          'Sudah punya akun? ',
+                          style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500),
+                        ),
+                        GestureDetector(
+                          onTap: _loading
+                              ? null
+                              : () => Navigator.of(context).maybePop(),
+                          child: const Text(
+                            'Masuk',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Label field kecil di atas input, sesuai mockup 06.
+class _FieldLabel extends StatelessWidget {
+  final String text;
+
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 12,
+            fontWeight: FontWeight.w700),
       ),
     );
   }

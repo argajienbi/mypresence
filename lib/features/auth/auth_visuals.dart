@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AuthUi {
-  static const Color bgTop = Color(0xFFFAF3E8);
-  static const Color bgBottom = Color(0xFFFFFDF8);
-  static const Color headerGreen = Color(0xFFE07856);
-  static const Color green = Color(0xFFD4694E);
-  static const Color greenDark = Color(0xFFC85A3A);
-  static const Color deepTeal = Color(0xFFA65A3E);
-  static const Color softGreen = Color(0xFFFDF0E4);
-  static const Color paleGreen = Color(0xFFFAF6EF);
-  static const Color text = Color(0xFF2D2A26);
-  static const Color muted = Color(0xFF8A7F72);
-  static const Color line = Color(0xFFE2ECE7);
+  static const Color bgTop = Color(0xFFF1F5F9);
+  static const Color bgBottom = Color(0xFFFFFFFF);
+  static const Color headerGreen = Color(0xFF0B5ED7);
+  static const Color green = Color(0xFF16A34A);
+  static const Color greenDark = Color(0xFF084298);
+  static const Color deepTeal = Color(0xFF084298);
+  static const Color softGreen = Color(0xFFE3EEFD);
+  static const Color paleGreen = Color(0xFFF1F5F9);
+  static const Color text = Color(0xFF0F172A);
+  static const Color muted = Color(0xFF64748B);
+  static const Color line = Color(0xFFE2E8F0);
   static const String appLogoAsset = 'assets/images/app_logo.png';
   static const String authIllustrationAsset = 'assets/images/auth_illustration.png';
 
@@ -223,7 +223,7 @@ class AuthCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.radius = 22,
+    this.radius = 10,
   });
 
   @override
@@ -289,15 +289,15 @@ class AuthTextField extends StatelessWidget {
         fillColor: AuthUi.paleGreen,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AuthUi.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AuthUi.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AuthUi.green, width: 1.4),
         ),
       ),
@@ -328,7 +328,7 @@ class GreenPrimaryButton extends StatelessWidget {
           elevation: 0,
           backgroundColor: AuthUi.green,
           disabledBackgroundColor: AuthUi.green.withValues(alpha: .52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         child: loading
             ? const SizedBox(
@@ -361,7 +361,7 @@ class SecondaryOutlineButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: AuthUi.deepTeal,
           side: const BorderSide(color: AuthUi.deepTeal, width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
       ),
@@ -418,7 +418,7 @@ class AuthErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF0F0),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFFD8D8)),
       ),
       child: Text(
