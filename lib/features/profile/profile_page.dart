@@ -175,9 +175,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 7),
                   AppCard(
                     padding: EdgeInsets.zero,
-                    radius: 22,
+                    radius: 10,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(10),
                       child: Column(
                         children: [
                           _InfoTile(
@@ -218,9 +218,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 8),
                   AppCard(
                     padding: EdgeInsets.zero,
-                    radius: 22,
+                    radius: 10,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(10),
                       child: Column(
                         children: [
                           _MenuTile(
@@ -331,7 +331,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 8),
                   const AppCard(
                     padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                    radius: 22,
+                    radius: 10,
                     child: Row(
                       children: [
                         Icon(Icons.info_outline,
@@ -354,7 +354,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.line),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(10)),
                         backgroundColor: Colors.white,
                       ),
                       child: const Text(
@@ -402,92 +402,107 @@ class _ProfileIdentityCard extends StatelessWidget {
         : session.displayName.trim()[0].toUpperCase();
     final displayPhotoUrl = _displayPhotoUrl(photoUrl, session.photoPath);
     return AppCard(
-      padding: const EdgeInsets.all(16),
-      radius: 22,
-      child: Row(
+      padding: EdgeInsets.zero,
+      radius: 10,
+      child: Column(
         children: [
-          GestureDetector(
-            onTap: onPhotoTap,
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  key: ValueKey(displayPhotoUrl),
-                  radius: 36,
-                  backgroundColor: AppColors.primary,
-                  backgroundImage: displayPhotoUrl.isNotEmpty
-                      ? NetworkImage(displayPhotoUrl)
-                      : null,
-                  child: displayPhotoUrl.isEmpty
-                      ? Text(initial,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900))
-                      : null,
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 27,
-                    height: 27,
-                    decoration: BoxDecoration(
-                        color: AppColors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3)),
-                    child: const Icon(Icons.camera_alt_rounded,
-                        color: Colors.white, size: 14),
-                  ),
-                ),
-              ],
+          Container(
+            height: 64,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.primaryDark],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(session.displayName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 18,
-                        height: 1.12,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text)),
-                const SizedBox(height: 6),
-                Text('NIP: ${session.nip.isEmpty ? '-' : session.nip}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                        fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: .10),
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Text(session.position,
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w900)),
+                Transform.translate(
+                  offset: const Offset(0, -32),
+                  child: GestureDetector(
+                    onTap: onPhotoTap,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          key: ValueKey(displayPhotoUrl),
+                          radius: 32,
+                          backgroundColor: AppColors.primary,
+                          backgroundImage: displayPhotoUrl.isNotEmpty
+                              ? NetworkImage(displayPhotoUrl)
+                              : null,
+                          child: displayPhotoUrl.isEmpty
+                              ? Text(initial,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w900))
+                              : null,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 27,
+                            height: 27,
+                            decoration: BoxDecoration(
+                                color: AppColors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white, width: 3)),
+                            child: const Icon(Icons.camera_alt_rounded,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 6),
-                Text(session.officeName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                        fontWeight: FontWeight.w800)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(session.displayName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                height: 1.12,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.text)),
+                        const SizedBox(height: 6),
+                        Text(
+                            'NIP: ${session.nip.isEmpty ? '-' : session.nip} • ${session.officeName.isEmpty ? '-' : session.officeName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.muted,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: .10),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text(session.position,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w900)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -511,9 +526,28 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text,
-        style: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text));
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.primary, AppColors.primaryDark],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(text,
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.text)),
+      ],
+    );
   }
 }
 
@@ -540,13 +574,13 @@ class _ProfileIconBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: AppColors.primary, size: 20),
+      child: Icon(icon, color: AppColors.primary, size: 22),
     );
   }
 }
@@ -713,7 +747,7 @@ class _NotificationPermissionBanner extends StatelessWidget {
 
         return AppCard(
           padding: const EdgeInsets.all(16),
-          radius: 22,
+          radius: 10,
           color: AppColors.orange.withValues(alpha: .08),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

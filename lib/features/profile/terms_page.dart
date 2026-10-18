@@ -92,7 +92,7 @@ class TermsPage extends StatelessWidget {
               children: [
                 AppCard(
                   padding: const EdgeInsets.all(16),
-                  radius: 22,
+                  radius: 10,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -126,7 +126,7 @@ class TermsPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 AppCard(
                   padding: const EdgeInsets.all(16),
-                  radius: 22,
+                  radius: 10,
                   child: const Text(
                     'Catatan: aturan final mengikuti kebijakan perusahaan atau admin masing-masing dan dapat diperbarui sewaktu-waktu.',
                     style: TextStyle(
@@ -161,7 +161,7 @@ class _PolicySectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.all(16),
-      radius: 22,
+      radius: 10,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
