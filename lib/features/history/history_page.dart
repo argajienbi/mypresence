@@ -775,7 +775,7 @@ class _MonthFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      radius: 22,
+      radius: 10,
       child: Row(
         children: [
           IconButton(
@@ -814,7 +814,7 @@ class _CalendarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: EdgeInsets.zero,
-      radius: 22,
+      radius: 10,
       child: ListTile(
         onTap: onTap,
         leading: Container(
@@ -822,7 +822,7 @@ class _CalendarButton extends StatelessWidget {
           height: 46,
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: .12),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.calendar_month_rounded,
               color: AppColors.primary),
@@ -921,10 +921,10 @@ class _SummaryCard extends StatelessWidget {
       child: AppCard(
         padding: EdgeInsets.zero,
         color: data.bg,
-        radius: 17,
+        radius: 10,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(10),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Column(
@@ -1058,10 +1058,10 @@ class _DailyHistoryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _HistoryPageState._statusColor(item.status);
-    final bg = color.withValues(alpha: .12);
-    final badge = _HistoryPageState._statusLabel(item.status);
-    final icon = _HistoryPageState._statusIcon(item.status);
-    final secondary = _secondaryText();
+    final badge = _HistoryPageState._statusLabel(item.status).toUpperCase();
+    final dayNum = item.date.day.toString();
+    final monthAbbr = _monthAbbr(item.date.month);
+    final dayName = _dayName(item.date.weekday);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1069,73 +1069,111 @@ class _DailyHistoryItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: AppCard(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Icon(icon, color: color),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(width: 12),
+              ],
+            ),
+            child: Row(
+              children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppDate.dayDate(item.date),
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.text,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: .08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                dayNum,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              Text(
+                                monthAbbr,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        _subtitle(),
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.text,
-                        ),
-                      ),
-                      if (secondary != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          secondary,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: item.status == 'telat'
-                                ? AppColors.orange
-                                : AppColors.primary,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                dayName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _subtitle(),
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.muted,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badge,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: color,
+                CustomPaint(
+                  size: const Size(2, 70),
+                  painter: _PerforationPainter(),
+                ),
+                ClipPath(
+                  clipper: _SlantClipper(),
+                  child: Container(
+                    width: 96,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    color: color.withValues(alpha: .14),
+                    alignment: Alignment.center,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        badge,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                          letterSpacing: .5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1146,6 +1184,58 @@ class _DailyHistoryItem extends StatelessWidget {
       ),
     );
   }
+
+  String _monthAbbr(int month) {
+    const abbr = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
+      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
+    ];
+    return abbr[month - 1];
+  }
+
+  String _dayName(int weekday) {
+    const names = [
+      'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+    ];
+    return names[weekday - 1];
+  }
+}
+
+/// Garis putus-putus vertikal (perforasi tiket).
+class _PerforationPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.line
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    const dashH = 4.0;
+    const gapH = 3.0;
+    double y = 0;
+    while (y < size.height) {
+      canvas.drawLine(Offset(0, y), Offset(0, y + dashH), paint);
+      y += dashH + gapH;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Clip tepi miring untuk stub tiket.
+class _SlantClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..moveTo(size.width * .2, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 class _LeaveHistoryItem extends StatelessWidget {

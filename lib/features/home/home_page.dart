@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/models/app_notification.dart';
@@ -62,6 +63,7 @@ class _HomePageState extends State<HomePage> {
   bool _insideRadius = false;
   bool _loadingLocation = true;
   Map<String, dynamic>? _today;
+  Map<String, dynamic>? _yesterday;
   DailySchedule? _schedule;
   Map<String, dynamic>? _approvedLeaveToday;
   bool _loadingSchedule = true;
@@ -100,6 +102,7 @@ class _HomePageState extends State<HomePage> {
     await Future.wait([
       _loadLocation(),
       _loadToday(),
+      _loadYesterday(),
       _loadSchedule(),
       _loadApprovedLeaveToday(),
     ]);
@@ -133,7 +136,17 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _today = data);
   }
 
-  Future<void> _loadSchedule({bool notifyChange = false}) async {
+  Future<void> _loadYesterday() async {
+    try {
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final data = await _attendance.attendanceForDate(widget.session, yesterday);
+      if (mounted) setState(() => _yesterday = data);
+    } catch (_) {
+      // Abaikan — tiket tetap tampil dengan fallback.
+    }
+  }
+
+  Future<void> _loadSchedule({bool notifyChange = false, int retryCount = 0}) async {
     try {
       final data = await _scheduleService.resolveToday(widget.session);
       final nextFingerprint = _scheduleFingerprint(data);
@@ -146,6 +159,19 @@ class _HomePageState extends State<HomePage> {
         _loadingSchedule = false;
         _lastScheduleFingerprint = nextFingerprint;
       });
+      // Retry otomatis jika hasil kosong (waktu kosong) — samakan dengan Detail Jadwal.
+      if (_isScheduleEmpty(data) && retryCount < 2) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        final retry = await _scheduleService.resolveToday(widget.session);
+        if (!mounted) return;
+        if (!_isScheduleEmpty(retry)) {
+          setState(() {
+            _schedule = retry;
+            _lastScheduleFingerprint = _scheduleFingerprint(retry);
+          });
+        }
+      }
       await _scheduleAttendanceReminders();
       if (changed) await _showScheduleChangedNotification(data);
     } catch (_) {
@@ -154,6 +180,24 @@ class _HomePageState extends State<HomePage> {
         _schedule = null;
         _loadingSchedule = false;
       });
+      // Retry maksimal 2x jika gagal total.
+      if (retryCount < 2) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) _loadSchedule(notifyChange: notifyChange, retryCount: retryCount + 1);
+      }
+    }
+  }
+
+  /// Cek apakah jadwal kosong (semua field waktu kosong) — perlu retry.
+  bool _isScheduleEmpty(dynamic schedule) {
+    if (schedule == null) return true;
+    try {
+      final s = schedule as dynamic;
+      return (s.workStart as String).isEmpty &&
+          (s.workEnd as String).isEmpty &&
+          (s.checkInStart as String).isEmpty;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -278,7 +322,17 @@ class _HomePageState extends State<HomePage> {
   String? get _lastLabel {
     if (hasOut) return null; // kartu pakai fallback 'Pulang $pulang'
     if (hasIn) return null; // kartu pakai fallback 'Masuk $masuk'
-    return null; // belum ada data kemarin -> kartu tampil '-'
+    // Belum absen hari ini — tampilkan data kemarin (mockup).
+    final y = _yesterday;
+    if (y != null) {
+      final masuk = y['masuk'];
+      final pulang = y['pulang'];
+      final masukTime = masuk is Map ? (masuk['time'] ?? '').toString() : '';
+      final pulangTime = pulang is Map ? (pulang['time'] ?? '').toString() : '';
+      if (pulangTime.isNotEmpty) return 'Kemarin $pulangTime';
+      if (masukTime.isNotEmpty) return 'Kemarin $masukTime';
+    }
+    return null; // kartu tampil '-'
   }
 
   /// Label info "Berikutnya" untuk kartu tiket (dari jadwal).
@@ -384,14 +438,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showScheduleDetails() {
-    Navigator.of(context).push(MaterialPageRoute(
+    Navigator.of(context)
+        .push(MaterialPageRoute(
       builder: (_) => ScheduleDetailPage(
         session: widget.session,
         scheduleService: _scheduleService,
         initialDate: DateTime.now(),
         initialSchedule: _schedule,
       ),
-    ));
+    ))
+        .then((_) {
+      // Refresh jadwal saat kembali — samakan tiket dengan halaman detail.
+      if (mounted) _loadSchedule(notifyChange: true);
+    });
   }
 
   void _showStatusDetails({
@@ -437,9 +496,16 @@ class _HomePageState extends State<HomePage> {
             .toString()
         : '--:--';
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: CustomScrollView(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: CustomScrollView(
         physics: const ClampingScrollPhysics(),
         slivers: [
           // Header biru: collapse + parallax saat scroll (mockup).
@@ -489,6 +555,7 @@ class _HomePageState extends State<HomePage> {
             pinned: true,
             delegate: _StickyCardDelegate(
               height: 128,
+              topPadding: MediaQuery.of(context).padding.top,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
                 child: RadiusCard(
@@ -561,6 +628,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -598,19 +666,29 @@ class _HomePageState extends State<HomePage> {
 class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double height;
+  final double topPadding;
 
-  const _StickyCardDelegate({required this.child, required this.height});
+  const _StickyCardDelegate({
+    required this.child,
+    required this.height,
+    this.topPadding = 0,
+  });
 
   @override
-  double get minExtent => height;
+  double get minExtent => height + topPadding;
 
   @override
-  double get maxExtent => height;
+  double get maxExtent => height + topPadding;
 
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox(height: height, child: child);
+    // Background menempel pas di bawah status bar (tanpa celah).
+    return Container(
+      padding: EdgeInsets.only(top: topPadding),
+      color: AppColors.bg,
+      child: SizedBox(height: height, child: child),
+    );
   }
 
   @override
