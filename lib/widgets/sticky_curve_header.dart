@@ -114,7 +114,7 @@ class _StickyCurveHeaderPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final paint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFE07856), Color(0xFFD9A441)],
+        colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(rect);
