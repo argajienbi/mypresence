@@ -347,8 +347,14 @@ class PushNotificationService {
     final ref = _firestore.doc(
       FirestorePaths.fcmToken(session.companyId, session.uid, tokenId),
     );
-    final existingSnap = await ref.get();
-    final existingData = existingSnap.data();
+    // Firestore read: jangan biarkan kegagalan menggagalkan RTDB write.
+    Map<String, dynamic>? existingData;
+    try {
+      final existingSnap = await ref.get();
+      existingData = existingSnap.data();
+    } catch (_) {
+      existingData = null;
+    }
     final existingInvalidReason =
         (existingData?['invalid_reason']?.toString().trim() ?? '');
     final shouldClearInvalidReason =
