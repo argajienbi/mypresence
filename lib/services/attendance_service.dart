@@ -142,6 +142,10 @@ class AttendanceService {
   Future<Map<String, dynamic>?> todayAttendance(AppSession session) =>
       _rtdb.getMap(FirebasePaths.attendanceDate(
           session.companyId, session.uid, AppDate.dateKey()));
+  Future<Map<String, dynamic>?> attendanceForDate(
+          AppSession session, DateTime date) =>
+      _rtdb.getMap(FirebasePaths.attendanceDate(
+          session.companyId, session.uid, AppDate.dateKey(date)));
   Future<Map<String, dynamic>?> attendanceAll(AppSession session) => _rtdb
       .getMap(FirebasePaths.attendanceUser(session.companyId, session.uid));
 

@@ -174,6 +174,7 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                   const SizedBox(height: 16),
                   if (_loading)
                     const AppCard(
+                      radius: 10,
                       child: Padding(
                         padding: EdgeInsets.all(22),
                         child: Center(
@@ -184,6 +185,7 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                     )
                   else if (filteredItems.isEmpty)
                     AppCard(
+                      radius: 10,
                       child: Padding(
                         padding: const EdgeInsets.all(22),
                         child: Column(
@@ -240,7 +242,7 @@ class _FilterBar extends StatelessWidget {
     ];
 
     final types = [
-      _TypeChipData(RequestTypeFilter.all, 'Semua Jenis'),
+      _TypeChipData(RequestTypeFilter.all, 'Semua'),
       _TypeChipData(RequestTypeFilter.izin, 'Izin'),
       _TypeChipData(RequestTypeFilter.sakit, 'Sakit'),
       _TypeChipData(RequestTypeFilter.cuti, 'Cuti'),
@@ -249,63 +251,121 @@ class _FilterBar extends StatelessWidget {
       _TypeChipData(RequestTypeFilter.correction, 'Koreksi'),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final filter in filters)
-              ChoiceChip(
-                label: Text('${filter.label} (${countOf(filter.value)})'),
-                selected: current == filter.value,
-                onSelected: (_) => onChanged(filter.value),
-                labelStyle: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color:
-                      current == filter.value ? Colors.white : AppColors.text,
-                ),
-                selectedColor: AppColors.primary,
-                backgroundColor: Colors.white,
-                side: BorderSide(
-                  color: current == filter.value
-                      ? AppColors.primary
-                      : AppColors.line,
+    const labelStyle = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w800,
+      color: AppColors.muted,
+      letterSpacing: .5,
+    );
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      radius: 10,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('STATUS', style: labelStyle),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              children: [
+                for (final filter in filters)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onChanged(filter.value),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: current == filter.value
+                              ? AppColors.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${filter.label} (${countOf(filter.value)})',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: current == filter.value
+                                ? Colors.white
+                                : AppColors.muted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('JENIS PENGAJUAN', style: labelStyle),
+          const SizedBox(height: 8),
+          Stack(
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (var index = 0; index < types.length; index++) ...[
+                      GestureDetector(
+                        onTap: () => onTypeChanged(types[index].value),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: currentType == types[index].value
+                                ? AppColors.primary
+                                : AppColors.bg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            types[index].label,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: currentType == types[index].value
+                                  ? Colors.white
+                                  : AppColors.text,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (index != types.length - 1)
+                        const SizedBox(width: 8),
+                    ],
+                  ],
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var index = 0; index < types.length; index++) ...[
-                ChoiceChip(
-                  label: Text(types[index].label),
-                  selected: currentType == types[index].value,
-                  onSelected: (_) => onTypeChanged(types[index].value),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: currentType == types[index].value
-                        ? Colors.white
-                        : AppColors.text,
-                  ),
-                  selectedColor: AppColors.primary,
-                  backgroundColor: Colors.white,
-                  side: BorderSide(
-                    color: currentType == types[index].value
-                        ? AppColors.primary
-                        : AppColors.line,
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 32,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0),
+                          Colors.white,
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                if (index != types.length - 1) const SizedBox(width: 10),
-              ],
+              ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -332,6 +392,7 @@ class _RequestStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _statusColor(item.status);
+    final stubLabel = _stubLabel(item.status);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -340,124 +401,113 @@ class _RequestStatusCard extends StatelessWidget {
         child: InkWell(
           onTap: () =>
               showRequestStatusDetailSheet(context: context, item: item),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(10),
           child: AppCard(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: .12),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(_kindIcon(item.kind), color: color),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+            padding: EdgeInsets.zero,
+            radius: 10,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            item.kindLabel,
-                            style: const TextStyle(
-                              color: AppColors.text,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(_kindIcon(item.kind),
+                                color: color, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.kindLabel,
+                                  style: const TextStyle(
+                                    color: AppColors.text,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${item.createdAtLabel} • ${item.targetDateLabel.isEmpty ? '-' : item.targetDateLabel}',
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (item.hasNote) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.note,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          if (item.contextLabel.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: .10),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                item.contextLabel,
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: .12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
+                  ),
+                  CustomPaint(
+                    painter: const _DashedLinePainter(),
+                    child: const SizedBox(width: 2),
+                  ),
+                  ClipPath(
+                    clipper: _SlantClipper(),
+                    child: Container(
+                      width: 96,
+                      color: color.withValues(alpha: .14),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.only(left: 12),
                       child: Text(
-                        item.statusLabel,
+                        stubLabel,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w900,
                           color: color,
+                          letterSpacing: .5,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _InfoRow(
-                    label: 'Tanggal pengajuan', value: item.createdAtLabel),
-                const SizedBox(height: 6),
-                _InfoRow(
-                    label: 'Tanggal target',
-                    value: item.targetDateLabel.isEmpty
-                        ? '-'
-                        : item.targetDateLabel),
-                if (item.hasNote) ...[
-                  const SizedBox(height: 6),
-                  _InfoRow(label: 'Keterangan', value: item.note),
-                ],
-                if (item.hasAdminNote) ...[
-                  const SizedBox(height: 6),
-                  _InfoRow(label: 'Catatan admin', value: item.adminNote),
-                ],
-                const SizedBox(height: 6),
-                _InfoRow(
-                  label: item.evidenceLabel,
-                  value: item.hasEvidence
-                      ? '${item.evidenceLabel} tersedia'
-                      : '${item.evidenceLabel} belum tersedia',
-                ),
-                if (item.hasProcessedAt) ...[
-                  const SizedBox(height: 6),
-                  _InfoRow(
-                      label: 'Tanggal diproses', value: item.processedAtLabel),
-                ],
-                const SizedBox(height: 4),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Tap untuk detail',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  static String _stubLabel(String status) {
+    switch (status) {
+      case 'approved':
+        return 'DISETUJUI';
+      case 'rejected':
+        return 'DITOLAK';
+      default:
+        return 'PENDING';
+    }
   }
 
   static IconData _kindIcon(RequestStatusKind kind) {
@@ -484,45 +534,42 @@ class _RequestStatusCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+class _SlantClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..moveTo(size.width * .2, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 1,
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: AppColors.text,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              height: 1.25,
-            ),
-          ),
-        ),
-      ],
-    );
+  bool shouldReclip(covariant _SlantClipper oldClipper) => false;
+}
+
+class _DashedLinePainter extends CustomPainter {
+  const _DashedLinePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.line
+      ..strokeWidth = 1.5;
+    const dashHeight = 4.0;
+    const dashGap = 3.0;
+    double y = 8;
+    while (y < size.height - 8) {
+      canvas.drawLine(
+        Offset(size.width / 2, y),
+        Offset(size.width / 2, y + dashHeight),
+        paint,
+      );
+      y += dashHeight + dashGap;
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant _DashedLinePainter oldDelegate) => false;
 }
