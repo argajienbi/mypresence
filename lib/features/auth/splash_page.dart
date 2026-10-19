@@ -8,6 +8,7 @@ import '../../core/models/app_session.dart';
 import '../../services/auth_service.dart';
 import '../../services/push_notification_service.dart';
 import '../home/main_shell.dart';
+import 'auth_visuals.dart';
 import 'login_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -197,7 +198,10 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    final size = media.size;
+    final topInset = media.padding.top;
     final bottomInset = media.padding.bottom;
+    final illustrationWidth = size.width.clamp(320.0, 520.0) * .68;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -208,6 +212,7 @@ class _SplashPageState extends State<SplashPage>
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         body: Container(
           width: double.infinity,
           height: double.infinity,
@@ -224,6 +229,7 @@ class _SplashPageState extends State<SplashPage>
             ),
           ),
           child: Stack(
+            fit: StackFit.expand,
             children: [
               // Dekorasi lingkaran lembut (mockup 05)
               Positioned(
@@ -250,118 +256,106 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
               ),
-              SafeArea(
-                child: Column(
-                  children: [
-                    const Spacer(flex: 3),
-                    // Logo + judul (mockup 05)
-                    FadeTransition(
-                      opacity: _fade,
-                      child: SlideTransition(
-                        position: _slide,
-                        child: ScaleTransition(
-                          scale: _logoScale,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 104,
-                                height: 104,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: .18),
-                                      blurRadius: 24,
-                                      offset: const Offset(0, 10),
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    topInset + 48,
+                    24,
+                    24 + bottomInset,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      FadeTransition(
+                        opacity: _fade,
+                        child: SlideTransition(
+                          position: _slide,
+                          child: ScaleTransition(
+                            scale: _logoScale,
+                            child: AuthCard(
+                              padding: const EdgeInsets.fromLTRB(
+                                18,
+                                18,
+                                18,
+                                18,
+                              ),
+                              radius: 10,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const MyPresenceLogo(
+                                    size: 88,
+                                    textSize: 23,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  SplashIllustration(
+                                    width: illustrationWidth.clamp(
+                                      220.0,
+                                      300.0,
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Text('📍',
-                                      style: TextStyle(fontSize: 52)),
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 22),
-                              const Text(
-                                'MyPresence',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: .5,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Absensi cerdas untuk tim Anda',
-                                style: TextStyle(
-                                  color:
-                                      Colors.white.withValues(alpha: .85),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 360),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: Text(
+                          _sessionLoadFailed
+                              ? 'Tidak Ada Koneksi Internet\nAnda masih login, tetapi data terbaru belum bisa dimuat.'
+                              : _message,
+                          key: ValueKey('$_message-$_sessionLoadFailed'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: .94),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: .18),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                    // Status / pesan
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 360),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: Text(
-                        _sessionLoadFailed
-                            ? 'Tidak Ada Koneksi Internet\nAnda masih login, tetapi data terbaru belum bisa dimuat.'
-                            : _message,
-                        key: ValueKey('$_message-$_sessionLoadFailed'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: .94),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_sessionLoadFailed)
-                      SizedBox(
-                        height: 46,
-                        child: FilledButton.icon(
-                          onPressed: _retrySessionLoad,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Coba Lagi'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 16),
+                      if (_sessionLoadFailed)
+                        SizedBox(
+                          height: 46,
+                          child: FilledButton.icon(
+                            onPressed: _retrySessionLoad,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Coba Lagi'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      const _BlinkingDots(),
-                    const Spacer(flex: 4),
-                    // Footer versi (mockup 05)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 8 + bottomInset),
-                      child: Text(
+                        )
+                      else
+                        const _SplashProgress(),
+                      const Spacer(),
+                      const Text(
                         'v2.4.1 • PT FMI',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: .6),
+                          color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    SizedBox(height: bottomInset),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -372,58 +366,40 @@ class _SplashPageState extends State<SplashPage>
   }
 }
 
-/// Animasi loading 3 titik berkedip sesuai mockup 05.
-class _BlinkingDots extends StatefulWidget {
-  const _BlinkingDots();
-
-  @override
-  State<_BlinkingDots> createState() => _BlinkingDotsState();
-}
-
-class _BlinkingDotsState extends State<_BlinkingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+/// Progress bar (struktur sebelumnya, warna biru mockup).
+class _SplashProgress extends StatelessWidget {
+  const _SplashProgress();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (index) {
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            // Setiap titik berkedip bergantian dengan jeda 0.2
-            final phase = (_controller.value + index * 0.2) % 1.0;
-            final opacity = phase < 0.5
-                ? 0.35 + (phase / 0.5) * 0.65
-                : 1.0 - ((phase - 0.5) / 0.5) * 0.65;
-            return Container(
-              width: 9,
-              height: 9,
-              margin: EdgeInsets.only(left: index == 0 ? 0 : 8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: opacity.clamp(0.35, 1.0)),
-              ),
-            );
-          },
-        );
-      }),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 2100),
+      curve: Curves.easeInOutCubic,
+      builder: (context, value, _) => Container(
+        width: 126,
+        height: 7,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .3),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: value.clamp(.08, 1),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: .4),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
