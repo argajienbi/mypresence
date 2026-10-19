@@ -68,10 +68,22 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _approvedLeaveToday;
   bool _loadingSchedule = true;
   String _lastScheduleFingerprint = '';
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolled = false;
+
+  void _updateStatusBarStyle() {
+    // Icon status bar putih saat header biru terlihat, gelap saat card
+    // sudah dock (background terang di belakang status bar).
+    final scrolled = _scrollController.hasClients && _scrollController.offset > 80;
+    if (scrolled != _isScrolled && mounted) {
+      setState(() => _isScrolled = scrolled);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_updateStatusBarStyle);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _date = AppDate.dayDate(DateTime.now()));
@@ -93,6 +105,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_updateStatusBarStyle);
+    _scrollController.dispose();
     _timer?.cancel();
     _schedulePollTimer?.cancel();
     super.dispose();
@@ -497,15 +511,20 @@ class _HomePageState extends State<HomePage> {
         : '--:--';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        // Putih saat header biru terlihat; gelap saat card dock (bg terang).
+        statusBarIconBrightness:
+            _isScrolled ? Brightness.dark : Brightness.light,
+        statusBarBrightness:
+            _isScrolled ? Brightness.light : Brightness.dark,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: AppColors.bg,
         body: CustomScrollView(
+        controller: _scrollController,
         physics: const ClampingScrollPhysics(),
         slivers: [
           // Header biru: collapse + parallax saat scroll (mockup).
@@ -557,7 +576,7 @@ class _HomePageState extends State<HomePage> {
               height: 128,
               topPadding: MediaQuery.of(context).padding.top,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
                 child: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
@@ -683,20 +702,12 @@ class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Area status bar diisi biru agar menyatu dengan banner kartu
-    // (tidak ada gap visual; ikon status bar putih tetap terbaca).
+    // Pola riwayat: Container padding atas + bg terang, card dock tepat
+    // di bawah status bar tanpa celah.
     return Container(
+      padding: EdgeInsets.only(top: topPadding),
       color: AppColors.bg,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Container(
-            height: topPadding,
-            color: AppColors.primary,
-          ),
-          SizedBox(height: height, child: child),
-        ],
-      ),
+      child: SizedBox(height: height, child: child),
     );
   }
 
