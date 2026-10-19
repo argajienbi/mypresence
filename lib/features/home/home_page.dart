@@ -557,7 +557,7 @@ class _HomePageState extends State<HomePage> {
               height: 128,
               topPadding: MediaQuery.of(context).padding.top,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
                 child: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
@@ -683,16 +683,27 @@ class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Background menempel pas di bawah status bar (tanpa celah).
+    // Area status bar diisi biru agar menyatu dengan banner kartu
+    // (tidak ada gap visual; ikon status bar putih tetap terbaca).
     return Container(
-      padding: EdgeInsets.only(top: topPadding),
       color: AppColors.bg,
-      child: SizedBox(height: height, child: child),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Container(
+            height: topPadding,
+            color: AppColors.primary,
+          ),
+          SizedBox(height: height, child: child),
+        ],
+      ),
     );
   }
 
   @override
   bool shouldRebuild(covariant _StickyCardDelegate oldDelegate) {
-    return oldDelegate.child != child || oldDelegate.height != height;
+    return oldDelegate.child != child ||
+        oldDelegate.height != height ||
+        oldDelegate.topPadding != topPadding;
   }
 }
