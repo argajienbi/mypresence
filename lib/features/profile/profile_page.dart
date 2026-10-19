@@ -426,39 +426,20 @@ class _ProfileIdentityCard extends StatelessWidget {
                   offset: const Offset(0, -32),
                   child: GestureDetector(
                     onTap: onPhotoTap,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          key: ValueKey(displayPhotoUrl),
-                          radius: 32,
-                          backgroundColor: AppColors.primary,
-                          backgroundImage: displayPhotoUrl.isNotEmpty
-                              ? NetworkImage(displayPhotoUrl)
-                              : null,
-                          child: displayPhotoUrl.isEmpty
-                              ? Text(initial,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900))
-                              : null,
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 27,
-                            height: 27,
-                            decoration: BoxDecoration(
-                                color: AppColors.green,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Colors.white, width: 3)),
-                            child: const Icon(Icons.camera_alt_rounded,
-                                color: Colors.white, size: 14),
-                          ),
-                        ),
-                      ],
+                    child: CircleAvatar(
+                      key: ValueKey(displayPhotoUrl),
+                      radius: 32,
+                      backgroundColor: AppColors.primary,
+                      backgroundImage: displayPhotoUrl.isNotEmpty
+                          ? NetworkImage(displayPhotoUrl)
+                          : null,
+                      child: displayPhotoUrl.isEmpty
+                          ? Text(initial,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900))
+                          : null,
                     ),
                   ),
                 ),
