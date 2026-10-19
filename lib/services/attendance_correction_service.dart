@@ -127,6 +127,34 @@ class AttendanceCorrectionService {
     );
   }
 
+  /// True jika sudah ada koreksi berstatus DISETUJUI untuk uid & tanggal ini.
+  /// Dipakai UI untuk menyembunyikan tombol "Ajukan Koreksi" agar user
+  /// tidak menawarkan koreksi ulang atas record yang sudah disetujui.
+  Future<bool> hasApprovedCorrection({
+    required AppSession session,
+    required String dateKey,
+  }) async {
+    final root = await _rtdb.getMap(
+          FirebasePaths.attendanceCorrections(session.companyId),
+        ) ??
+        <String, dynamic>{};
+    final targetDate = dateKey.trim();
+    if (targetDate.isEmpty) return false;
+    for (final entry in root.entries) {
+      final value = entry.value;
+      if (value is! Map) continue;
+      final row = asMap(value);
+      if (asString(row['uid']) != session.uid) continue;
+      final rowDate = asString(row['date'], asString(row['tanggal'])).trim();
+      if (rowDate != targetDate) continue;
+      if (RequestStatusItem.normalizeStatus(asString(row['status'])) ==
+          'approved') {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> _ensureNoActiveRequest({
     required AppSession session,
     required String dateKey,
