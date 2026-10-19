@@ -509,11 +509,10 @@ class ScheduleService {
       if (!_isActive(item)) continue;
       if (asString(item['date']) != date) continue;
 
-      final type = asString(item['type']);
-      final targetId = asString(item['target_id']);
-      final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch =
-          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final userMatch = _matchesUser(item, context);
+      final groupMatch = asString(item['type']) == 'group' &&
+          asString(item['target_id']).isNotEmpty &&
+          asString(item['target_id']) == context.groupId;
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
         matches.add(item);
@@ -545,11 +544,10 @@ class ScheduleService {
         continue;
       }
 
-      final type = asString(item['type']);
-      final targetId = asString(item['target_id']);
-      final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch =
-          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final userMatch = _matchesUser(item, context);
+      final groupMatch = asString(item['type']) == 'group' &&
+          asString(item['target_id']).isNotEmpty &&
+          asString(item['target_id']) == context.groupId;
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
         matches.add(item);
@@ -730,11 +728,10 @@ class ScheduleService {
       if (!_isActive(item)) continue;
       if (asString(item['date']) != date) continue;
 
-      final type = asString(item['type']);
-      final targetId = asString(item['target_id']);
-      final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch =
-          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final userMatch = _matchesUser(item, context);
+      final groupMatch = asString(item['type']) == 'group' &&
+          asString(item['target_id']).isNotEmpty &&
+          asString(item['target_id']) == context.groupId;
 
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
@@ -771,11 +768,10 @@ class ScheduleService {
         continue;
       }
 
-      final type = asString(item['type']);
-      final targetId = asString(item['target_id']);
-      final userMatch = type == 'user' && targetId == context.uid;
-      final groupMatch =
-          type == 'group' && targetId.isNotEmpty && targetId == context.groupId;
+      final userMatch = _matchesUser(item, context);
+      final groupMatch = asString(item['type']) == 'group' &&
+          asString(item['target_id']).isNotEmpty &&
+          asString(item['target_id']) == context.groupId;
 
       if (userMatch || groupMatch) {
         item['id'] = asString(item['id'], entry.key);
@@ -978,11 +974,56 @@ class ScheduleService {
     return value.toString() == 'true';
   }
 
+  /// Cocokkan assignment user — selaras dengan myadmin (cek 3 field uid).
+  /// Myadmin: target_id === uid || user_id === uid || uid === uid.
+  bool _matchesUser(Map<String, dynamic> item, _ScheduleContext context) {
+    if (asString(item['type']) != 'user') return false;
+    final uid = context.uid;
+    return asString(item['target_id']) == uid ||
+        asString(item['user_id']) == uid ||
+        asString(item['uid']) == uid;
+  }
+
   bool _dateInRange(String date, String startDate, String endDate) {
     if (startDate.isEmpty && endDate.isEmpty) return false;
+    // Parse tanggal dulu agar format non-ISO (mis. dd/MM/yyyy) tetap benar.
+    // Fallback ke perbandingan string untuk format ISO yyyy-MM-dd.
+    final d = _parseDate(date);
+    final s = _parseDate(startDate);
+    final e = _parseDate(endDate);
+    if (d != null && (s != null || e != null)) {
+      if (s != null && d.isBefore(s)) return false;
+      if (e != null && d.isAfter(e)) return false;
+      return true;
+    }
     if (startDate.isNotEmpty && date.compareTo(startDate) < 0) return false;
     if (endDate.isNotEmpty && date.compareTo(endDate) > 0) return false;
     return true;
+  }
+
+  /// Parse tanggal dari berbagai format (yyyy-MM-dd, dd/MM/yyyy, dd-MM-yyyy).
+  DateTime? _parseDate(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return null;
+    // ISO: yyyy-MM-dd
+    final iso = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})$').firstMatch(v);
+    if (iso != null) {
+      return DateTime(
+        int.parse(iso.group(1)!),
+        int.parse(iso.group(2)!),
+        int.parse(iso.group(3)!),
+      );
+    }
+    // Indonesia: dd/MM/yyyy atau dd-MM-yyyy
+    final id = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$').firstMatch(v);
+    if (id != null) {
+      return DateTime(
+        int.parse(id.group(3)!),
+        int.parse(id.group(2)!),
+        int.parse(id.group(1)!),
+      );
+    }
+    return null;
   }
 
   String _weekdayKey(DateTime date) {
