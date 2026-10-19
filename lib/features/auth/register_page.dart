@@ -195,9 +195,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ],
                             ),
-                            child: const Center(
-                              child:
-                                  Text('📍', style: TextStyle(fontSize: 34)),
+                            child: Center(
+                              child: Image.asset(
+                                AuthUi.appLogoAsset,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
