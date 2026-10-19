@@ -33,11 +33,28 @@ class _HistoryPageState extends State<HistoryPage> {
   List<Map<String, dynamic>> _leaveRows = [];
   List<Map<String, dynamic>> _overtimeRows = [];
   List<DailyHistoryStatus> _dailyStatuses = [];
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolled = false;
+
+  void _updateStatusBarStyle() {
+    final scrolled = _scrollController.hasClients && _scrollController.offset > 60;
+    if (scrolled != _isScrolled && mounted) {
+      setState(() => _isScrolled = scrolled);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_updateStatusBarStyle);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_updateStatusBarStyle);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -547,16 +564,19 @@ class _HistoryPageState extends State<HistoryPage> {
     final topPadding = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness:
+            _isScrolled ? Brightness.dark : Brightness.light,
+        statusBarBrightness:
+            _isScrolled ? Brightness.light : Brightness.dark,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: AppColors.bg,
         body: CustomScrollView(
+          controller: _scrollController,
           physics: const ClampingScrollPhysics(),
           slivers: [
             // Header biru: collapse + parallax saat scroll (mockup 02,
