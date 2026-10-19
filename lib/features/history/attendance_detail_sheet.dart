@@ -6,6 +6,7 @@ import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
 import '../../core/models/request_status_item.dart';
 import '../../core/utils.dart';
+import '../../services/attendance_correction_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/attachment_preview.dart';
@@ -262,37 +263,11 @@ class _AttendanceDetailSheet extends StatelessWidget {
                 const SizedBox(height: 18),
               ],
               if (canRequestCorrection)
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () async {
-                      final result = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) => AttendanceCorrectionFormPage(
-                            session: session,
-                            initialDate: item.date,
-                            oldAttendance: item.attendanceRow,
-                          ),
-                        ),
-                      );
-                      if (result == true && context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    icon: const Icon(Icons.edit_note_rounded),
-                    label: const Text(
-                      'Ajukan Koreksi',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ),
+                _CorrectionActionButton(
+                  session: session,
+                  date: item.date,
+                  dateKey: item.dateKey,
+                  oldAttendance: item.attendanceRow,
                 )
               else
                 SizedBox(
@@ -628,6 +603,106 @@ class _AttendanceDetailSheet extends StatelessWidget {
 
   String _photoWarning(Map<String, dynamic>? row) {
     return '';
+  }
+}
+
+/// Tombol aksi koreksi di bagian bawah detail sheet.
+///
+/// Menyembunyikan tombol "Ajukan Koreksi" (diganti "Tutup") ketika sudah ada
+/// koreksi berstatus DISETUJUI untuk tanggal ini, agar user tidak ditawari
+/// mengajukan koreksi ulang atas record yang sama.
+class _CorrectionActionButton extends StatefulWidget {
+  final AppSession session;
+  final DateTime date;
+  final String dateKey;
+  final Map<String, dynamic>? oldAttendance;
+
+  const _CorrectionActionButton({
+    required this.session,
+    required this.date,
+    required this.dateKey,
+    required this.oldAttendance,
+  });
+
+  @override
+  State<_CorrectionActionButton> createState() => _CorrectionActionButtonState();
+}
+
+class _CorrectionActionButtonState extends State<_CorrectionActionButton> {
+  final AttendanceCorrectionService _service = AttendanceCorrectionService();
+  late final Future<bool> _approvedFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _approvedFuture = _service.hasApprovedCorrection(
+      session: widget.session,
+      dateKey: widget.dateKey,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _approvedFuture,
+      builder: (context, snapshot) {
+        // Saat pengecekan gagal/loading: tampilkan tombol seperti biasa agar
+        // fungsi ajukan koreksi tidak hilang; service tetap memblokir
+        // duplikat aktif saat submit.
+        final approved = snapshot.data == true;
+        if (approved) {
+          return SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                side: const BorderSide(color: AppColors.line),
+              ),
+              child: const Text(
+                'Tutup',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          );
+        }
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+              final result = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => AttendanceCorrectionFormPage(
+                    session: widget.session,
+                    initialDate: widget.date,
+                    oldAttendance: widget.oldAttendance,
+                  ),
+                ),
+              );
+              if (result == true && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            icon: const Icon(Icons.edit_note_rounded),
+            label: const Text(
+              'Ajukan Koreksi',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
