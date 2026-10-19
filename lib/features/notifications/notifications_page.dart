@@ -604,10 +604,51 @@ class _NotificationTile extends StatelessWidget {
 
   const _NotificationTile({required this.item, required this.onTap});
 
+  /// Status approval dari konten notifikasi, atau null jika bukan item
+  /// approval / statusnya tidak dapat ditentukan. Dipakai untuk badge
+  /// "Disetujui"/"Ditolak"/"Menunggu" di panel Approval.
+  static ({String label, Color color})? _approvalStatus(AppNotification item) {
+    final value =
+        '${item.type} ${item.refType} ${item.title} ${item.displayBody}'
+            .toLowerCase();
+    final isApproval = value.contains('approval') ||
+        value.contains('approved') ||
+        value.contains('rejected') ||
+        value.contains('disetujui') ||
+        value.contains('ditolak') ||
+        value.contains('pending') ||
+        value.contains('menunggu') ||
+        value.contains('leave') ||
+        value.contains('izin') ||
+        value.contains('cuti') ||
+        value.contains('sakit') ||
+        value.contains('lembur') ||
+        value.contains('overtime');
+    if (!isApproval) return null;
+    if (value.contains('approved') ||
+        value.contains('disetujui') ||
+        value.contains('success')) {
+      return (label: 'Disetujui', color: AppColors.green);
+    }
+    if (value.contains('rejected') ||
+        value.contains('ditolak') ||
+        value.contains('error')) {
+      return (label: 'Ditolak', color: AppColors.red);
+    }
+    if (value.contains('pending') ||
+        value.contains('menunggu') ||
+        value.contains('review') ||
+        value.contains('warning')) {
+      return (label: 'Menunggu', color: AppColors.orange);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final category = _NotificationCategory.from(item);
     final unread = !item.read;
+    final approvalStatus = _approvalStatus(item);
 
     return Material(
       color: unread ? category.color.withValues(alpha: .08) : Colors.white,
@@ -718,6 +759,28 @@ class _NotificationTile extends StatelessWidget {
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
+                        if (approvalStatus != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: approvalStatus.color
+                                  .withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: approvalStatus.color
+                                    .withValues(alpha: .35),
+                              ),
+                            ),
+                            child: Text(
+                              approvalStatus.label,
+                              style: TextStyle(
+                                color: approvalStatus.color,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
                         _MiniMeta(
                             icon: category.metaIcon,
                             text: category.label,
