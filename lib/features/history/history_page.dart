@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
@@ -543,137 +544,219 @@ class _HistoryPageState extends State<HistoryPage> {
     final hasAnyData = visibleDailyStatuses.isNotEmpty ||
         _leaveRows.isNotEmpty ||
         _overtimeRows.isNotEmpty;
+    final topPadding = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: ListView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(18, 136, 18, 96),
-              children: [
-                _MonthFilter(
-                  monthLabel: AppDate.monthLabel(_month),
-                  onPrev: () => _changeMonth(-1),
-                  onNext: () => _changeMonth(1),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            // Header biru: collapse + parallax saat scroll (mockup 02,
+            // pola sama seperti header di Home).
+            SliverAppBar(
+              expandedHeight: 108 + topPadding,
+              collapsedHeight: 0,
+              toolbarHeight: 0,
+              pinned: false,
+              floating: false,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              flexibleSpace: const FlexibleSpaceBar(
+                collapseMode: CollapseMode.parallax,
+                background: StickyCurveHeader(
+                  title: 'Riwayat Presensi',
+                  subtitle: 'Rekam jejak kehadiran dan pengajuan',
+                  icon: Icons.history_rounded,
+                  height: 108,
                 ),
-                const SizedBox(height: 10),
-                _CalendarButton(onTap: _showCalendarSheet, month: _month),
-                const SizedBox(height: 16),
-                const _SectionTitle('Ringkasan Bulan Ini'),
-                if (_scheduleLoading) ...[
-                  const SizedBox(height: 4),
-                  const _SectionNote(
-                      'Ringkasan akan diperbarui otomatis setelah jadwal selesai dimuat.'),
-                ],
-                const SizedBox(height: 10),
-                _SummaryHorizontalList(
-                  summary: summary,
-                  onTap: (key, title, color) => _showSummaryDetail(
-                    title,
-                    summary.datesByKey[key] ?? const <String>[],
-                    color,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                const _SectionTitle('Daftar Presensi Terbaru'),
-                const SizedBox(height: 4),
-                _SectionNote(
-                  _scheduleLoading
-                      ? 'Menampilkan data awal. Status jadwal sedang disempurnakan...'
-                      : 'Menampilkan 7 hari terakhir.',
-                ),
-                const SizedBox(height: 10),
-                if (_loading)
-                  const AppCard(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child:
-                            CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
+            // Card bulan: sticky tepat di bawah status bar saat header
+            // sudah collapse (mockup 02, pola _StickyCardDelegate di Home).
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyMonthDelegate(
+                topPadding: topPadding,
+                monthLabel: AppDate.monthLabel(_month),
+                onPrev: () => _changeMonth(-1),
+                onNext: () => _changeMonth(1),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 96),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    _CalendarButton(onTap: _showCalendarSheet, month: _month),
+                    const SizedBox(height: 16),
+                    const _SectionTitle('Ringkasan Bulan Ini'),
+                    if (_scheduleLoading) ...[
+                      const SizedBox(height: 4),
+                      const _SectionNote(
+                          'Ringkasan akan diperbarui otomatis setelah jadwal selesai dimuat.'),
+                    ],
+                    const SizedBox(height: 10),
+                    _SummaryHorizontalList(
+                      summary: summary,
+                      onTap: (key, title, color) => _showSummaryDetail(
+                        title,
+                        summary.datesByKey[key] ?? const <String>[],
+                        color,
                       ),
                     ),
-                  )
-                else if (!hasAnyData)
-                  const AppCard(
-                    child: Padding(
-                      padding: EdgeInsets.all(22),
-                      child: Column(
-                        children: [
-                          Icon(Icons.inbox_rounded,
-                              color: AppColors.muted, size: 38),
-                          SizedBox(height: 10),
-                          Text(
-                            'Belum ada presensi dalam 7 hari terakhir.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 18),
+                    const _SectionTitle('Daftar Presensi Terbaru'),
+                    const SizedBox(height: 4),
+                    _SectionNote(
+                      _scheduleLoading
+                          ? 'Menampilkan data awal. Status jadwal sedang disempurnakan...'
+                          : 'Menampilkan 7 hari terakhir.',
                     ),
-                  )
-                else ...[
-                  if (visibleDailyStatuses.isEmpty)
-                    const AppCard(
-                      child: Padding(
-                        padding: EdgeInsets.all(18),
-                        child: Text(
-                          'Belum ada presensi dalam 7 hari terakhir.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontWeight: FontWeight.w800,
+                    const SizedBox(height: 10),
+                    if (_loading)
+                      const AppCard(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child:
+                                CircularProgressIndicator(color: AppColors.primary),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    ...visibleDailyStatuses.map(
-                      (item) => _DailyHistoryItem(
-                        item,
-                        onTap: () => _showAttendanceDetail(item),
-                      ),
-                    ),
-                  if (_leaveRows.isNotEmpty || _overtimeRows.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    const _SectionNote(
-                      'Detail ini hanya arsip pengajuan, status harian tetap terlihat di Daftar Presensi.',
-                    ),
+                      )
+                    else if (!hasAnyData)
+                      const AppCard(
+                        child: Padding(
+                          padding: EdgeInsets.all(22),
+                          child: Column(
+                            children: [
+                              Icon(Icons.inbox_rounded,
+                                  color: AppColors.muted, size: 38),
+                              SizedBox(height: 10),
+                              Text(
+                                'Belum ada presensi dalam 7 hari terakhir.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.muted,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      if (visibleDailyStatuses.isEmpty)
+                        const AppCard(
+                          child: Padding(
+                            padding: EdgeInsets.all(18),
+                            child: Text(
+                              'Belum ada presensi dalam 7 hari terakhir.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.muted,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...visibleDailyStatuses.map(
+                          (item) => _DailyHistoryItem(
+                            item,
+                            onTap: () => _showAttendanceDetail(item),
+                          ),
+                        ),
+                      if (_leaveRows.isNotEmpty || _overtimeRows.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        const _SectionNote(
+                          'Detail ini hanya arsip pengajuan, status harian tetap terlihat di Daftar Presensi.',
+                        ),
+                      ],
+                      if (_leaveRows.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        const _SectionTitle('Detail Pengajuan Disetujui'),
+                        const SizedBox(height: 10),
+                        ..._leaveRows.map(_LeaveHistoryItem.new),
+                      ],
+                      if (_overtimeRows.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        const _SectionTitle('Detail Lembur Disetujui'),
+                        const SizedBox(height: 10),
+                        ..._overtimeRows.map(_OvertimeHistoryItem.new),
+                      ],
+                    ],
                   ],
-                  if (_leaveRows.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    const _SectionTitle('Detail Pengajuan Disetujui'),
-                    const SizedBox(height: 10),
-                    ..._leaveRows.map(_LeaveHistoryItem.new),
-                  ],
-                  if (_overtimeRows.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    const _SectionTitle('Detail Lembur Disetujui'),
-                    const SizedBox(height: 10),
-                    ..._overtimeRows.map(_OvertimeHistoryItem.new),
-                  ],
-                ],
-              ],
+                ),
+              ),
             ),
-          ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: StickyCurveHeader(
-              title: 'Riwayat Presensi',
-              subtitle: 'Rekam jejak kehadiran dan pengajuan',
-              icon: Icons.history_rounded,
-              height: 108,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+}
+
+/// Delegate untuk card pemilih bulan yang sticky tepat di bawah status bar
+/// saat header sudah collapse (mockup 02). Pola sama seperti
+/// _StickyCardDelegate di home_page.dart: min/maxExtent = tinggi card +
+/// topPadding, dan child dibungkus Container berwarna bg dengan padding
+/// atas agar tidak ada celah di bawah status bar.
+class _StickyMonthDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final String monthLabel;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  const _StickyMonthDelegate({
+    required this.topPadding,
+    required this.monthLabel,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  /// Tinggi total area sticky: card bulan + margin atas/bawah 8px.
+  static const double _height = 72;
+
+  @override
+  double get minExtent => _height + topPadding;
+
+  @override
+  double get maxExtent => _height + topPadding;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      padding: EdgeInsets.only(top: topPadding),
+      color: AppColors.bg,
+      child: SizedBox(
+        height: _height,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+          child: _MonthFilter(
+            monthLabel: monthLabel,
+            onPrev: onPrev,
+            onNext: onNext,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyMonthDelegate oldDelegate) {
+    return oldDelegate.monthLabel != monthLabel ||
+        oldDelegate.topPadding != topPadding;
   }
 }
 
