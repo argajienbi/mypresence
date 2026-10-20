@@ -69,21 +69,10 @@ class _HomePageState extends State<HomePage> {
   bool _loadingSchedule = true;
   String _lastScheduleFingerprint = '';
   final ScrollController _scrollController = ScrollController();
-  bool _isScrolled = false;
-
-  void _updateStatusBarStyle() {
-    // Icon status bar putih saat header biru terlihat, gelap saat card
-    // sudah dock (background terang di belakang status bar).
-    final scrolled = _scrollController.hasClients && _scrollController.offset > 80;
-    if (scrolled != _isScrolled && mounted) {
-      setState(() => _isScrolled = scrolled);
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_updateStatusBarStyle);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() => _date = AppDate.dayDate(DateTime.now()));
@@ -105,7 +94,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_updateStatusBarStyle);
     _scrollController.dispose();
     _timer?.cancel();
     _schedulePollTimer?.cancel();
@@ -513,11 +501,9 @@ class _HomePageState extends State<HomePage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        // Putih saat header biru terlihat; gelap saat card dock (bg terang).
-        statusBarIconBrightness:
-            _isScrolled ? Brightness.dark : Brightness.light,
-        statusBarBrightness:
-            _isScrolled ? Brightness.light : Brightness.dark,
+        // Selalu putih: area status bar selalu di atas strip biru header.
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
@@ -527,20 +513,22 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         physics: const ClampingScrollPhysics(),
         slivers: [
-          // Header biru: collapse + parallax saat scroll (mockup).
+          // Header biru + kartu lokasi dalam satu app bar: header collapse
+          // mulus, kartu lokasi selalu menempel (jarak diam 15, dock 15).
           SliverAppBar(
-            expandedHeight: 176,
-            collapsedHeight: 0,
+            // maxExtent aktual = topPadding + expandedHeight (framework).
+            expandedHeight: 176 + 128,
+            collapsedHeight: MediaQuery.of(context).padding.top + 128,
             toolbarHeight: 0,
-            pinned: false,
+            pinned: true,
             floating: false,
-            backgroundColor: Colors.transparent,
+            backgroundColor: AppColors.bg,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              background: StreamBuilder<List<AppNotification>>(
+            flexibleSpace: _HomeCollapsingHeader(
+              topPadding: MediaQuery.of(context).padding.top,
+              header: StreamBuilder<List<AppNotification>>(
                 stream:
                     _notificationService.watchFirestoreInbox(widget.session),
                 builder: (context, firestoreSnapshot) {
@@ -567,17 +555,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-            ),
-          ),
-          // Kartu lokasi: sticky di atas saat header menghilang (mockup).
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyCardDelegate(
-              height: 128,
-              topPadding: MediaQuery.of(context).padding.top,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 15, 18, 8),
-                child: RadiusCard(
+              card: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
                   officeLat: widget.session.officeLatitude,
@@ -606,7 +584,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-              ),
             ),
           ),
           SliverPadding(
@@ -685,41 +662,60 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Delegate untuk kartu lokasi yang sticky di atas (mockup: berhenti di
-/// header, tidak ikut menghilang saat scroll).
-class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-  final double height;
+/// Header Home gabungan: header profil (collapse mulus) + kartu lokasi yang
+/// selalu menempel di bawahnya. Jarak header->kartu saat diam = 15px, dan
+/// saat collapse kartu berhenti tepat 15px di bawah status bar.
+class _HomeCollapsingHeader extends StatelessWidget {
   final double topPadding;
+  final Widget header;
+  final Widget card;
 
-  const _StickyCardDelegate({
-    required this.child,
-    required this.height,
-    this.topPadding = 0,
+  const _HomeCollapsingHeader({
+    required this.topPadding,
+    required this.header,
+    required this.card,
   });
 
-  @override
-  double get minExtent => height + topPadding;
+  // Zona kartu: gap 15 + kartu 105 + bawah 8 = 128.
+  static const double _cardZone = 128;
+  // Tinggi penuh header profil (termasuk area status bar).
+  static const double _headerFull = 176;
 
   @override
-  double get maxExtent => height + topPadding;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Pola riwayat: Container padding atas + bg terang, card dock tepat
-    // di bawah status bar tanpa celah.
-    return Container(
-      padding: EdgeInsets.only(top: topPadding),
-      color: AppColors.bg,
-      child: SizedBox(height: height, child: child),
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final total =
+            constraints.maxHeight.isFinite ? constraints.maxHeight : _headerFull + _cardZone;
+        // Tinggi header menyusut 176 -> topPadding seiring collapse.
+        final headerH = (total - _cardZone).clamp(topPadding, _headerFull);
+        return ColoredBox(
+          color: AppColors.bg,
+          child: Column(
+            children: [
+              SizedBox(
+                height: headerH,
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      height: _headerFull,
+                      width: double.infinity,
+                      child: header,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: SizedBox(height: 105, child: card),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickyCardDelegate oldDelegate) {
-    return oldDelegate.child != child ||
-        oldDelegate.height != height ||
-        oldDelegate.topPadding != topPadding;
   }
 }
