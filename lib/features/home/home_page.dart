@@ -576,7 +576,7 @@ class _HomePageState extends State<HomePage> {
               height: 128,
               topPadding: MediaQuery.of(context).padding.top,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+                padding: const EdgeInsets.fromLTRB(18, 15, 18, 8),
                 child: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
@@ -644,6 +644,11 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+          ),
+          // Spacer bawah: pastikan selalu ada cukup ruang scroll agar
+          // header biru bisa collapse penuh dan card lokasi dock ke atas.
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 220),
           ),
         ],
       ),
