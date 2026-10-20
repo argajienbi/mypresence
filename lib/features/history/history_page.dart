@@ -762,7 +762,7 @@ class _StickyMonthDelegate extends SliverPersistentHeaderDelegate {
       child: SizedBox(
         height: _height,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+          padding: const EdgeInsets.fromLTRB(18, 15, 18, 8),
           child: _MonthFilter(
             monthLabel: monthLabel,
             onPrev: onPrev,
