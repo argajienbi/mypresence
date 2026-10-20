@@ -501,7 +501,7 @@ class _HomePageState extends State<HomePage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        // Selalu putih: area status bar selalu di atas strip biru header.
+        // Selalu putih: strip biru header selalu di belakang status bar.
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: Colors.white,
@@ -513,12 +513,12 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         physics: const ClampingScrollPhysics(),
         slivers: [
-          // Header biru + kartu lokasi dalam satu app bar: header collapse
-          // mulus, kartu lokasi selalu menempel (jarak diam 15, dock 15).
+          // Header biru collapse jadi strip setinggi status bar (pinned);
+          // kartu lokasi menempel tepat di bawahnya. Isi header hilang
+          // dengan clip standar FlexibleSpaceBar (tidak tertekan).
           SliverAppBar(
-            // maxExtent aktual = topPadding + expandedHeight (framework).
-            expandedHeight: 176 + 128,
-            collapsedHeight: MediaQuery.of(context).padding.top + 128,
+            expandedHeight: 176,
+            collapsedHeight: 0, // efektif = 0 + topPadding (framework)
             toolbarHeight: 0,
             pinned: true,
             floating: false,
@@ -526,9 +526,9 @@ class _HomePageState extends State<HomePage> {
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             automaticallyImplyLeading: false,
-            flexibleSpace: _HomeCollapsingHeader(
-              topPadding: MediaQuery.of(context).padding.top,
-              header: StreamBuilder<List<AppNotification>>(
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: StreamBuilder<List<AppNotification>>(
                 stream:
                     _notificationService.watchFirestoreInbox(widget.session),
                 builder: (context, firestoreSnapshot) {
@@ -555,7 +555,15 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              card: RadiusCard(
+            ),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickyCardDelegate(
+              height: 138,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 25, 18, 8),
+                child: RadiusCard(
                   officeName: widget.session.officeName,
                   address: widget.session.officeAddress,
                   officeLat: widget.session.officeLatitude,
@@ -584,6 +592,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+              ),
             ),
           ),
           SliverPadding(
@@ -662,60 +671,33 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Header Home gabungan: header profil (collapse mulus) + kartu lokasi yang
-/// selalu menempel di bawahnya. Jarak header->kartu saat diam = 15px, dan
-/// saat collapse kartu berhenti tepat 15px di bawah status bar.
-class _HomeCollapsingHeader extends StatelessWidget {
-  final double topPadding;
-  final Widget header;
-  final Widget card;
+/// Delegate kartu lokasi sticky: tinggi tetap, tanpa strip status bar
+/// (kartu menempel di bawah strip biru header, jadi selalu di bawah
+/// status bar). Jarak diam & dock ke atasnya = 25px dari padding kartu.
+class _StickyCardDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
 
-  const _HomeCollapsingHeader({
-    required this.topPadding,
-    required this.header,
-    required this.card,
-  });
-
-  // Zona kartu: gap 15 + kartu 105 + bawah 8 = 128.
-  static const double _cardZone = 128;
-  // Tinggi penuh header profil (termasuk area status bar).
-  static const double _headerFull = 176;
+  const _StickyCardDelegate({required this.child, required this.height});
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final total =
-            constraints.maxHeight.isFinite ? constraints.maxHeight : _headerFull + _cardZone;
-        // Tinggi header menyusut 176 -> topPadding seiring collapse.
-        final headerH = (total - _cardZone).clamp(topPadding, _headerFull);
-        return ColoredBox(
-          color: AppColors.bg,
-          child: Column(
-            children: [
-              SizedBox(
-                height: headerH,
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      height: _headerFull,
-                      width: double.infinity,
-                      child: header,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 15),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: SizedBox(height: 105, child: card),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AppColors.bg,
+      child: SizedBox(height: height, child: child),
     );
   }
+
+  @override
+  bool shouldRebuild(covariant _StickyCardDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.height != height;
+  }
 }
+
