@@ -7,6 +7,7 @@ import '../../core/utils.dart';
 import '../../services/announcement_service.dart';
 import '../../services/app_notification_service.dart';
 import '../notifications/notifications_page.dart';
+import '../../widgets/app_page_header.dart';
 
 class AnnouncementsPage extends StatelessWidget {
   final AppSession session;
@@ -18,16 +19,13 @@ class AnnouncementsPage extends StatelessWidget {
     final service = AnnouncementService();
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Pengumuman',
-            style: TextStyle(fontWeight: FontWeight.w900)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Pengumuman',
+            icon: Icons.campaign_rounded,
+            showBack: true,
+            extra: Row(
               children: [
                 const _TabPill(label: 'Pengumuman', active: true),
                 const SizedBox(width: 8),
@@ -43,9 +41,8 @@ class AnnouncementsPage extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-      body: StreamBuilder<List<Announcement>>(
+          Expanded(
+            child: StreamBuilder<List<Announcement>>(
         stream: service.watchAnnouncements(session),
         builder: (context, snapshot) {
           final items = snapshot.data ?? const <Announcement>[];
@@ -68,6 +65,9 @@ class AnnouncementsPage extends StatelessWidget {
             },
           );
         },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -82,8 +82,16 @@ class AnnouncementDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(title: const Text('Detail Pengumuman')),
-      body: ListView(
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Detail Pengumuman',
+            subtitle: _metaLine(item),
+            icon: Icons.campaign_rounded,
+            showBack: true,
+          ),
+          Expanded(
+            child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
           Container(
@@ -113,7 +121,10 @@ class AnnouncementDetailPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
+            ),
+          ),
+          ],
+        ),
     );
   }
 }

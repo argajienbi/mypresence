@@ -8,6 +8,7 @@ import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../services/leave_service.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/app_page_header.dart';
 
 class LeaveFormPage extends StatefulWidget {
   final AppSession session;
@@ -174,10 +175,11 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
         backgroundColor: AppColors.bg,
         body: Column(
           children: [
-            _LeaveFormHeader(
+            AppPageHeader(
               title: title,
               subtitle: 'Lengkapi formulir dan kirim ke admin untuk approval',
               icon: icon,
+              showBack: true,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -284,93 +286,6 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   }
 }
 
-/// Header teal (mockup pengajuan). SoftHeaderBackground krem tidak dipakai
-/// di sini agar halaman ini mengikuti bahasa myadmin.
-class _LeaveFormHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _LeaveFormHeader({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .35),
-                  ),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .85),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => Navigator.of(context).pop(),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .35),
-                    ),
-                  ),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Pengalih jenis pengajuan (mockup pengajuan): Izin / Cuti / Sakit / Lembur.
 class _TypeSegment extends StatelessWidget {
   final String current;
   final ValueChanged<String> onChanged;

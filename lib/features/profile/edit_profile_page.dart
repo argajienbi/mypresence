@@ -5,6 +5,7 @@ import '../../core/models/app_session.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/app_page_header.dart';
 
 class EditProfilePage extends StatefulWidget {
   final AppSession session;
@@ -63,7 +64,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
         backgroundColor: AppColors.bg,
         body: Column(
           children: [
-            const _EditProfileHeader(),
+            const AppPageHeader(
+              title: 'Data Pribadi',
+              subtitle:
+                  'Perubahan data pribadi akan tersimpan di akun perusahaan Anda.',
+              icon: Icons.badge_rounded,
+              showBack: true,
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -118,85 +125,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Header teal (pola _LeaveFormHeader): StickyCurvePage krem tidak dipakai
-/// di sini agar halaman ini mengikuti bahasa myadmin.
-class _EditProfileHeader extends StatelessWidget {
-  const _EditProfileHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .35),
-                  ),
-                ),
-                child: const Icon(Icons.badge_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Data Pribadi',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Perubahan data pribadi akan tersimpan di akun perusahaan Anda.',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .85),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => Navigator.of(context).pop(),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .35),
-                    ),
-                  ),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

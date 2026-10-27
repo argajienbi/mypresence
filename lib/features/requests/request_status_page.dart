@@ -5,6 +5,7 @@ import '../../core/models/app_session.dart';
 import '../../core/models/request_status_item.dart';
 import '../../services/request_status_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_page_header.dart';
 import '../corrections/attendance_correction_form_page.dart';
 import '../leave/leave_form_page.dart';
 import '../proxy_qr/proxy_attendance_page.dart';
@@ -184,7 +185,29 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
       backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          _PengajuanHeader(onAdd: _openLeaveForm),
+          AppPageHeader(
+            title: 'Pengajuan',
+            subtitle: 'Pantau izin, QR titip absen, dan koreksi presensi',
+            icon: Icons.assignment_turned_in_outlined,
+            showBack: true,
+            trailing: InkWell(
+              onTap: _openLeaveForm,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .35),
+                  ),
+                ),
+                child: const Icon(Icons.add_rounded,
+                    color: Colors.white, size: 22),
+              ),
+            ),
+          ),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primary,
@@ -263,71 +286,6 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Header teal (mockup pengajuan). StickyCurveHeader (shared, biru) tidak
-/// dipakai di sini agar halaman ini mengikuti bahasa myadmin.
-class _PengajuanHeader extends StatelessWidget {
-  final VoidCallback onAdd;
-
-  const _PengajuanHeader({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Pengajuan',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: onAdd,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .14),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .35),
-                        ),
-                      ),
-                      child: const Icon(Icons.add_rounded,
-                          color: Colors.white, size: 22),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Pantau izin, QR titip absen, dan koreksi presensi',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: .85),
-                  fontSize: 12.5,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

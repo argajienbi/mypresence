@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
 import '../../../core/models/app_session.dart';
+import '../../../widgets/app_page_header.dart';
 
-/// Header Home bahasa myadmin: gradient teal, teks putih.
-/// Mengikuti mockup ~/workspace/mypresence-mockup/home.html —
-/// salam kecil, nama lengkap, baris tanggal pendek, lonceng badge coral.
+/// Header Home: [AppPageHeader] dengan avatar bulat 56 + lonceng.
+/// Bentuknya kini sama dengan semua halaman dalam (teal datar, tinggi
+/// konten 108); yang beda hanya isinya (salam + nama + tanggal + avatar).
 /// Seluruh logika (salam, avatar, foto, badge notifikasi) dipertahankan.
 class HomeStickyProfileHeader extends StatelessWidget {
   final AppSession session;
@@ -40,70 +41,14 @@ class HomeStickyProfileHeader extends StatelessWidget {
       session.photoPath.trim(),
     );
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.headerGradient,
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _ProfileAvatar(displayName: name, photoUrl: photoUrl),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$greeting,',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .80),
-                        fontSize: 12,
-                        height: 1.05,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        height: 1.2,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      date,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .75),
-                        fontSize: 12,
-                        height: 1.05,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              _NotificationButton(
-                count: unreadNotifications,
-                onPressed: onNotificationPressed,
-              ),
-            ],
-          ),
-        ),
+    return AppPageHeader(
+      eyebrow: '$greeting,',
+      title: name,
+      subtitle: date,
+      leading: _ProfileAvatar(displayName: name, photoUrl: photoUrl),
+      trailing: _NotificationButton(
+        count: unreadNotifications,
+        onPressed: onNotificationPressed,
       ),
     );
   }
@@ -128,8 +73,8 @@ class _ProfileAvatar extends StatelessWidget {
     final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
-      width: 48,
-      height: 48,
+      width: 56,
+      height: 56,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withValues(alpha: .18),
@@ -179,7 +124,7 @@ class _InitialAvatar extends StatelessWidget {
         initials,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 17,
+          fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
       ),

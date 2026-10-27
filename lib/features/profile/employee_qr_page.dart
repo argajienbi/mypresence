@@ -13,7 +13,7 @@ import '../../core/models/app_session.dart';
 import '../../services/company_service.dart';
 import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
-import '../../widgets/sticky_curve_layout.dart';
+import '../../widgets/app_page_header.dart';
 
 const Color kCardDarkTeal = Color(0xFF0B2B33);
 const Color kCardDeepTeal = Color(0xFF0B7A8C);
@@ -164,119 +164,133 @@ class _EmployeeQrPageState extends State<EmployeeQrPage>
       body: AppLoadingOverlay(
         visible: _saving,
         message: 'Menyimpan kartu...',
-        child: StickyCurvePage(
-          title: 'ID Karyawan',
-          subtitle: 'Kartu identitas digital karyawan',
-          icon: Icons.badge_rounded,
-          overlapTop: 134,
-          trailing: _CloseButton(onTap: () => Navigator.pop(context)),
-          overlapChild: Center(
-            child: _loading
-                ? SizedBox(
-                    width: cardWidth,
-                    height: 540,
-                    child: const Center(
-                      child: CircularProgressIndicator(color: kCardTeal),
-                    ),
-                  )
-                : GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _flip,
-                    child: RepaintBoundary(
-                      key: _cardKey,
-                      child: AnimatedBuilder(
-                        animation: _controller,
-                        builder: (context, _) {
-                          final angle = _controller.value * math.pi;
-                          final showBack = angle > math.pi / 2;
-                          return Transform(
-                            transform: Matrix4.identity()
-                              ..setEntry(3, 2, .0013)
-                              ..rotateY(angle),
-                            alignment: Alignment.center,
-                            child: showBack
-                                  ? Transform(
-                                    transform: Matrix4.identity()
-                                      ..rotateY(math.pi),
-                                    alignment: Alignment.center,
-                                    child: _BackCard(
-                                      session: widget.session,
-                                      payload: _payload,
-                                      branding: _branding,
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                    ),
-                                  )
-                                : _FrontCard(
-                                    session: widget.session,
-                                    photoUrl: _resolvedPhotoUrl,
-                                    branding: _branding,
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                  ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-          ),
+        child: Column(
           children: [
-            const Center(
-              child: Text(
-                'Tap kartu untuk melihat sisi depan/belakang.',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.muted,
-                ),
-              ),
+            const AppPageHeader(
+              title: 'ID Karyawan',
+              subtitle: 'Kartu identitas digital karyawan',
+              icon: Icons.badge_rounded,
+              showBack: true,
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _loading ? null : () => _saveCard(share: false),
-                    icon: const Icon(Icons.download_rounded, size: 20),
-                    label: const Text('Simpan'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kCardTeal,
-                      foregroundColor: Colors.white,
-                      shadowColor: kCardTeal.withValues(alpha: .24),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      minimumSize: const Size.fromHeight(56),
-                      textStyle: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
+            Expanded(
+              child: ListView(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 112),
+                children: [
+                  Center(
+                    child: _loading
+                        ? SizedBox(
+                            width: cardWidth,
+                            height: 540,
+                            child: const Center(
+                              child:
+                                  CircularProgressIndicator(color: kCardTeal),
+                            ),
+                          )
+                        : GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _flip,
+                            child: RepaintBoundary(
+                              key: _cardKey,
+                              child: AnimatedBuilder(
+                                animation: _controller,
+                                builder: (context, _) {
+                                  final angle = _controller.value * math.pi;
+                                  final showBack = angle > math.pi / 2;
+                                  return Transform(
+                                    transform: Matrix4.identity()
+                                      ..setEntry(3, 2, .0013)
+                                      ..rotateY(angle),
+                                    alignment: Alignment.center,
+                                    child: showBack
+                                        ? Transform(
+                                            transform: Matrix4.identity()
+                                              ..rotateY(math.pi),
+                                            alignment: Alignment.center,
+                                            child: _BackCard(
+                                              session: widget.session,
+                                              payload: _payload,
+                                              branding: _branding,
+                                              width: cardWidth,
+                                              height: cardHeight,
+                                            ),
+                                          )
+                                        : _FrontCard(
+                                            session: widget.session,
+                                            photoUrl: _resolvedPhotoUrl,
+                                            branding: _branding,
+                                            width: cardWidth,
+                                            height: cardHeight,
+                                          ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Center(
+                    child: Text(
+                      'Tap kartu untuk melihat sisi depan/belakang.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _loading ? null : () => _saveCard(share: true),
-                    icon: const Icon(Icons.ios_share_rounded, size: 20),
-                    label: const Text('Bagikan'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: kCardTeal,
-                      side: const BorderSide(color: kCardTeal, width: 1.4),
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed:
+                              _loading ? null : () => _saveCard(share: false),
+                          icon: const Icon(Icons.download_rounded, size: 20),
+                          label: const Text('Simpan'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kCardTeal,
+                            foregroundColor: Colors.white,
+                            shadowColor: kCardTeal.withValues(alpha: .24),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            minimumSize: const Size.fromHeight(56),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ),
-                      minimumSize: const Size.fromHeight(56),
-                      textStyle: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed:
+                              _loading ? null : () => _saveCard(share: true),
+                          icon: const Icon(Icons.ios_share_rounded, size: 20),
+                          label: const Text('Bagikan'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: kCardTeal,
+                            side:
+                                const BorderSide(color: kCardTeal, width: 1.4),
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            minimumSize: const Size.fromHeight(56),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -1345,44 +1359,6 @@ class _CornerSlashClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant _CornerSlashClipper oldClipper) => false;
-}
-
-class _CloseButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _CloseButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: .78)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: .10),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.close_rounded,
-            color: kCardDarkTeal,
-            size: 20,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 String _displayNameForCard(AppSession session) {

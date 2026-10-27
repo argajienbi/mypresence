@@ -9,6 +9,7 @@ import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/attendance_correction_service.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/app_page_header.dart';
 
 class AttendanceCorrectionFormPage extends StatefulWidget {
   final AppSession session;
@@ -216,8 +217,12 @@ class _AttendanceCorrectionFormPageState
         backgroundColor: AppColors.bg,
         body: Column(
           children: [
-            _CorrectionFormHeader(
-              onClose: () => Navigator.of(context).pop(),
+            const AppPageHeader(
+              title: 'Ajukan Koreksi Presensi',
+              subtitle:
+                  'Perbaiki data Clock In atau Clock Out dan kirim ke admin untuk review',
+              icon: Icons.edit_note_rounded,
+              showBack: true,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -395,87 +400,6 @@ class _AttendanceCorrectionFormPageState
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Header teal (mockup pengajuan). SoftHeaderBackground krem tidak dipakai
-/// di sini agar halaman ini mengikuti bahasa myadmin.
-class _CorrectionFormHeader extends StatelessWidget {
-  final VoidCallback onClose;
-
-  const _CorrectionFormHeader({required this.onClose});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .35),
-                  ),
-                ),
-                child: const Icon(Icons.edit_note_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ajukan Koreksi Presensi',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Perbaiki data Clock In atau Clock Out dan kirim ke admin untuk review',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .85),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: onClose,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: .35),
-                    ),
-                  ),
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

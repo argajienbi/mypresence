@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_page_header.dart';
 
 class HelpCenterPage extends StatelessWidget {
   final AppSession session;
@@ -87,10 +88,11 @@ class HelpCenterPage extends StatelessWidget {
       backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          _TealPageHeader(
+          AppPageHeader(
             title: 'Pusat Bantuan',
             subtitle: 'Panduan penggunaan aplikasi untuk ${session.officeName.isEmpty ? 'karyawan' : session.officeName}',
             icon: Icons.help_outline_rounded,
+            showBack: true,
           ),
           Expanded(
             child: ListView(
@@ -185,70 +187,3 @@ class _FaqCard extends StatelessWidget {
   }
 }
 
-/// Header teal datar (pola _ProfileHeader): StickyCurveHeader lengkung
-/// tidak dipakai di sini agar halaman ini mengikuti bahasa myadmin.
-class _TealPageHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _TealPageHeader({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .35),
-                  ),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: .85),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

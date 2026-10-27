@@ -6,6 +6,7 @@ import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/app_page_header.dart';
 import 'proxy_qr_camera_page.dart';
 
 class ProxyAttendancePage extends StatefulWidget {
@@ -127,13 +128,13 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
       message: target == null ? 'Memvalidasi QR...' : 'Menyiapkan kamera...',
       child: Scaffold(
         backgroundColor: const Color(0xFF111827),
-        appBar: AppBar(
-          backgroundColor: AppColors.bg,
-          title: const Text('Titip Absen QR',
-              style: TextStyle(fontWeight: FontWeight.w900)),
-        ),
         body: Column(
           children: [
+            const AppPageHeader(
+              title: 'Titip Absen QR',
+              icon: Icons.qr_code_2_rounded,
+              showBack: true,
+            ),
             Expanded(
               child: Stack(
                 fit: StackFit.expand,

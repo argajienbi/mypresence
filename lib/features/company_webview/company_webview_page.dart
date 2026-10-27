@@ -5,6 +5,7 @@ import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
 import '../../services/company_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_page_header.dart';
 
 class CompanyWebViewPage extends StatefulWidget {
   final AppSession session;
@@ -93,9 +94,30 @@ class _CompanyWebViewPageState extends State<CompanyWebViewPage> {
       backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          _CompanyWebHeader(
+          AppPageHeader(
             title: title,
-            onRefresh: () => _controller?.reload() ?? _load(),
+            icon: Icons.public_rounded,
+            showBack: true,
+            trailing: Tooltip(
+              message: 'Refresh',
+              child: InkWell(
+                onTap: () => _controller?.reload() ?? _load(),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .35),
+                    ),
+                  ),
+                  child: const Icon(Icons.refresh_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ),
           ),
           Expanded(
             child: SafeArea(
@@ -127,81 +149,3 @@ class _CompanyWebViewPageState extends State<CompanyWebViewPage> {
   }
 }
 
-/// Header teal datar (pola _LeaveFormHeader): AppBar standar tidak dipakai
-/// di sini agar halaman ini mengikuti bahasa myadmin.
-class _CompanyWebHeader extends StatelessWidget {
-  final String title;
-  final VoidCallback onRefresh;
-
-  const _CompanyWebHeader({required this.title, required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .14),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .35),
-                  ),
-                ),
-                child: const Icon(Icons.public_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Refresh',
-                child: InkWell(
-                  onTap: onRefresh,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .14),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: .35),
-                      ),
-                    ),
-                    child: const Icon(Icons.refresh_rounded,
-                        color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

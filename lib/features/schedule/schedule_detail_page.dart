@@ -4,6 +4,7 @@ import '../../core/app_theme.dart';
 import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/schedule_service.dart';
+import '../../widgets/app_page_header.dart';
 
 class ScheduleDetailPage extends StatefulWidget {
   final AppSession session;
@@ -103,16 +104,16 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Detail Jadwal'),
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-      ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Detail Jadwal',
+            subtitle: workTime == '-' ? null : workTime,
+            icon: Icons.event_available_rounded,
+            showBack: true,
+          ),
+          Expanded(
+            child: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: _load,
         child: ListView(
@@ -200,7 +201,10 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
               ],
             ),
           ],
-        ),
+            ),
+          ),
+          ),
+        ],
       ),
     );
   }

@@ -8,7 +8,7 @@ import '../../services/attendance_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/sticky_curve_header.dart';
+import '../../widgets/app_page_header.dart';
 import 'attendance_detail_sheet.dart';
 import 'history_models.dart';
 
@@ -686,11 +686,10 @@ class _HistoryPageState extends State<HistoryPage> {
               automaticallyImplyLeading: false,
               flexibleSpace: const FlexibleSpaceBar(
                 collapseMode: CollapseMode.parallax,
-                background: StickyCurveHeader(
+                background: AppPageHeader(
                   title: 'Riwayat Presensi',
                   subtitle: 'Rekam jejak kehadiran dan pengajuan',
                   icon: Icons.history_rounded,
-                  height: 108,
                 ),
               ),
             ),

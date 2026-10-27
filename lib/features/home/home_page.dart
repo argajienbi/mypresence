@@ -107,7 +107,11 @@ class _HomePageState extends State<HomePage> {
       _loadSchedule(),
       _loadApprovedLeaveToday(),
     ]);
-    await _scheduleAttendanceReminders();
+    // Reminder gagal tidak boleh menggagalkan refresh (dulu melempar
+    // error async yang tidak tertangani dari initState).
+    try {
+      await _scheduleAttendanceReminders();
+    } catch (_) {}
   }
 
   Future<void> _loadLocation() async {
@@ -138,43 +142,66 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSchedule({bool notifyChange = false, int retryCount = 0}) async {
+    // 1) Load jadwal — hanya langkah ini yang dijaga try load. Gagal load
+    // TIDAK BOLEH menghapus jadwal bagus terakhir: catch hanya mematikan
+    // loading dan menjadwalkan retry, _schedule dibiarkan apa adanya.
+    DailySchedule data;
     try {
-      final data = await _scheduleService.resolveToday(widget.session);
-      final nextFingerprint = _scheduleFingerprint(data);
-      final changed = notifyChange &&
-          _lastScheduleFingerprint.isNotEmpty &&
-          _lastScheduleFingerprint != nextFingerprint;
-      if (!mounted) return;
-      setState(() {
-        _schedule = data;
-        _loadingSchedule = false;
-        _lastScheduleFingerprint = nextFingerprint;
-      });
-      // Retry otomatis jika hasil kosong (waktu kosong) — samakan dengan Detail Jadwal.
-      if (_isScheduleEmpty(data) && retryCount < 2) {
+      data = await _scheduleService.resolveToday(widget.session);
+    } catch (_) {
+      if (mounted) setState(() => _loadingSchedule = false);
+      // Retry maksimal 2x jika gagal total (tanpa mengosongkan jadwal).
+      if (retryCount < 2) {
         await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
+        if (mounted) {
+          _loadSchedule(notifyChange: notifyChange, retryCount: retryCount + 1);
+        }
+      }
+      return;
+    }
+    if (!mounted) return;
+    final nextFingerprint = _scheduleFingerprint(data);
+    final changed = notifyChange &&
+        _lastScheduleFingerprint.isNotEmpty &&
+        _lastScheduleFingerprint != nextFingerprint;
+    setState(() {
+      _schedule = data;
+      _loadingSchedule = false;
+      _lastScheduleFingerprint = nextFingerprint;
+    });
+    // Retry otomatis jika hasil kosong (waktu kosong) — samakan dengan Detail Jadwal.
+    // Kegagalan retry tidak boleh mengosongkan jadwal yang sedang tampil.
+    if (_isScheduleEmpty(data) && retryCount < 2) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      try {
         final retry = await _scheduleService.resolveToday(widget.session);
         if (!mounted) return;
         if (!_isScheduleEmpty(retry)) {
+          data = retry;
           setState(() {
             _schedule = retry;
             _lastScheduleFingerprint = _scheduleFingerprint(retry);
           });
         }
+      } catch (_) {
+        // Retry gagal: jadwal yang sedang tampil dipertahankan.
       }
+    }
+    // 2) Langkah pasca-load — masing-masing dibungkus sendiri. Dulu kedua
+    // langkah ini ada di dalam try yang sama dengan load, sehingga saat
+    // reminder/notifikasi throw, catch men-set _schedule = null: jadwal
+    // yang baru tampil berkedip lalu hilang, dan retry mengulang siklusnya.
+    try {
       await _scheduleAttendanceReminders();
-      if (changed) await _showScheduleChangedNotification(data);
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _schedule = null;
-        _loadingSchedule = false;
-      });
-      // Retry maksimal 2x jika gagal total.
-      if (retryCount < 2) {
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) _loadSchedule(notifyChange: notifyChange, retryCount: retryCount + 1);
+      // Reminder gagal: jadwal tetap tampil; dicoba lagi di load berikut.
+    }
+    if (changed) {
+      try {
+        await _showScheduleChangedNotification(data);
+      } catch (_) {
+        // Notifikasi perubahan jadwal gagal: jadwal tetap tampil.
       }
     }
   }
@@ -492,7 +519,7 @@ class _HomePageState extends State<HomePage> {
           // kartu lokasi menempel tepat di bawahnya. Isi header hilang
           // dengan clip standar FlexibleSpaceBar (tidak tertekan).
           SliverAppBar(
-            expandedHeight: 176,
+            expandedHeight: 108,
             collapsedHeight: 0, // efektif = 0 + topPadding (framework)
             toolbarHeight: 0,
             pinned: true,
