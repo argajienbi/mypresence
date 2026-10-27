@@ -131,8 +131,8 @@ class _LoginPageState extends State<LoginPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
@@ -140,33 +140,29 @@ class _LoginPageState extends State<LoginPage> {
         visible: _loading,
         message: 'Memproses akun...',
         child: Scaffold(
-          backgroundColor: AppColors.bg,
+          backgroundColor: Colors.white,
           body: SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: Column(
               children: [
-                // Header gradient biru dengan logo (mockup 04)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(24, topInset + 56, 24, 64),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.primary, AppColors.primaryDark],
-                    ),
-                  ),
+                // Header polos (mockup): tile logo + judul, tanpa gradient.
+                // Tile tetap putih karena logo asli berupa lingkaran hijau
+                // (akan bentrok di atas coral); radius 18 mengikuti mockup.
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24, topInset + 28, 24, 0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 76,
-                        height: 76,
+                        width: 64,
+                        height: 64,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.line),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: .12),
+                              color: Colors.black.withValues(alpha: .08),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -175,36 +171,36 @@ class _LoginPageState extends State<LoginPage> {
                         child: Center(
                           child: Image.asset(
                             AuthUi.appLogoAsset,
-                            width: 44,
-                            height: 44,
+                            width: 40,
+                            height: 40,
                             fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 26),
                       const Text(
-                        'MyPresence',
+                        'Masuk ke MyPresence',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
+                          color: AppColors.text,
+                          fontSize: 26,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Absensi cerdas untuk tim Anda',
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Gunakan akun yang sudah terdaftar di perusahaan Anda.',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: .85),
-                          fontSize: 12.5,
+                          color: AppColors.muted,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // White card overlapping (mockup 04)
+                // Kartu form (mockup)
                 Container(
-                  margin: const EdgeInsets.fromLTRB(20, -34, 20, 0),
+                  margin: const EdgeInsets.fromLTRB(20, 26, 20, 0),
                   padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -221,23 +217,6 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Selamat Datang 👋',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Masuk untuk mencatat kehadiran Anda',
-                        style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 14),
                       const Text(
                         'Email',
                         style: TextStyle(
@@ -299,7 +278,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       AuthErrorBanner(message: _error),
                       const SizedBox(height: 14),
-                      _BlueGradientButton(
+                      _PrimaryButton(
                           label: 'Masuk', onPressed: _login, loading: _loading),
                     ],
                   ),
@@ -347,13 +326,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-/// Tombol gradient biru sesuai mockup 04 (lokal, tidak mengubah auth_visuals.dart).
-class _BlueGradientButton extends StatelessWidget {
+/// Tombol utama teal solid sesuai mockup (menggantikan tombol gradient biru).
+class _PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
 
-  const _BlueGradientButton({
+  const _PrimaryButton({
     required this.label,
     required this.onPressed,
     this.loading = false,
@@ -364,40 +343,29 @@ class _BlueGradientButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primary, AppColors.primaryDark],
-          ),
-          borderRadius: BorderRadius.circular(10),
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: .55),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
         ),
-        child: ElevatedButton(
-          onPressed: loading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
-          ),
-          child: loading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2.5, color: Colors.white),
-                )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900),
-                ),
-        ),
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: Colors.white),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900),
+              ),
       ),
     );
   }

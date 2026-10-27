@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
-/// Palet "Fintech Fusion" — kombinasi BRIMO (biru profesional),
-/// Shopee (oranye energik), Jago (minimalis bersih), Kredivo (kartu rapi).
-/// Dikunci 2026-10-19 sesuai mockup ~/workspace/mockup-fintech/.
+/// Palet "Bahasa MyAdmin" — diselaraskan dengan mockup
+/// ~/workspace/mypresence-mockup/ (token myadmin: primer teal #0b7a8c,
+/// aksen coral #f2523f hanya untuk logo/tile, gelap #0b2b33, radius 10px).
+/// Menggantikan palet "Fintech Fusion" (biru #0B5ED7) per 2026-10-28.
+/// Field dipertahankan agar kompatibel dengan semua konsumen.
 class AppColors {
   // Brand
-  static const primary = Color(0xFF0B5ED7);
-  static const primaryDark = Color(0xFF084298);
-  static const primarySoft = Color(0xFFE3EEFD);
-  static const accent = Color(0xFFFF6B35);
-  static const accentDark = Color(0xFFE8590C);
-  static const accentSoft = Color(0xFFFFEDE4);
+  static const primary = Color(0xFF0B7A8C);
+  static const primaryDark = Color(0xFF0B2B33);
+  static const primarySoft = Color(0xFFE0F2F5);
+  static const accent = Color(0xFFF2523F);
+  static const accentDark = Color(0xFFC93A28);
+  static const accentSoft = Color(0xFFFDECEA);
 
   // Surface
   static const bg = Color(0xFFF1F5F9);
-  static const header = Color(0xFF0B5ED7);
+  static const header = Color(0xFF0B7A8C);
   static const card = Color(0xFFFFFFFF);
   static const line = Color(0xFFE2E8F0);
 
@@ -29,16 +31,17 @@ class AppColors {
   static const orangeSoft = Color(0xFFFEF3C7);
   static const red = Color(0xFFDC2626);
   static const redSoft = Color(0xFFFEE2E2);
-  static const blue = Color(0xFF0B5ED7);
-  static const blueSoft = Color(0xFFE3EEFD);
+  // Dulu alias biru Fintech; kini alias teal brand (tidak ada lagi #0B5ED7).
+  static const blue = Color(0xFF0B7A8C);
+  static const blueSoft = Color(0xFFE0F2F5);
   static const purple = Color(0xFF7C3AED);
   static const purpleSoft = Color(0xFFEDE9FE);
 
-  // Header gradient (BRIMO style)
+  // Header gradient (teal gelap -> teal, bahasa MyAdmin)
   static const headerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
+    colors: [AppColors.primaryDark, AppColors.primary],
   );
 }
 

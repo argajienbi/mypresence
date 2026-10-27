@@ -5,7 +5,9 @@ import '../../core/models/app_session.dart';
 import '../../core/models/request_status_item.dart';
 import '../../services/request_status_service.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/sticky_curve_header.dart';
+import '../corrections/attendance_correction_form_page.dart';
+import '../leave/leave_form_page.dart';
+import '../proxy_qr/proxy_attendance_page.dart';
 import 'request_status_detail_sheet.dart';
 
 enum RequestStatusFilter {
@@ -139,6 +141,38 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
     setState(() => _typeFilter = filter);
   }
 
+  Future<void> _openLeaveForm() async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            LeaveFormPage(session: widget.session, type: 'izin'),
+      ),
+    );
+    if (submitted == true && mounted) _load();
+  }
+
+  Future<void> _openCorrectionForm() async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AttendanceCorrectionFormPage(
+          session: widget.session,
+          initialDate: DateTime.now(),
+          oldAttendance: null,
+        ),
+      ),
+    );
+    if (submitted == true && mounted) _load();
+  }
+
+  Future<void> _openProxyQr() async {
+    final submitted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ProxyAttendancePage(session: widget.session),
+      ),
+    );
+    if (submitted == true && mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredItems = _filteredItems;
@@ -150,12 +184,7 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
       backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          const StickyCurveHeader(
-            title: 'Status Pengajuan',
-            subtitle: 'Pantau izin, QR titip absen, dan koreksi presensi',
-            icon: Icons.assignment_turned_in_rounded,
-            height: 108,
-          ),
+          _PengajuanHeader(onAdd: _openLeaveForm),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primary,
@@ -164,6 +193,14 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 96),
                 children: [
+                  _StatsRow(
+                    pending: _count(RequestStatusFilter.pending),
+                    approved: _count(RequestStatusFilter.approved),
+                    rejected: _count(RequestStatusFilter.rejected),
+                    current: _filter,
+                    onSelect: _selectFilter,
+                  ),
+                  const SizedBox(height: 12),
                   _FilterBar(
                     current: _filter,
                     currentType: _typeFilter,
@@ -207,11 +244,245 @@ class _RequestStatusPageState extends State<RequestStatusPage> {
                     )
                   else
                     ...filteredItems.map(_RequestStatusCard.new),
+                  if (!_loading) ...[
+                    const SizedBox(height: 16),
+                    _LinkRow(
+                      icon: Icons.edit_note_rounded,
+                      label: 'Koreksi Absensi',
+                      onTap: _openCorrectionForm,
+                    ),
+                    const SizedBox(height: 10),
+                    _LinkRow(
+                      icon: Icons.qr_code_2_rounded,
+                      label: 'Titip Absen QR',
+                      onTap: _openProxyQr,
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Header teal (mockup pengajuan). StickyCurveHeader (shared, biru) tidak
+/// dipakai di sini agar halaman ini mengikuti bahasa myadmin.
+class _PengajuanHeader extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _PengajuanHeader({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Pengajuan',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: onAdd,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .14),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .35),
+                        ),
+                      ),
+                      child: const Icon(Icons.add_rounded,
+                          color: Colors.white, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pantau izin, QR titip absen, dan koreksi presensi',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: .85),
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu ringkasan hitungan (mockup pengajuan). Ketuk kartu untuk memfilter.
+class _StatsRow extends StatelessWidget {
+  final int pending;
+  final int approved;
+  final int rejected;
+  final RequestStatusFilter current;
+  final ValueChanged<RequestStatusFilter> onSelect;
+
+  const _StatsRow({
+    required this.pending,
+    required this.approved,
+    required this.rejected,
+    required this.current,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _StatCard(
+          label: 'Menunggu',
+          count: pending,
+          color: AppColors.orange,
+          selected: current == RequestStatusFilter.pending,
+          onTap: () => onSelect(RequestStatusFilter.pending),
+        ),
+        const SizedBox(width: 10),
+        _StatCard(
+          label: 'Disetujui',
+          count: approved,
+          color: AppColors.green,
+          selected: current == RequestStatusFilter.approved,
+          onTap: () => onSelect(RequestStatusFilter.approved),
+        ),
+        const SizedBox(width: 10),
+        _StatCard(
+          label: 'Ditolak',
+          count: rejected,
+          color: AppColors.red,
+          selected: current == RequestStatusFilter.rejected,
+          onTap: () => onSelect(RequestStatusFilter.rejected),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _StatCard({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? color : AppColors.line,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Baris tautan ke form koreksi / titip absen QR (mockup pengajuan).
+class _LinkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _LinkRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -236,7 +507,7 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final filters = [
       _FilterChipData(RequestStatusFilter.all, 'Semua'),
-      _FilterChipData(RequestStatusFilter.pending, 'Pending'),
+      _FilterChipData(RequestStatusFilter.pending, 'Menunggu'),
       _FilterChipData(RequestStatusFilter.approved, 'Disetujui'),
       _FilterChipData(RequestStatusFilter.rejected, 'Ditolak'),
     ];
@@ -322,7 +593,7 @@ class _FilterBar extends StatelessWidget {
                               horizontal: 14, vertical: 9),
                           decoration: BoxDecoration(
                             color: currentType == types[index].value
-                                ? AppColors.primary
+                                ? AppColors.primaryDark
                                 : AppColors.bg,
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -506,7 +777,7 @@ class _RequestStatusCard extends StatelessWidget {
       case 'rejected':
         return 'DITOLAK';
       default:
-        return 'PENDING';
+        return 'MENUNGGU';
     }
   }
 

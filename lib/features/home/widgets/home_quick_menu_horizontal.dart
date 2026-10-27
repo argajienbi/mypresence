@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
-import '../../../widgets/app_card.dart';
 
+/// Menu cepat bahasa myadmin (mockup ~/workspace/mypresence-mockup/home.html).
+/// Deret 7 ikon lingkaran teal + label — tanpa kartu, tanpa "Lihat semua"
+/// (ketujuh menu sudah muat dalam satu baris).
+/// Ketujuh aksi & tujuannya dipertahankan persis seperti sebelumnya.
 class HomeQuickMenuHorizontal extends StatelessWidget {
   final VoidCallback onStatus;
   final VoidCallback onSchedule;
@@ -24,152 +27,24 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
   });
 
   List<_MenuAction> get _actions => [
-        _MenuAction('Status', Icons.assignment_turned_in_rounded, const Color(0xFF8A7F72), onStatus),
-        _MenuAction('Detail Jadwal', Icons.event_available_rounded, AppColors.primary, onSchedule),
-        _MenuAction('Izin', Icons.event_note_rounded, AppColors.primary, onIzin),
-        _MenuAction('Sakit', Icons.medical_services_rounded, AppColors.red, onSakit),
-        _MenuAction('Cuti', Icons.work_rounded, AppColors.orange, onCuti),
-        _MenuAction('Lembur', Icons.more_time_rounded, const Color(0xFF9B7EBD), onLembur),
-        _MenuAction('QR', Icons.qr_code_2_rounded, AppColors.green, onQrTeman),
+        _MenuAction('Status', Icons.assignment_turned_in_rounded, onStatus),
+        _MenuAction('Jadwal', Icons.calendar_month_rounded, onSchedule),
+        _MenuAction('Izin', Icons.event_note_rounded, onIzin),
+        _MenuAction('Sakit', Icons.medical_services_rounded, onSakit),
+        _MenuAction('Cuti', Icons.work_history_rounded, onCuti),
+        _MenuAction('Lembur', Icons.more_time_rounded, onLembur),
+        _MenuAction('QR Teman', Icons.qr_code_2_rounded, onQrTeman),
       ];
 
   @override
   Widget build(BuildContext context) {
     final actions = _actions;
 
-    return AppCard(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Menu Cepat',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      'Akses cepat ke fitur penting harian.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () => _showAllMenu(context, actions),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Lihat semua',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: [
-                for (int index = 0; index < actions.length; index++) ...[
-                  _MenuItem(action: actions[index]),
-                  SizedBox(width: index == actions.length - 1 ? 2 : 10),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAllMenu(BuildContext context, List<_MenuAction> actions) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: .14),
-                  blurRadius: 28,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.line,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Semua Menu Cepat',
-                  style: TextStyle(color: AppColors.text, fontSize: 18, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Pilih fitur yang ingin digunakan.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 12.5, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: actions.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: .82,
-                  ),
-                  itemBuilder: (context, index) => _MenuItem(
-                    action: actions[index],
-                    closeThenTap: () {
-                      Navigator.of(context).pop();
-                      actions[index].onTap();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    return Row(
+      children: [
+        for (final action in actions)
+          Expanded(child: _MenuItem(action: action)),
+      ],
     );
   }
 }
@@ -177,52 +52,54 @@ class HomeQuickMenuHorizontal extends StatelessWidget {
 class _MenuAction {
   final String label;
   final IconData icon;
-  final Color color;
   final VoidCallback onTap;
 
-  const _MenuAction(this.label, this.icon, this.color, this.onTap);
+  const _MenuAction(this.label, this.icon, this.onTap);
 }
 
 class _MenuItem extends StatelessWidget {
   final _MenuAction action;
-  final VoidCallback? closeThenTap;
 
-  const _MenuItem({required this.action, this.closeThenTap});
+  const _MenuItem({required this.action});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: closeThenTap ?? action.onTap,
-        child: Container(
-          width: 78,
-          height: 86,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.line),
-          ),
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: action.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.line, width: 1),
                 ),
-                child: Icon(action.icon, color: action.color, size: 23),
+                child: Icon(
+                  action.icon,
+                  color: AppColors.primary,
+                  size: 24,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 action.label,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: AppColors.text, fontWeight: FontWeight.w800, height: 1.15),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w500,
+                  height: 1.15,
+                ),
               ),
             ],
           ),

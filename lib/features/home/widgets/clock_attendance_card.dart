@@ -1,17 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-/// Kartu absen gaya Tiket V2 (dikunci 2026-10-19, mockup card-absen.html).
-/// Perforasi + stub tanggal, panel info Terakhir & Berikutnya.
-/// Seluruh props & logika status dipertahankan; lastLabel/nextLabel opsional.
-class ClockAttendanceCard extends StatelessWidget {
+import '../../../core/app_theme.dart';
+
+/// Kartu absen bahasa myadmin (mockup ~/workspace/mypresence-mockup/home.html).
+/// Kartu putih: jam besar live, pill status, Masuk/Pulang, "Berikutnya",
+/// tombol teal Absen Masuk/Pulang.
+///
+/// Menggantikan kartu "Tiket V2" (gradient biru/oranye/hijau + perforasi)
+/// mengikuti mockup — cabang redesign ini adalah alternatifnya; Tiket V2
+/// tetap ada di branch uti/firebase-mypresence-prod.
+/// Props & logika status dipertahankan, kecuali lastLabel (tiket) yang dihapus.
+class ClockAttendanceCard extends StatefulWidget {
   final String nextAction;
   final bool insideRadius;
   final bool hasIn;
   final bool hasOut;
   final String? checkInTime;
   final String? checkOutTime;
-  final String? lastLabel;
   final String? nextLabel;
+
+  /// Label status khusus, mis. "Izin Disetujui" saat pengajuan hari ini
+  /// disetujui. Bila null, label dihitung dari hasIn/hasOut.
+  final String? statusLabel;
   final VoidCallback onPressed;
 
   const ClockAttendanceCard({
@@ -23,270 +35,187 @@ class ClockAttendanceCard extends StatelessWidget {
     required this.onPressed,
     this.checkInTime,
     this.checkOutTime,
-    this.lastLabel,
     this.nextLabel,
+    this.statusLabel,
   });
 
   @override
+  State<ClockAttendanceCard> createState() => _ClockAttendanceCardState();
+}
+
+class _ClockAttendanceCardState extends State<ClockAttendanceCard> {
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isDone = nextAction == 'done' && hasIn && hasOut;
-    final isClockIn = nextAction == 'masuk' && !isDone;
-    final isClockOut = nextAction == 'pulang' && !isDone;
-    final isInteractive = isClockIn || isClockOut;
+    final isDone = widget.nextAction == 'done' && widget.hasIn && widget.hasOut;
+    final isClockOut = widget.nextAction == 'pulang' && !isDone;
 
-    final checkIn = _formatTime(checkInTime);
-    final checkOut = _formatTime(checkOutTime);
-    final now = DateTime.now();
-
-    late final String title;
-    late final String subtitle;
-    late final LinearGradient gradient;
-    late final Color shadowColor;
-
-    if (isDone) {
-      title = 'Presensi Selesai';
-      subtitle = 'Tiket hari ini sudah terpakai';
-      gradient = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF16A34A), Color(0xFF15803D)],
-      );
-      shadowColor = const Color(0xFF15803D).withValues(alpha: .30);
-    } else if (isClockOut) {
-      title = 'Absen Pulang';
-      subtitle = 'Tap untuk robek tiket pulang';
-      gradient = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFF6B35), Color(0xFFE8590C)],
-      );
-      shadowColor = const Color(0xFFE8590C).withValues(alpha: .32);
-    } else {
-      title = 'Absen Masuk';
-      subtitle = 'Tap untuk robek tiket masuk';
-      gradient = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
-      );
-      shadowColor = const Color(0xFF084298).withValues(alpha: .34);
-    }
-
-    // Info waktu: fallback ke jam absen hari ini bila label tak diberikan.
-    final lastInfo = (lastLabel?.trim().isNotEmpty ?? false)
-        ? lastLabel!.trim()
-        : (hasOut
-            ? 'Pulang $checkOut'
-            : hasIn
-                ? 'Masuk $checkIn'
-                : '-');
-    final nextInfo = (nextLabel?.trim().isNotEmpty ?? false)
-        ? nextLabel!.trim()
+    final checkIn = _formatTime(widget.checkInTime);
+    final checkOut = _formatTime(widget.checkOutTime);
+    final nextInfo = (widget.nextLabel?.trim().isNotEmpty ?? false)
+        ? widget.nextLabel!.trim()
         : '-';
 
-    final contentKey = ValueKey('$nextAction|$checkIn|$checkOut');
+    final statusText = isDone
+        ? 'Presensi Selesai'
+        : widget.hasIn
+            ? 'Sudah Absen Masuk'
+            : (widget.statusLabel?.trim().isNotEmpty ?? false)
+                ? widget.statusLabel!.trim()
+                : 'Belum Ada Presensi';
+    final statusIsDone = isDone || widget.hasIn;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isInteractive ? onPressed : null,
+    final clockText =
+        '${_two(_now.hour)}:${_two(_now.minute)}:${_two(_now.second)}';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            gradient: gradient,
-            boxShadow: [
-              BoxShadow(
-                color: shadowColor,
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
+        border: Border.all(color: AppColors.line, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .07),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
-          child: IntrinsicHeight(
-            child: Stack(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Stub tanggal
-                    Container(
-                      width: 74,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 6,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            now.day.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              height: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            _monthAbbr(now.month).toUpperCase(),
-                            style: TextStyle(
-                              color:
-                                  Colors.white.withValues(alpha: .85),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: .6,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      clockText,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
-                    // Garis perforasi vertikal
-                    SizedBox(
-                      width: 2,
-                      child: CustomPaint(
-                        painter: const _DashedLinePainter(vertical: true),
-                      ),
-                    ),
-                    // Konten utama
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) =>
-                              FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, .06),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          ),
-                          child: Column(
-                            key: contentKey,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white
-                                          .withValues(alpha: .20),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      isDone
-                                          ? Icons.check_rounded
-                                          : Icons
-                                              .photo_camera_front_rounded,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 15.5,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          subtitle,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: Colors.white
-                                                .withValues(alpha: .88),
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 9,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      Colors.black.withValues(alpha: .14),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _TimeRow(
-                                      label: 'Terakhir',
-                                      value: lastInfo,
-                                    ),
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          vertical: 6),
-                                      child: SizedBox(
-                                        height: 1,
-                                        width: double.infinity,
-                                        child: CustomPaint(
-                                          painter: _DashedLinePainter(
-                                              vertical: false),
-                                        ),
-                                      ),
-                                    ),
-                                    _TimeRow(
-                                      label: 'Berikutnya',
-                                      value: nextInfo,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _dateLine(_now),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-                // Notch perforasi atas & bawah
-                const Positioned(
-                  left: 63,
-                  top: -11,
-                  child: _Notch(),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusIsDone
+                      ? const Color(0xFFDCFCE7)
+                      : AppColors.bg,
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                const Positioned(
-                  left: 63,
-                  bottom: -11,
-                  child: _Notch(),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color:
+                        statusIsDone ? AppColors.green : AppColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ],
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1, color: AppColors.line),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _TimeCell(label: 'Masuk', value: checkIn),
+              ),
+              Expanded(
+                child: _TimeCell(label: 'Pulang', value: checkOut),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Berikutnya: $nextInfo',
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ),
+          const SizedBox(height: 14),
+          if (isDone)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Presensi Hari Ini Selesai',
+                style: TextStyle(
+                  color: AppColors.green,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: widget.onPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: Text(isClockOut ? 'Absen Pulang' : 'Absen Masuk'),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -296,99 +225,51 @@ class ClockAttendanceCard extends StatelessWidget {
     return text.isEmpty ? '--:--' : text;
   }
 
-  String _monthAbbr(int month) {
-    const abbr = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+  String _two(int value) => value.toString().padLeft(2, '0');
+
+  String _dateLine(DateTime date) {
+    const weekdays = [
+      'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu',
     ];
-    return abbr[month - 1];
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    ];
+    return '${weekdays[date.weekday - 1]}, ${date.day} '
+        '${months[date.month - 1]} ${date.year}';
   }
 }
 
-class _Notch extends StatelessWidget {
-  const _Notch();
-
-  @override
-  Widget build(BuildContext context) {
-    // Warna = background halaman agar terlihat seperti lubang tiket.
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF1F5F9),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-class _TimeRow extends StatelessWidget {
+class _TimeCell extends StatelessWidget {
   final String label;
   final String value;
 
-  const _TimeRow({required this.label, required this.value});
+  const _TimeCell({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: .75),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-            ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
       ],
     );
   }
-}
-
-class _DashedLinePainter extends CustomPainter {
-  final bool vertical;
-
-  const _DashedLinePainter({required this.vertical});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: .45)
-      ..strokeWidth = vertical ? 2 : 1;
-    const dash = 5.0;
-    const gap = 4.0;
-    if (vertical) {
-      double y = 4;
-      while (y < size.height - 4) {
-        final end = (y + dash).clamp(0.0, size.height - 4);
-        canvas.drawLine(Offset(size.width / 2, y),
-            Offset(size.width / 2, end), paint);
-        y += dash + gap;
-      }
-    } else {
-      double x = 0;
-      while (x < size.width) {
-        final end = (x + dash).clamp(0.0, size.width);
-        canvas.drawLine(Offset(x, 0), Offset(end, 0), paint);
-        x += dash + gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -16,6 +16,7 @@ import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/schedule_service.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/app_feedback.dart';
 import '../attendance/camera_presence_page.dart';
 import '../leave/leave_form_page.dart';
@@ -56,14 +57,13 @@ class _HomePageState extends State<HomePage> {
 
   Timer? _timer;
   Timer? _schedulePollTimer;
-  String _date = AppDate.dayDate(DateTime.now());
+  String _date = _shortDateLine(DateTime.now());
   double? _distance;
   double? _userLat;
   double? _userLng;
   bool _insideRadius = false;
   bool _loadingLocation = true;
   Map<String, dynamic>? _today;
-  Map<String, dynamic>? _yesterday;
   DailySchedule? _schedule;
   Map<String, dynamic>? _approvedLeaveToday;
   bool _loadingSchedule = true;
@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() => _date = AppDate.dayDate(DateTime.now()));
+      setState(() => _date = _shortDateLine(DateTime.now()));
     });
     _schedulePollTimer = Timer.periodic(
       const Duration(minutes: 5),
@@ -104,7 +104,6 @@ class _HomePageState extends State<HomePage> {
     await Future.wait([
       _loadLocation(),
       _loadToday(),
-      _loadYesterday(),
       _loadSchedule(),
       _loadApprovedLeaveToday(),
     ]);
@@ -136,16 +135,6 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadToday() async {
     final data = await _attendance.todayAttendance(widget.session);
     if (mounted) setState(() => _today = data);
-  }
-
-  Future<void> _loadYesterday() async {
-    try {
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      final data = await _attendance.attendanceForDate(widget.session, yesterday);
-      if (mounted) setState(() => _yesterday = data);
-    } catch (_) {
-      // Abaikan — tiket tetap tampil dengan fallback.
-    }
   }
 
   Future<void> _loadSchedule({bool notifyChange = false, int retryCount = 0}) async {
@@ -320,24 +309,7 @@ class _HomePageState extends State<HomePage> {
   bool get hasIn => _today?['masuk'] is Map;
   bool get hasOut => _today?['pulang'] is Map;
 
-  /// Label info "Terakhir" untuk kartu tiket.
-  String? get _lastLabel {
-    if (hasOut) return null; // kartu pakai fallback 'Pulang $pulang'
-    if (hasIn) return null; // kartu pakai fallback 'Masuk $masuk'
-    // Belum absen hari ini — tampilkan data kemarin (mockup).
-    final y = _yesterday;
-    if (y != null) {
-      final masuk = y['masuk'];
-      final pulang = y['pulang'];
-      final masukTime = masuk is Map ? (masuk['time'] ?? '').toString() : '';
-      final pulangTime = pulang is Map ? (pulang['time'] ?? '').toString() : '';
-      if (pulangTime.isNotEmpty) return 'Kemarin $pulangTime';
-      if (masukTime.isNotEmpty) return 'Kemarin $masukTime';
-    }
-    return null; // kartu tampil '-'
-  }
-
-  /// Label info "Berikutnya" untuk kartu tiket (dari jadwal).
+  /// Label info "Berikutnya" untuk kartu jam (dari jadwal).
   String get _nextLabel {
     final s = _schedule;
     final ws = s == null
@@ -497,11 +469,14 @@ class _HomePageState extends State<HomePage> {
                 '--:--')
             .toString()
         : '--:--';
+    final leaveLabel = _approvedLeaveToday != null
+        ? '${_leaveTypeLabel((_approvedLeaveToday!['type'] ?? _approvedLeaveToday!['leave_type'] ?? '').toString())} Disetujui'
+        : null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        // Selalu putih: strip biru header selalu di belakang status bar.
+        // Selalu putih: strip teal header selalu di belakang status bar.
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: Colors.white,
@@ -513,7 +488,7 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         physics: const ClampingScrollPhysics(),
         slivers: [
-          // Header biru collapse jadi strip setinggi status bar (pinned);
+          // Header teal collapse jadi strip setinggi status bar (pinned);
           // kartu lokasi menempel tepat di bawahnya. Isi header hilang
           // dengan clip standar FlexibleSpaceBar (tidak tertekan).
           SliverAppBar(
@@ -560,7 +535,7 @@ class _HomePageState extends State<HomePage> {
           SliverPersistentHeader(
             pinned: true,
             delegate: _StickyCardDelegate(
-              height: 138,
+              height: 110,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 25, 18, 8),
                 child: RadiusCard(
@@ -607,8 +582,8 @@ class _HomePageState extends State<HomePage> {
                     hasOut: hasOut,
                     checkInTime: masuk,
                     checkOutTime: pulang,
-                    lastLabel: _lastLabel,
                     nextLabel: _nextLabel,
+                    statusLabel: leaveLabel,
                     onPressed: _openAttendance,
                   ),
                   const SizedBox(height: 14),
@@ -624,6 +599,13 @@ class _HomePageState extends State<HomePage> {
                     onCuti: () => _openLeave('cuti'),
                     onLembur: () => _openLeave('lembur'),
                     onQrTeman: _openQrTeman,
+                  ),
+                  const SizedBox(height: 16),
+                  _TodayScheduleCard(
+                    schedule: _schedule,
+                    loading: _loadingSchedule,
+                    workTime: _workTime(_schedule),
+                    onDetail: _showScheduleDetails,
                   ),
                   const SizedBox(height: 16),
                   HomeAnnouncementCard(session: widget.session),
@@ -650,6 +632,10 @@ class _HomePageState extends State<HomePage> {
     return '$start - $end';
   }
 
+  /// Baris tanggal pendek untuk header ("Selasa, 27 Okt 2026").
+  static String _shortDateLine(DateTime value) =>
+      '${AppDate.weekday(value)}, ${AppDate.shortDate(value)} ${value.year}';
+
   String _statusMessage(String status) {
     if (_approvedLeaveToday != null) {
       return 'Pengajuan sudah disetujui admin. Absen hari ini tidak wajib dilakukan.';
@@ -668,6 +654,132 @@ class _HomePageState extends State<HomePage> {
       default:
         return 'Izin';
     }
+  }
+}
+
+/// Kartu "Jadwal Hari Ini" bahasa myadmin (mockup home.html).
+/// Baris Shift / Jendela masuk / Status + tautan Detail ke halaman jadwal.
+class _TodayScheduleCard extends StatelessWidget {
+  final DailySchedule? schedule;
+  final bool loading;
+  final String workTime;
+  final VoidCallback onDetail;
+
+  const _TodayScheduleCard({
+    required this.schedule,
+    required this.loading,
+    required this.workTime,
+    required this.onDetail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final s = schedule;
+    final shiftName = s == null
+        ? ''
+        : (s.shiftName.isNotEmpty ? s.shiftName : s.timetableName);
+    final shiftLabel = loading
+        ? 'Memuat...'
+        : s == null
+            ? '-'
+            : shiftName.isEmpty
+                ? workTime
+                : (workTime == '-' ? shiftName : '$shiftName • $workTime');
+    final checkInWindow = loading
+        ? 'Memuat...'
+        : s == null
+            ? '-'
+            : '${s.checkInStart.isEmpty ? '-' : s.checkInStart}–${s.checkInEnd.isEmpty ? '-' : s.checkInEnd}';
+    final statusLabel = loading
+        ? 'Memuat...'
+        : s == null
+            ? 'Belum tersedia'
+            : s.isHoliday
+                ? 'Libur'
+                : !s.isWorkday
+                    ? (s.message.isEmpty ? 'Tidak ada jadwal' : s.message)
+                    : 'Hari kerja';
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Jadwal Hari Ini',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: onDetail,
+                borderRadius: BorderRadius.circular(6),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'Detail ›',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _KvRow(label: 'Shift', value: shiftLabel),
+          const SizedBox(height: 10),
+          _KvRow(label: 'Jendela masuk', value: checkInWindow),
+          const SizedBox(height: 10),
+          _KvRow(label: 'Status', value: statusLabel),
+        ],
+      ),
+    );
+  }
+}
+
+class _KvRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _KvRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.muted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

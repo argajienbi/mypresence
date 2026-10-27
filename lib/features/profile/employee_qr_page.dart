@@ -15,10 +15,10 @@ import '../../services/qr_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../../widgets/sticky_curve_layout.dart';
 
-const Color kCardDarkTeal = Color(0xFF084298);
-const Color kCardDeepTeal = Color(0xFF0B5ED7);
-const Color kCardTeal = Color(0xFF0B5ED7);
-const Color kCardCyan = Color(0xFF3B82F6);
+const Color kCardDarkTeal = Color(0xFF0B2B33);
+const Color kCardDeepTeal = Color(0xFF0B7A8C);
+const Color kCardTeal = Color(0xFF0B7A8C);
+const Color kCardCyan = Color(0xFF14B8A6);
 const Color kCardGreen = Color(0xFF16A34A);
 const Color kCardSoftGray = Color(0xFFF1F5F9);
 const Color kCardWhite = Color(0xFFFFFFFF);

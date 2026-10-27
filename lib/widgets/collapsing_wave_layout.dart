@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../core/app_theme.dart';
+
 class CollapsingWavePage extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -106,11 +109,7 @@ class _CollapsingWaveDelegate extends SliverPersistentHeaderDelegate {
               clipper: _WaveClipper(progress: t),
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
-                  ),
+                  gradient: AppColors.headerGradient,
                 ),
               ),
             ),
@@ -130,8 +129,8 @@ class _CollapsingWaveDelegate extends SliverPersistentHeaderDelegate {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .72), borderRadius: BorderRadius.circular(18)),
-                      child: Icon(icon, color: const Color(0xFFC85A3A)),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .72), borderRadius: BorderRadius.circular(10)),
+                      child: Icon(icon, color: AppColors.primary),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

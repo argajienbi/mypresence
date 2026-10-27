@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 class AuthUi {
   static const Color bgTop = Color(0xFFF1F5F9);
   static const Color bgBottom = Color(0xFFFFFFFF);
-  static const Color headerGreen = Color(0xFF0B5ED7);
+  // Dulu biru Fintech; kini teal bahasa MyAdmin.
+  static const Color headerGreen = Color(0xFF0B7A8C);
   static const Color green = Color(0xFF16A34A);
-  static const Color greenDark = Color(0xFF084298);
-  static const Color deepTeal = Color(0xFF084298);
-  static const Color softGreen = Color(0xFFE3EEFD);
+  static const Color greenDark = Color(0xFF0B2B33);
+  static const Color deepTeal = Color(0xFF0B2B33);
+  static const Color softGreen = Color(0xFFE0F2F5);
   static const Color paleGreen = Color(0xFFF1F5F9);
   static const Color text = Color(0xFF0F172A);
   static const Color muted = Color(0xFF64748B);
@@ -286,7 +287,7 @@ class AuthTextField extends StatelessWidget {
         prefixIcon: Icon(icon, size: 20, color: AuthUi.deepTeal),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: AuthUi.paleGreen,
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -298,7 +299,7 @@ class AuthTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AuthUi.green, width: 1.4),
+          borderSide: const BorderSide(color: AuthUi.headerGreen, width: 1.4),
         ),
       ),
     );

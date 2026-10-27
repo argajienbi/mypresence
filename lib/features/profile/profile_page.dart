@@ -12,11 +12,11 @@ import '../../services/request_status_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_feedback.dart';
-import '../../widgets/sticky_curve_header.dart';
 import '../requests/request_status_page.dart';
 import '../auth/login_page.dart';
 import '../announcements/announcements_page.dart';
 import '../company_webview/company_webview_page.dart';
+import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 import 'employee_qr_page.dart';
 import 'help_center_page.dart';
@@ -304,6 +304,15 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                           _MenuTile(
+                            icon: Icons.lock_outline_rounded,
+                            title: 'Ganti Kata Sandi',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const ChangePasswordPage()),
+                            ),
+                          ),
+                          _MenuTile(
                             icon: Icons.help_outline,
                             title: 'Pusat Bantuan',
                             onTap: () => Navigator.of(context).push(
@@ -358,7 +367,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         backgroundColor: Colors.white,
                       ),
                       child: const Text(
-                        'Logout',
+                        'Keluar dari Akun',
                         style: TextStyle(
                             color: AppColors.red, fontWeight: FontWeight.w900),
                       ),
@@ -371,14 +380,73 @@ class _ProfilePageState extends State<ProfilePage> {
               top: 0,
               left: 0,
               right: 0,
-              child: StickyCurveHeader(
-                title: 'Profil',
-                subtitle: 'Identitas dan pengaturan akun',
-                icon: Icons.person_rounded,
-                height: 108,
-              ),
+              child: _ProfileHeader(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header teal (mockup profil). StickyCurveHeader (shared, biru) tidak
+/// dipakai di sini agar halaman ini mengikuti bahasa myadmin.
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 108,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .35),
+                    ),
+                  ),
+                  child: const Icon(Icons.person_rounded,
+                      color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Profil',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Identitas dan pengaturan akun',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: .85),
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -419,9 +487,12 @@ class _ProfileIdentityCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Transform.translate(
                   offset: const Offset(0, -32),
                   child: GestureDetector(
@@ -481,6 +552,28 @@ class _ProfileIdentityCard extends StatelessWidget {
                                   fontWeight: FontWeight.w900)),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    onPressed: onPhotoTap,
+                    icon: const Icon(Icons.photo_camera_rounded, size: 18),
+                    label: const Text(
+                      'Perbarui Foto Profil',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.text,
+                      side: const BorderSide(color: AppColors.line),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),

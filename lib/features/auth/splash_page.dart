@@ -208,7 +208,7 @@ class _SplashPageState extends State<SplashPage>
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
-        systemNavigationBarColor: Color(0xFF06337A),
+        systemNavigationBarColor: AppColors.primaryDark,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
@@ -217,15 +217,14 @@ class _SplashPageState extends State<SplashPage>
           width: double.infinity,
           height: double.infinity,
           decoration: const BoxDecoration(
+            // Mockup: gradient teal gelap (#0b2b33) -> teal (#0b7a8c).
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.primary,
                 AppColors.primaryDark,
-                Color(0xFF06337A),
+                AppColors.primary,
               ],
-              stops: [0.0, 0.7, 1.0],
             ),
           ),
           child: Stack(
@@ -288,6 +287,16 @@ class _SplashPageState extends State<SplashPage>
                                     size: 88,
                                     textSize: 23,
                                   ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Presensi mobile terhubung perusahaan',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 14),
                                   SplashIllustration(
                                     width: illustrationWidth.clamp(
@@ -295,25 +304,44 @@ class _SplashPageState extends State<SplashPage>
                                       300.0,
                                     ),
                                   ),
+                                  // Progress + pesan muat di dalam kartu (mockup).
+                                  if (!_sessionLoadFailed) ...[
+                                    const SizedBox(height: 20),
+                                    const _SplashProgress(),
+                                    const SizedBox(height: 10),
+                                    AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 360,
+                                      ),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeInCubic,
+                                      child: Text(
+                                        _message,
+                                        key: ValueKey(_message),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: AppColors.muted,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 360),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        child: Text(
-                          _sessionLoadFailed
-                              ? 'Tidak Ada Koneksi Internet\nAnda masih login, tetapi data terbaru belum bisa dimuat.'
-                              : _message,
-                          key: ValueKey('$_message-$_sessionLoadFailed'),
+                      // Pesan muat + progress kini di dalam kartu; di bawah
+                      // kartu hanya tampil saat sesi gagal dimuat.
+                      if (_sessionLoadFailed) ...[
+                        const SizedBox(height: 18),
+                        Text(
+                          'Tidak Ada Koneksi Internet\nAnda masih login, tetapi data terbaru belum bisa dimuat.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: .94),
+                            color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             shadows: [
@@ -325,9 +353,7 @@ class _SplashPageState extends State<SplashPage>
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_sessionLoadFailed)
+                        const SizedBox(height: 16),
                         SizedBox(
                           height: 46,
                           child: FilledButton.icon(
@@ -342,9 +368,8 @@ class _SplashPageState extends State<SplashPage>
                               ),
                             ),
                           ),
-                        )
-                      else
-                        const _SplashProgress(),
+                        ),
+                      ],
                       const Spacer(),
                       const Text(
                         'v2.4.1 • PT FMI',
@@ -366,7 +391,7 @@ class _SplashPageState extends State<SplashPage>
   }
 }
 
-/// Progress bar (struktur sebelumnya, warna biru mockup).
+/// Progress bar di dalam kartu splash (mockup): trek abu muda, isi teal.
 class _SplashProgress extends StatelessWidget {
   const _SplashProgress();
 
@@ -377,10 +402,10 @@ class _SplashProgress extends StatelessWidget {
       duration: const Duration(milliseconds: 2100),
       curve: Curves.easeInOutCubic,
       builder: (context, value, _) => Container(
-        width: 126,
-        height: 7,
+        width: 200,
+        height: 6,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .3),
+          color: AppColors.line,
           borderRadius: BorderRadius.circular(10),
         ),
         alignment: Alignment.centerLeft,
@@ -388,14 +413,8 @@ class _SplashProgress extends StatelessWidget {
           widthFactor: value.clamp(.08, 1),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withValues(alpha: .4),
-                  blurRadius: 10,
-                ),
-              ],
             ),
           ),
         ),

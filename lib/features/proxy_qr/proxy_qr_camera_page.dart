@@ -12,6 +12,7 @@ import '../../core/utils.dart';
 import '../../services/qr_service.dart';
 import '../../services/photo_quality_service.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/face_guide.dart';
 
 class ProxyQrCameraPage extends StatefulWidget {
   final AppSession session;
@@ -334,7 +335,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
         controller == null ||
         !controller.value.isInitialized) {
       return Container(
-        color: const Color(0xFF1E293B),
+        color: AppColors.primaryDark,
         child:
             const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
@@ -344,7 +345,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
       builder: (context, constraints) {
         final previewSize = controller.value.previewSize;
         if (previewSize == null) {
-          return const ColoredBox(color: Color(0xFF1E293B));
+          return const ColoredBox(color: AppColors.primaryDark);
         }
 
         final previewRatio = previewSize.height / previewSize.width;
@@ -373,7 +374,7 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
       visible: _submitting,
       message: 'Mengunggah foto dan membuat request QR...',
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.primaryDark,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -390,6 +391,13 @@ class _ProxyQrCameraPageState extends State<ProxyQrCameraPage>
                 onSwitch: _isBusy ? null : _switchCamera,
               ),
             ),
+            if (_photo == null && _controllerReady)
+              const Positioned(
+                left: 0,
+                right: 0,
+                top: 132,
+                child: FaceGuide(),
+              ),
             if (_photo == null)
               Positioned(
                 left: 28,
@@ -508,7 +516,14 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.badge_rounded, color: AppColors.green, size: 18),
+          Container(
+            width: 9,
+            height: 9,
+            decoration: const BoxDecoration(
+              color: AppColors.green,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -557,7 +572,7 @@ class _CameraBottomSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SafeArea(
         top: false,
@@ -667,7 +682,7 @@ class _CameraBottomSheet extends StatelessWidget {
                         foregroundColor: AppColors.text,
                         side: const BorderSide(color: AppColors.line),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(14)),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                       ),
                       icon: Icon(

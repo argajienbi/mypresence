@@ -10,8 +10,10 @@ import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/attendance_service.dart';
+import '../../services/location_service.dart';
 import '../../services/photo_quality_service.dart';
 import '../../widgets/app_feedback.dart';
+import '../../widgets/face_guide.dart';
 
 class CameraPresencePage extends StatefulWidget {
   final AppSession session;
@@ -28,6 +30,8 @@ class _CameraPresencePageState extends State<CameraPresencePage>
     with WidgetsBindingObserver {
   final AttendanceService _attendance = AttendanceService();
   final PhotoQualityService _photoQualityService = PhotoQualityService();
+  final LocationService _location = LocationService();
+  final GlobalKey _sheetKey = GlobalKey();
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   CameraLensDirection _lens = CameraLensDirection.front;
@@ -40,6 +44,13 @@ class _CameraPresencePageState extends State<CameraPresencePage>
   bool _cameraTransitioning = false;
   DateTime? _lastCameraActionAt;
   String _status = 'Membuka kamera...';
+  // Lokasi untuk kartu info di bottom sheet (display-only, best-effort).
+  LocationResult? _locationResult;
+  LocationAssessment? _locationAssessment;
+  double? _distanceMeter;
+  bool _locationLoading = true;
+  String? _locationError;
+  double _sheetHeight = 270.0;
 
   bool get _controllerReady => _controller?.value.isInitialized == true;
 
@@ -73,6 +84,44 @@ class _CameraPresencePageState extends State<CameraPresencePage>
     WidgetsBinding.instance.addObserver(this);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _initCamera();
+    _loadLocation();
+  }
+
+  /// Ambil lokasi sekali untuk kartu info di bottom sheet. Display-only:
+  /// gagal ambil lokasi tidak menghentikan alur absen (submit mengambil
+  /// lokasinya sendiri lewat AttendanceService).
+  Future<void> _loadLocation() async {
+    try {
+      final loc = await _location.currentLocation();
+      if (!mounted) return;
+      final distance = _location.distanceMeter(
+        fromLat: loc.latitude,
+        fromLng: loc.longitude,
+        toLat: widget.session.officeLatitude,
+        toLng: widget.session.officeLongitude,
+      );
+      setState(() {
+        _locationResult = loc;
+        _locationAssessment = _location.assessLocation(loc);
+        _distanceMeter = distance;
+        _locationLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _locationLoading = false;
+        _locationError = friendlyError(e);
+      });
+    }
+  }
+
+  void _measureSheet() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final height = _sheetKey.currentContext?.size?.height;
+      if (height != null && height != _sheetHeight && mounted) {
+        setState(() => _sheetHeight = height);
+      }
+    });
   }
 
   @override
@@ -325,7 +374,7 @@ class _CameraPresencePageState extends State<CameraPresencePage>
         controller == null ||
         !controller.value.isInitialized) {
       return Container(
-        color: const Color(0xFF1E293B),
+        color: AppColors.primaryDark,
         child:
             const Center(child: CircularProgressIndicator(color: Colors.white)),
       );
@@ -335,7 +384,7 @@ class _CameraPresencePageState extends State<CameraPresencePage>
       builder: (context, constraints) {
         final previewSize = controller.value.previewSize;
         if (previewSize == null) {
-          return const ColoredBox(color: Color(0xFF1E293B));
+          return const ColoredBox(color: AppColors.primaryDark);
         }
 
         final previewRatio = previewSize.height / previewSize.width;
@@ -357,13 +406,13 @@ class _CameraPresencePageState extends State<CameraPresencePage>
     final title =
         widget.actionType == 'pulang' ? 'Absen Pulang' : 'Absen Masuk';
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const bottomSheetHeight = 176.0;
+    _measureSheet();
 
     return AppLoadingOverlay(
       visible: _submitting,
       message: 'Mengunggah foto dan data presensi...',
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.primaryDark,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -379,11 +428,18 @@ class _CameraPresencePageState extends State<CameraPresencePage>
                 onSwitch: _isBusy ? null : _switchCamera,
               ),
             ),
+            if (_photo == null && _controllerReady)
+              const Positioned(
+                left: 0,
+                right: 0,
+                top: 132,
+                child: FaceGuide(),
+              ),
             if (_photo == null)
               Positioned(
                 left: 28,
                 right: 28,
-                bottom: bottomSheetHeight + bottomPadding + 16,
+                bottom: _sheetHeight + bottomPadding + 16,
                 child: _StatusPill(status: _status),
               ),
             Positioned(
@@ -391,11 +447,18 @@ class _CameraPresencePageState extends State<CameraPresencePage>
               right: 0,
               bottom: 0,
               child: _CameraBottomSheet(
+                key: _sheetKey,
                 officeName: widget.session.officeName,
                 photoTaken: _photo != null,
                 canInteract: !_isBusy,
                 canSubmit: _photo == null ? _controllerReady : true,
                 capturing: _capturing,
+                locationLoading: _locationLoading,
+                locationError: _locationError,
+                locationResult: _locationResult,
+                locationAssessment: _locationAssessment,
+                distanceMeter: _distanceMeter,
+                radiusMeter: widget.session.officeRadiusMeter,
                 onSwitchOrRetake: _photo == null ? _switchCamera : _retake,
                 onCaptureOrSubmit: _photo == null ? _capture : _submit,
               ),
@@ -473,8 +536,14 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.face_retouching_natural_rounded,
-              color: AppColors.green, size: 18),
+          Container(
+            width: 9,
+            height: 9,
+            decoration: const BoxDecoration(
+              color: AppColors.green,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -498,26 +567,42 @@ class _CameraBottomSheet extends StatelessWidget {
   final bool canInteract;
   final bool canSubmit;
   final bool capturing;
+  final bool locationLoading;
+  final String? locationError;
+  final LocationResult? locationResult;
+  final LocationAssessment? locationAssessment;
+  final double? distanceMeter;
+  final double radiusMeter;
   final VoidCallback onSwitchOrRetake;
   final VoidCallback onCaptureOrSubmit;
 
   const _CameraBottomSheet({
+    super.key,
     required this.officeName,
     required this.photoTaken,
     required this.canInteract,
     required this.canSubmit,
     required this.capturing,
+    required this.locationLoading,
+    required this.locationError,
+    required this.locationResult,
+    required this.locationAssessment,
+    required this.distanceMeter,
+    required this.radiusMeter,
     required this.onSwitchOrRetake,
     required this.onCaptureOrSubmit,
   });
 
   @override
   Widget build(BuildContext context) {
+    final assessment = locationAssessment;
+    final distance = distanceMeter;
+    final inside = distance != null && distance <= radiusMeter;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SafeArea(
         top: false,
@@ -553,6 +638,19 @@ class _CameraBottomSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            _LocationCard(
+              loading: locationLoading,
+              error: locationError,
+              result: locationResult,
+              distanceMeter: distance,
+              radiusMeter: radiusMeter,
+              inside: inside,
+            ),
+            if (assessment != null && assessment.mockDetected) ...[
+              const SizedBox(height: 10),
+              _MockWarningCard(message: assessment.mockWarningMessage),
+            ],
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
@@ -565,7 +663,7 @@ class _CameraBottomSheet extends StatelessWidget {
                         foregroundColor: AppColors.text,
                         side: const BorderSide(color: AppColors.line),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(14)),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                       ),
                       icon: Icon(
@@ -608,9 +706,10 @@ class _CameraBottomSheet extends StatelessWidget {
                       border: Border.all(color: Colors.white, width: 5),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              (photoTaken ? AppColors.green : AppColors.primary)
-                                  .withValues(alpha: .32),
+                          color: (photoTaken
+                                  ? AppColors.green
+                                  : AppColors.primary)
+                              .withValues(alpha: .32),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -646,6 +745,171 @@ class _CameraBottomSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Kartu lokasi di bottom sheet (mockup absensi): badge Dalam/Di Luar Radius,
+/// jarak + radius kantor, koordinat + akurasi GPS. Display-only.
+class _LocationCard extends StatelessWidget {
+  final bool loading;
+  final String? error;
+  final LocationResult? result;
+  final double? distanceMeter;
+  final double radiusMeter;
+  final bool inside;
+
+  const _LocationCard({
+    required this.loading,
+    required this.error,
+    required this.result,
+    required this.distanceMeter,
+    required this.radiusMeter,
+    required this.inside,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = result;
+    final distance = distanceMeter;
+    final badgeColor = inside ? AppColors.green : AppColors.orange;
+    final badgeLabel = loading
+        ? 'Memeriksa...'
+        : (inside ? 'Dalam Radius' : 'Di Luar Radius');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.line),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                size: 18,
+                color: loading ? AppColors.muted : badgeColor,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Lokasi Anda',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  color: AppColors.text,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  badgeLabel,
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          if (loading)
+            const Text(
+              'Memeriksa lokasi...',
+              style: TextStyle(color: AppColors.muted, fontSize: 12.5),
+            )
+          else if (loc == null || distance == null)
+            Text(
+              error ?? 'Lokasi belum tersedia.',
+              style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+            )
+          else
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12.5,
+                  height: 1.5,
+                ),
+                children: [
+                  const TextSpan(text: 'Jarak '),
+                  TextSpan(
+                    text: '${distance.round()} m',
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const TextSpan(text: ' dari kantor • Radius kantor '),
+                  TextSpan(
+                    text: '${radiusMeter.round()} m',
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  TextSpan(
+                    text:
+                        '\nKoordinat: ${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)} • Akurasi GPS ±${loc.accuracy.round()} m',
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Peringatan lokasi palsu (mockup absensi): tampil saat
+/// LocationAssessment.mockDetected. Presensi tetap bisa dikirim — submit
+/// sudah menandai risikonya untuk validasi admin.
+class _MockWarningCard extends StatelessWidget {
+  final String message;
+
+  const _MockWarningCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.red.withValues(alpha: .07),
+        border: Border.all(color: AppColors.red.withValues(alpha: .35)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '⚠️ Lokasi Palsu Terdeteksi!',
+            style: TextStyle(
+              color: AppColors.red,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.red,
+              fontSize: 12.5,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../core/models/announcement.dart';
 import '../../core/models/app_session.dart';
+import '../../core/utils.dart';
 import '../../services/announcement_service.dart';
+import '../../services/app_notification_service.dart';
+import '../notifications/notifications_page.dart';
 
 class AnnouncementsPage extends StatelessWidget {
   final AppSession session;
@@ -15,7 +18,33 @@ class AnnouncementsPage extends StatelessWidget {
     final service = AnnouncementService();
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(title: const Text('Pengumuman')),
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        title: const Text('Pengumuman',
+            style: TextStyle(fontWeight: FontWeight.w900)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Row(
+              children: [
+                const _TabPill(label: 'Pengumuman', active: true),
+                const SizedBox(width: 8),
+                _NotificationTabPill(
+                  session: session,
+                  onTap: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          NotificationsPage(session: session),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: StreamBuilder<List<Announcement>>(
         stream: service.watchAnnouncements(session),
         builder: (context, snapshot) {
@@ -73,6 +102,11 @@ class AnnouncementDetailPage extends StatelessWidget {
                   item.title,
                   style: const TextStyle(fontSize: 22, height: 1.2, fontWeight: FontWeight.w900, color: AppColors.text),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  _metaLine(item),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11.5, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 12),
                 Text(item.body, style: const TextStyle(height: 1.55, color: AppColors.text)),
               ],
@@ -93,8 +127,12 @@ class _AnnouncementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _typeColor(item.type);
+    final pinned =
+        item.raw['pinned'] == true || item.raw['is_pinned'] == true;
     return Material(
-      color: Colors.white,
+      color: pinned
+          ? AppColors.primary.withValues(alpha: .05)
+          : Colors.white,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -103,12 +141,19 @@ class _AnnouncementCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border(
-              left: BorderSide(color: color, width: 4),
-              top: BorderSide(color: Colors.black.withValues(alpha: .06)),
-              right: BorderSide(color: Colors.black.withValues(alpha: .06)),
-              bottom: BorderSide(color: Colors.black.withValues(alpha: .06)),
-            ),
+            border: pinned
+                ? Border.all(
+                    color: AppColors.primary.withValues(alpha: .45),
+                  )
+                : Border(
+                    left: BorderSide(color: color, width: 4),
+                    top: BorderSide(
+                        color: Colors.black.withValues(alpha: .06)),
+                    right: BorderSide(
+                        color: Colors.black.withValues(alpha: .06)),
+                    bottom: BorderSide(
+                        color: Colors.black.withValues(alpha: .06)),
+                  ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +167,39 @@ class _AnnouncementCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _TypeBadge(type: item.type),
+                    Row(
+                      children: [
+                        _TypeBadge(type: item.type),
+                        if (pinned) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primary.withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.push_pin_rounded,
+                                    size: 11, color: AppColors.primary),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Disematkan',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text)),
                     const SizedBox(height: 6),
@@ -203,4 +280,125 @@ class _EmptyAnnouncement extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Pil tab di atas header teal (mockup pengumuman): Pengumuman aktif (putih),
+/// Notifikasi (transparan + badge coral jumlah belum dibaca).
+class _TabPill extends StatelessWidget {
+  final String label;
+  final bool active;
+
+  const _TabPill({required this.label, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: active ? Colors.white : Colors.white.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: active ? AppColors.primary : Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationTabPill extends StatelessWidget {
+  final AppSession session;
+  final VoidCallback onTap;
+
+  const _NotificationTabPill({required this.session, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final service = AppNotificationService();
+    return StreamBuilder(
+      stream: service.watchFirestoreInbox(session),
+      builder: (context, firestoreSnapshot) {
+        return StreamBuilder(
+          stream: service.watchRtdbFallback(session),
+          builder: (context, rtdbSnapshot) {
+            final merged = service.mergePersonalInbox(
+              firestoreSnapshot.data ?? const [],
+              rtdbSnapshot.data ?? const [],
+            );
+            final unread = merged.where((e) => !e.read).length;
+            return InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Notifikasi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (unread > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 19,
+                          minHeight: 19,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+String _metaLine(Announcement item) {
+  final ts = item.publishedAt != 0 ? item.publishedAt : item.createdAt;
+  final date = ts > 0 ? AppDate.dayDate(_toDateTime(ts)) : '';
+  final parts = [
+    if (date.isNotEmpty) date,
+    _TypeBadge._label(item.type),
+  ];
+  return parts.join(' • ');
+}
+
+DateTime _toDateTime(int value) {
+  // Backend menyimpan epoch detik atau milidetik — tebak dari besarannya.
+  if (value > 1000000000000) {
+    return DateTime.fromMillisecondsSinceEpoch(value);
+  }
+  return DateTime.fromMillisecondsSinceEpoch(value * 1000);
 }

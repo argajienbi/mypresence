@@ -35,6 +35,12 @@ class _HistoryPageState extends State<HistoryPage> {
   List<DailyHistoryStatus> _dailyStatuses = [];
   final ScrollController _scrollController = ScrollController();
   bool _isScrolled = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  // Filter status mockup: 'semua' | 'hadir' | 'telat' | 'izin' | 'sakit' | 'cuti'.
+  String _statusFilter = 'semua';
+  // Filter metode mockup: 'semua' | 'manual' | 'qr' | 'koreksi'.
+  String _methodFilter = 'semua';
 
   void _updateStatusBarStyle() {
     final scrolled = _scrollController.hasClients && _scrollController.offset > 60;
@@ -47,6 +53,11 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_updateStatusBarStyle);
+    _searchController.addListener(() {
+      if (!mounted) return;
+      setState(
+          () => _searchQuery = _searchController.text.trim().toLowerCase());
+    });
     _load();
   }
 
@@ -54,6 +65,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void dispose() {
     _scrollController.removeListener(_updateStatusBarStyle);
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -151,6 +163,77 @@ class _HistoryPageState extends State<HistoryPage> {
     setState(() => _month = DateTime(_month.year, _month.month + delta));
     _load();
   }
+
+  /// Metode presensi hari itu: 'qr' | 'koreksi' | 'manual' | 'pengajuan'.
+  /// - 'qr': method qr / dibuat via QR / titip absen (proxy_request_id).
+  /// - 'koreksi': baris membawa penanda koreksi. Catatan: saat ini backend
+  ///   belum menandai baris yang dikoreksi, jadi chip Koreksi umumnya
+  ///   kosong sampai backend memberi penanda tersebut.
+  /// - 'pengajuan': hari izin/sakit/cuti (tanpa baris presensi).
+  /// - 'manual': presensi selfie biasa.
+  static String _methodOf(DailyHistoryStatus item) {
+    final row = item.attendanceRow;
+    if (row == null) return 'pengajuan';
+    final method = asString(row['method']).toLowerCase();
+    final createdByQr = row['created_by_qr'] == true;
+    final proxyId = asString(row['proxy_request_id']);
+    if (method == 'qr' || createdByQr || proxyId.isNotEmpty) return 'qr';
+    const correctionKeys = [
+      'correction_id',
+      'corrected',
+      'is_corrected',
+      'correction_status',
+    ];
+    for (final key in correctionKeys) {
+      final value = row[key];
+      if (value != null &&
+          value.toString().isNotEmpty &&
+          value != false) {
+        return 'koreksi';
+      }
+    }
+    final masuk = row['masuk'];
+    if (masuk is Map && asString(masuk['method']).toLowerCase() == 'qr') {
+      return 'qr';
+    }
+    final pulang = row['pulang'];
+    if (pulang is Map && asString(pulang['method']).toLowerCase() == 'qr') {
+      return 'qr';
+    }
+    return 'manual';
+  }
+
+  static String _methodLabel(String method) {
+    switch (method) {
+      case 'qr':
+        return 'QR';
+      case 'koreksi':
+        return 'Koreksi';
+      case 'pengajuan':
+        return 'Pengajuan';
+      default:
+        return 'Manual';
+    }
+  }
+
+  bool _matchesSearch(DailyHistoryStatus item) {
+    final query = _searchQuery;
+    if (query.isEmpty) return true;
+    final haystacks = <String>[
+      item.date.day.toString(),
+      AppDate.weekday(item.date).toLowerCase(),
+      AppDate.monthLabel(item.date).toLowerCase(),
+      AppDate.shortDate(item.date).toLowerCase(),
+      AppDate.dayDate(item.date).toLowerCase(),
+      item.dateKey,
+    ];
+    return haystacks.any((text) => text.contains(query));
+  }
+
+  bool get _filtersActive =>
+      _searchQuery.isNotEmpty ||
+      _statusFilter != 'semua' ||
+      _methodFilter != 'semua';
 
   _MonthSummary _summary() {
     int hadir = 0;
@@ -554,7 +637,17 @@ class _HistoryPageState extends State<HistoryPage> {
           final dateOnly =
               DateTime(item.date.year, item.date.month, item.date.day);
           if (dateOnly.isAfter(todayOnly)) return false;
-          return item.status != 'libur' && item.status != 'tanpa_data';
+          if (item.status == 'libur' || item.status == 'tanpa_data') {
+            return false;
+          }
+          if (_statusFilter != 'semua' && item.status != _statusFilter) {
+            return false;
+          }
+          if (_methodFilter != 'semua' &&
+              _methodOf(item) != _methodFilter) {
+            return false;
+          }
+          return _matchesSearch(item);
         })
         .take(7)
         .toList(growable: false);
@@ -617,6 +710,39 @@ class _HistoryPageState extends State<HistoryPage> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate(
                   [
+                    _SearchField(
+                      controller: _searchController,
+                      onClear: _searchController.clear,
+                    ),
+                    const SizedBox(height: 12),
+                    _FilterChips(
+                      label: null,
+                      options: const [
+                        ('semua', 'Semua'),
+                        ('hadir', 'Hadir'),
+                        ('telat', 'Terlambat'),
+                        ('izin', 'Izin'),
+                        ('sakit', 'Sakit'),
+                        ('cuti', 'Cuti'),
+                      ],
+                      selected: _statusFilter,
+                      onSelected: (value) =>
+                          setState(() => _statusFilter = value),
+                    ),
+                    const SizedBox(height: 8),
+                    _FilterChips(
+                      label: 'Metode:',
+                      options: const [
+                        ('semua', 'Semua'),
+                        ('manual', 'Manual'),
+                        ('qr', 'QR'),
+                        ('koreksi', 'Koreksi'),
+                      ],
+                      selected: _methodFilter,
+                      onSelected: (value) =>
+                          setState(() => _methodFilter = value),
+                    ),
+                    const SizedBox(height: 16),
                     _CalendarButton(onTap: _showCalendarSheet, month: _month),
                     const SizedBox(height: 16),
                     const _SectionTitle('Ringkasan Bulan Ini'),
@@ -640,7 +766,9 @@ class _HistoryPageState extends State<HistoryPage> {
                     _SectionNote(
                       _scheduleLoading
                           ? 'Menampilkan data awal. Status jadwal sedang disempurnakan...'
-                          : 'Menampilkan 7 hari terakhir.',
+                          : _filtersActive
+                              ? 'Menampilkan hasil filter (maks. 7 hari).'
+                              : 'Menampilkan 7 hari terakhir.',
                     ),
                     const SizedBox(height: 10),
                     if (_loading)
@@ -654,18 +782,20 @@ class _HistoryPageState extends State<HistoryPage> {
                         ),
                       )
                     else if (!hasAnyData)
-                      const AppCard(
+                      AppCard(
                         child: Padding(
-                          padding: EdgeInsets.all(22),
+                          padding: const EdgeInsets.all(22),
                           child: Column(
                             children: [
-                              Icon(Icons.inbox_rounded,
+                              const Icon(Icons.inbox_rounded,
                                   color: AppColors.muted, size: 38),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Text(
-                                'Belum ada presensi dalam 7 hari terakhir.',
+                                _filtersActive
+                                    ? 'Tidak ada presensi yang cocok dengan filter.'
+                                    : 'Belum ada presensi dalam 7 hari terakhir.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppColors.muted,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -676,13 +806,15 @@ class _HistoryPageState extends State<HistoryPage> {
                       )
                     else ...[
                       if (visibleDailyStatuses.isEmpty)
-                        const AppCard(
+                        AppCard(
                           child: Padding(
-                            padding: EdgeInsets.all(18),
+                            padding: const EdgeInsets.all(18),
                             child: Text(
-                              'Belum ada presensi dalam 7 hari terakhir.',
+                              _filtersActive
+                                  ? 'Tidak ada presensi yang cocok dengan filter.'
+                                  : 'Belum ada presensi dalam 7 hari terakhir.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.muted,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -777,6 +909,120 @@ class _StickyMonthDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _StickyMonthDelegate oldDelegate) {
     return oldDelegate.monthLabel != monthLabel ||
         oldDelegate.topPadding != topPadding;
+  }
+}
+
+/// Kolom cari tanggal (mockup riwayat): cocok dengan nomor tanggal,
+/// nama hari, bulan, atau kunci tanggal (mis. "21 Okt", "Selasa").
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onClear;
+
+  const _SearchField({required this.controller, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Cari tanggal, contoh: 21 Okt',
+        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.clear_rounded,
+                    color: AppColors.muted, size: 20),
+              ),
+      ),
+    );
+  }
+}
+
+/// Baris chip filter horizontal (mockup riwayat): status atau metode.
+class _FilterChips extends StatelessWidget {
+  final String? label;
+  final List<(String, String)> options;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  const _FilterChips({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          if (label != null) ...[
+            Text(
+              label!,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          for (int i = 0; i < options.length; i++) ...[
+            _FilterChip(
+              label: options[i].$2,
+              active: options[i].$1 == selected,
+              onTap: () => onSelected(options[i].$1),
+            ),
+            if (i != options.length - 1) const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: active ? AppColors.primary : Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+                color: active ? AppColors.primary : AppColors.line),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: active ? Colors.white : AppColors.text,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1202,15 +1448,31 @@ class _DailyHistoryItem extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Padding(
                       padding: const EdgeInsets.only(left: 12),
-                      child: Text(
-                        badge,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: color,
-                          letterSpacing: .5,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            badge,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: color,
+                              letterSpacing: .5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _HistoryPageState._methodLabel(
+                                _HistoryPageState._methodOf(item)),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

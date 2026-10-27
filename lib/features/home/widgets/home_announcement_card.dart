@@ -5,6 +5,7 @@ import '../../../core/models/announcement.dart';
 import '../../../core/models/app_session.dart';
 import '../../../services/announcement_service.dart';
 import '../../../widgets/app_card.dart';
+import '../../announcements/announcements_page.dart';
 
 class HomeAnnouncementCard extends StatefulWidget {
   final AppSession session;
@@ -82,14 +83,13 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
                           height: 40,
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: .10),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
                               const Text(
                                 'Pengumuman',
@@ -99,17 +99,52 @@ class _HomeAnnouncementCardState extends State<HomeAnnouncementCard> {
                                   color: AppColors.text,
                                 ),
                               ),
-                              Text(
-                                hasAnnouncements ? 'Baca pengumuman langsung di halaman Home' : 'Belum ada pengumuman terbaru',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.muted,
+                              if (hasAnnouncements) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  constraints: const BoxConstraints(
+                                      minWidth: 20, minHeight: 20),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    items.length.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => AnnouncementsPage(
+                                  session: widget.session,
                                 ),
                               ),
-                            ],
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Lihat Semua ›',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700),
                           ),
                         ),
                         AnimatedRotation(

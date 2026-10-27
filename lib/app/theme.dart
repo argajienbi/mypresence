@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Palet "Fintech Fusion" — diselaraskan dengan lib/core/app_theme.dart.
+/// Palet "Bahasa MyAdmin" — diselaraskan dengan lib/core/app_theme.dart
+/// (primer teal #0b7a8c, aksen coral, gelap #0b2b33, radius 10px).
 /// Nama field dipertahankan agar kompatibel dengan 5 file konsumen.
 class AppColors {
   static const background = Color(0xFFF1F5F9);
-  static const headerCurve = Color(0xFF0B5ED7);
-  static const primary = Color(0xFF0B5ED7);
-  static const primaryDark = Color(0xFF084298);
+  static const headerCurve = Color(0xFF0B7A8C);
+  static const primary = Color(0xFF0B7A8C);
+  static const primaryDark = Color(0xFF0B2B33);
   static const green = Color(0xFF16A34A);
   static const orange = Color(0xFFF59E0B);
   static const red = Color(0xFFDC2626);
-  static const blue = Color(0xFF0B5ED7);
+  static const blue = Color(0xFF0B7A8C);
   static const purple = Color(0xFF7C3AED);
   static const text = Color(0xFF0F172A);
   static const muted = Color(0xFF64748B);

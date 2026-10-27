@@ -146,7 +146,7 @@ class _ProxyAttendancePageState extends State<ProxyAttendancePage> {
                       decoration: BoxDecoration(
                         border: Border.all(
                             color: target == null
-                                ? const Color(0xFF78BFF2)
+                                ? AppColors.primary
                                 : AppColors.green,
                             width: 3),
                         borderRadius: BorderRadius.circular(30),

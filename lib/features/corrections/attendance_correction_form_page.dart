@@ -9,7 +9,6 @@ import '../../core/models/app_session.dart';
 import '../../core/utils.dart';
 import '../../services/attendance_correction_service.dart';
 import '../../widgets/app_feedback.dart';
-import '../../widgets/soft_header.dart';
 
 class AttendanceCorrectionFormPage extends StatefulWidget {
   final AppSession session;
@@ -215,42 +214,28 @@ class _AttendanceCorrectionFormPageState
       message: 'Mengirim pengajuan koreksi...',
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        body: Stack(
+        body: Column(
           children: [
-            const SoftHeaderBackground(height: 210),
-            SafeArea(
+            _CorrectionFormHeader(
+              onClose: () => Navigator.of(context).pop(),
+            ),
+            Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SourcePageTitle(
-                      title: 'Ajukan Koreksi Presensi',
-                      subtitle:
-                          'Perbaiki data Clock In atau Clock Out dan kirim ke admin untuk review',
-                      icon: Icons.edit_note_rounded,
-                      trailing: IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: AppColors.text,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .96),
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .78),
-                        ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.line),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: .09),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withValues(alpha: .05),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -346,7 +331,7 @@ class _AttendanceCorrectionFormPageState
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: .06),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color:
                                       AppColors.primary.withValues(alpha: .14),
@@ -390,7 +375,7 @@ class _AttendanceCorrectionFormPageState
                                 backgroundColor: AppColors.primary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
                               child: const Text(
@@ -410,6 +395,87 @@ class _AttendanceCorrectionFormPageState
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header teal (mockup pengajuan). SoftHeaderBackground krem tidak dipakai
+/// di sini agar halaman ini mengikuti bahasa myadmin.
+class _CorrectionFormHeader extends StatelessWidget {
+  final VoidCallback onClose;
+
+  const _CorrectionFormHeader({required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .35),
+                  ),
+                ),
+                child: const Icon(Icons.edit_note_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ajukan Koreksi Presensi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Perbaiki data Clock In atau Clock Out dan kirim ke admin untuk review',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .85),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: onClose,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .35),
+                    ),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -497,7 +563,7 @@ class _AttachmentBox extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -533,7 +599,7 @@ class _AttachmentBox extends StatelessWidget {
           if (file != null) ...[
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(10),
               child: Image.file(
                 file!,
                 height: 150,
@@ -636,7 +702,7 @@ class _OldAttendancePreview extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.primary.withValues(alpha: .14)),
       ),
       child: Column(

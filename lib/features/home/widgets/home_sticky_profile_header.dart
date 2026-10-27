@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/app_theme.dart';
 import '../../../core/models/app_session.dart';
 
-/// Header Home gaya BRIMO: gradient biru, teks putih.
+/// Header Home bahasa myadmin: gradient teal, teks putih.
+/// Mengikuti mockup ~/workspace/mypresence-mockup/home.html —
+/// salam kecil, nama lengkap, baris tanggal pendek, lonceng badge coral.
 /// Seluruh logika (salam, avatar, foto, badge notifikasi) dipertahankan.
 class HomeStickyProfileHeader extends StatelessWidget {
   final AppSession session;
@@ -29,12 +31,9 @@ class HomeStickyProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = session.displayName
-            .trim()
-            .split(' ')
-            .where((e) => e.isNotEmpty)
-            .firstOrNull ??
-        'User';
+    final name = session.displayName.trim().isEmpty
+        ? 'User'
+        : session.displayName.trim();
     final greeting = _getGreeting();
     final photoUrl = _displayPhotoUrl(
       session.photoUrl.trim(),
@@ -44,9 +43,6 @@ class HomeStickyProfileHeader extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: AppColors.headerGradient,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(28),
-        ),
       ),
       child: SafeArea(
         bottom: false,
@@ -55,7 +51,7 @@ class HomeStickyProfileHeader extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _ProfileAvatar(firstName: firstName, photoUrl: photoUrl),
+              _ProfileAvatar(displayName: name, photoUrl: photoUrl),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -63,24 +59,36 @@ class HomeStickyProfileHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$greeting, $firstName',
+                      '$greeting,',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .80),
+                        fontSize: 12,
+                        height: 1.05,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
-                        height: 1.08,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
                     Text(
                       date,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: .85),
-                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: .75),
+                        fontSize: 12,
                         height: 1.05,
                         fontWeight: FontWeight.w600,
                       ),
@@ -110,63 +118,69 @@ String _displayPhotoUrl(String photoUrl, String photoPath) {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  final String firstName;
+  final String displayName;
   final String photoUrl;
 
-  const _ProfileAvatar({required this.firstName, required this.photoUrl});
+  const _ProfileAvatar({required this.displayName, required this.photoUrl});
 
   @override
   Widget build(BuildContext context) {
     final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
-      width: 64,
-      height: 64,
-      padding: const EdgeInsets.all(3),
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .18),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: .18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: .40),
+          width: 1,
+        ),
       ),
       child: ClipOval(
         child: hasPhoto
             ? Image.network(
                 photoUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _InitialAvatar(firstName: firstName),
+                errorBuilder: (_, __, ___) =>
+                    _InitialAvatar(displayName: displayName),
               )
-            : _InitialAvatar(firstName: firstName),
+            : _InitialAvatar(displayName: displayName),
       ),
     );
   }
 }
 
 class _InitialAvatar extends StatelessWidget {
-  final String firstName;
+  final String displayName;
 
-  const _InitialAvatar({required this.firstName});
+  const _InitialAvatar({required this.displayName});
 
   @override
   Widget build(BuildContext context) {
-    final initial = firstName.trim().isEmpty
+    final parts = displayName
+        .trim()
+        .split(' ')
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    final initials = parts.isEmpty
         ? 'U'
-        : firstName.characters.first.toUpperCase();
+        : parts.length == 1
+            ? parts.first.characters.first.toUpperCase()
+            : (parts.first.characters.first +
+                    parts.last.characters.first)
+                .toUpperCase();
 
     return Container(
-      color: AppColors.primary,
+      color: Colors.white.withValues(alpha: .18),
       alignment: Alignment.center,
       child: Text(
-        initial,
+        initials,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 26,
-          fontWeight: FontWeight.w900,
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -185,19 +199,25 @@ class _NotificationButton extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Container(
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .18),
-            borderRadius: BorderRadius.circular(14),
+            color: Colors.white.withValues(alpha: .14),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: .35),
+              width: 1,
+            ),
           ),
           child: IconButton(
             onPressed: onPressed,
             icon: const Icon(
               Icons.notifications_rounded,
               color: Colors.white,
-              size: 26,
+              size: 20,
             ),
-            padding: const EdgeInsets.all(10),
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           ),
         ),
         if (count > 0)
@@ -205,20 +225,20 @@ class _NotificationButton extends StatelessWidget {
             right: -4,
             top: -4,
             child: Container(
-              constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 color: AppColors.accent,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white, width: 2),
               ),
               alignment: Alignment.center,
               child: Text(
                 count > 99 ? '99+' : count.toString(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1.4,
                 ),
               ),
             ),

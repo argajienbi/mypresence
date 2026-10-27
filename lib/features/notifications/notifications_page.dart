@@ -4,6 +4,7 @@ import '../../core/app_theme.dart';
 import '../../core/models/app_notification.dart';
 import '../../core/models/app_session.dart';
 import '../../services/app_notification_service.dart';
+import '../announcements/announcements_page.dart';
 import 'notification_detail_page.dart';
 
 enum _NotificationFilter {
@@ -70,7 +71,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           children: [
                             _NotificationHeader(
                                 onBack: () => Navigator.of(context).pop()),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 14),
+                            _PageTabs(
+                              session: widget.session,
+                              unreadCount: unreadCount,
+                            ),
+                            const SizedBox(height: 14),
                             _SearchField(
                               controller: _searchController,
                               onChanged: (value) =>
@@ -304,6 +310,108 @@ class _NotificationHeader extends StatelessWidget {
           ),
           const _SquareIconButton(icon: Icons.tune_rounded),
         ],
+      ),
+    );
+  }
+}
+
+/// Pil tab Pengumuman / Notifikasi (mockup pengumuman). "Pengumuman" pindah
+/// ke halaman pengumuman (pushReplacement agar stack tetap bersih).
+class _PageTabs extends StatelessWidget {
+  final AppSession session;
+  final int unreadCount;
+
+  const _PageTabs({required this.session, required this.unreadCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _PageTab(
+          label: 'Pengumuman',
+          active: false,
+          onTap: () => Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => AnnouncementsPage(session: session),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _PageTab(
+          label: 'Notifikasi',
+          active: true,
+          count: unreadCount,
+        ),
+      ],
+    );
+  }
+}
+
+class _PageTab extends StatelessWidget {
+  final String label;
+  final bool active;
+  final int? count;
+  final VoidCallback? onTap;
+
+  const _PageTab({
+    required this.label,
+    required this.active,
+    this.count,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = active ? AppColors.primary : Colors.white;
+    final fg = active ? Colors.white : AppColors.text;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.line,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: fg,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (count != null && count! > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                constraints: const BoxConstraints(
+                  minWidth: 19,
+                  minHeight: 19,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  count! > 99 ? '99+' : '${count!}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -735,8 +843,8 @@ class _NotificationTile extends StatelessWidget {
                               width: 10,
                               height: 10,
                               margin: const EdgeInsets.only(top: 5),
-                              decoration: BoxDecoration(
-                                  color: AppColors.primary,
+                              decoration: const BoxDecoration(
+                                  color: AppColors.accent,
                                   shape: BoxShape.circle)),
                         ],
                       ],

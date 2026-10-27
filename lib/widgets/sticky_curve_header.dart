@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_theme.dart';
+
 class StickyCurveHeader extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -44,13 +46,13 @@ class StickyCurveHeader extends StatelessWidget {
                 children: [
                   if (icon != null) ...[
                     Container(
-                      width: 54,
-                      height: 54,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: .18),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 30),
+                      child: Icon(icon, color: Colors.white, size: 24),
                     ),
                     const SizedBox(width: 14),
                   ],
@@ -65,7 +67,7 @@ class StickyCurveHeader extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 20,
                             height: 1.05,
                             fontWeight: FontWeight.w900,
                             letterSpacing: .2,
@@ -78,7 +80,7 @@ class StickyCurveHeader extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: .90),
-                            fontSize: 14,
+                            fontSize: 12,
                             height: 1.12,
                             fontWeight: FontWeight.w800,
                           ),
@@ -113,11 +115,7 @@ class _StickyCurveHeaderPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final paint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF0B5ED7), Color(0xFF084298)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(rect);
+      ..shader = AppColors.headerGradient.createShader(rect);
 
     final path = Path()
       ..lineTo(0, size.height - 36)

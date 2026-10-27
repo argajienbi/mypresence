@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
 
-/// Kartu lokasi V4 "Banner Biru" (dikunci 2026-10-19, mockup card-lokasi-v4).
-/// Banner gradient biru + baris metrik putih. Peta pindah ke bottom sheet.
+/// Kartu lokasi bahasa myadmin (mockup ~/workspace/mypresence-mockup/home.html).
+/// Kartu putih: ikon pin, nama + alamat kantor, pill status radius + jarak.
+/// Menggantikan "Banner Biru" V4 — banner gradient + baris metrik dihapus
+/// mengikuti mockup (cabang redesign ini adalah alternatifnya; V4 tetap
+/// ada di branch uti/firebase-mypresence-prod).
 /// Seluruh props & perilaku onTap dipertahankan.
 class RadiusCard extends StatelessWidget {
   final String officeName;
@@ -36,10 +39,19 @@ class RadiusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = loading
-        ? 'MEMUAT'
-        : (inside ? 'DALAM RADIUS' : 'DI LUAR RADIUS');
-    final distanceLabel =
-        distanceMeter == null ? '--' : '${distanceMeter!.round()} m';
+        ? 'Memuat...'
+        : (inside ? 'Dalam Radius' : 'Di Luar Radius');
+    final pillColor = loading
+        ? AppColors.muted
+        : (inside ? AppColors.green : AppColors.red);
+    final pillBg = loading
+        ? AppColors.line
+        : (inside
+            ? const Color(0xFFDCFCE7)
+            : const Color(0xFFFEE2E2));
+    final distanceLabel = distanceMeter == null
+        ? '--'
+        : '${distanceMeter!.round()} m dari kantor';
 
     return Material(
       color: Colors.transparent,
@@ -47,155 +59,102 @@ class RadiusCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.line, width: 1),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: .22),
+                color: Colors.black.withValues(alpha: .07),
                 blurRadius: 18,
-                offset: const Offset(0, 8),
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              // Banner biru
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 15,
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.headerGradient,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(10),
-                  ),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: AppColors.primary,
+                  size: 22,
                 ),
-                child: Row(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Lokasi & Radius Absensi',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    Text(
+                      officeName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .20),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: .4,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Baris metrik putih
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(10),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: pillColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  border: Border.all(color: AppColors.line, width: 1),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _Metric(
-                        label: 'RADIUS',
-                        value: '${radiusMeter.round()} m',
-                      ),
+                  const SizedBox(height: 5),
+                  Text(
+                    distanceLabel,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
-                    Container(
-                      width: 1,
-                      height: 28,
-                      color: AppColors.line,
-                    ),
-                    Expanded(
-                      child: _Metric(
-                        label: 'JARAK ANDA',
-                        value: distanceLabel,
-                        highlight: !loading && !inside,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool highlight;
-
-  const _Metric({
-    required this.label,
-    required this.value,
-    this.highlight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: .6,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: highlight ? AppColors.accentDark : AppColors.text,
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
     );
   }
 }

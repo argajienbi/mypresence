@@ -8,7 +8,6 @@ import '../../core/error_mapper.dart';
 import '../../core/models/app_session.dart';
 import '../../services/leave_service.dart';
 import '../../widgets/app_feedback.dart';
-import '../../widgets/soft_header.dart';
 
 class LeaveFormPage extends StatefulWidget {
   final AppSession session;
@@ -30,9 +29,16 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   bool loading = false;
   File? attachmentFile;
   String attachmentName = '';
+  late String _type;
 
-  bool get isSakit => widget.type == 'sakit';
-  bool get isLembur => widget.type == 'lembur';
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.type;
+  }
+
+  bool get isSakit => _type == 'sakit';
+  bool get isLembur => _type == 'lembur';
 
   @override
   void dispose() {
@@ -45,7 +51,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   }
 
   String get title {
-    switch (widget.type) {
+    switch (_type) {
       case 'sakit':
         return 'Lapor Sakit';
       case 'cuti':
@@ -58,7 +64,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   }
 
   IconData get icon {
-    switch (widget.type) {
+    switch (_type) {
       case 'sakit':
         return Icons.favorite_rounded;
       case 'cuti':
@@ -79,7 +85,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       final duration = isLembur ? _overtimeDurationMinute() : 0;
       await _service.submitLeave(
         session: widget.session,
-        type: widget.type,
+        type: _type,
         dateStart: start.text,
         dateEnd: end.text,
         reason: reason.text,
@@ -92,7 +98,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       );
       if (!mounted) return;
       AppToast.success(context, 'Pengajuan berhasil dikirim.');
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) AppToast.error(context, friendlyError(e));
     } finally {
@@ -166,35 +172,34 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       message: 'Mengirim pengajuan...',
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        body: Stack(
+        body: Column(
           children: [
-            const SoftHeaderBackground(height: 210),
-            SafeArea(
+            _LeaveFormHeader(
+              title: title,
+              subtitle: 'Lengkapi formulir dan kirim ke admin untuk approval',
+              icon: icon,
+            ),
+            Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SourcePageTitle(
-                      title: title,
-                      subtitle: 'Lengkapi formulir dan kirim ke admin untuk approval',
-                      icon: icon,
-                      trailing: IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded, color: AppColors.text),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .96),
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(color: Colors.white.withValues(alpha: .78)),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .09), blurRadius: 18, offset: const Offset(0, 8))],
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.line),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .05), blurRadius: 14, offset: const Offset(0, 6))],
                       ),
                       child: Column(
                         children: [
+                          _TypeSegment(
+                            current: _type,
+                            onChanged: (value) => setState(() => _type = value),
+                          ),
+                          const SizedBox(height: 16),
                           _DateField(
                             controller: start,
                             label: isLembur ? 'Tanggal lembur yyyy-mm-dd' : 'Tanggal mulai yyyy-mm-dd',
@@ -261,7 +266,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                             height: 52,
                             child: ElevatedButton(
                               onPressed: loading ? null : submit,
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                               child: const Text('Kirim Pengajuan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
                             ),
                           ),
@@ -275,6 +280,149 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Header teal (mockup pengajuan). SoftHeaderBackground krem tidak dipakai
+/// di sini agar halaman ini mengikuti bahasa myadmin.
+class _LeaveFormHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  const _LeaveFormHeader({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .35),
+                  ),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: .85),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => Navigator.of(context).pop(),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .35),
+                    ),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pengalih jenis pengajuan (mockup pengajuan): Izin / Cuti / Sakit / Lembur.
+class _TypeSegment extends StatelessWidget {
+  final String current;
+  final ValueChanged<String> onChanged;
+
+  const _TypeSegment({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    const types = [
+      ('izin', 'Izin'),
+      ('cuti', 'Cuti'),
+      ('sakit', 'Sakit'),
+      ('lembur', 'Lembur'),
+    ];
+    return Row(
+      children: [
+        for (final (value, label) in types)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: InkWell(
+                onTap: () => onChanged(value),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: current == value
+                        ? AppColors.primary
+                        : AppColors.bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: current == value
+                          ? AppColors.primary
+                          : AppColors.line,
+                    ),
+                  ),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: current == value
+                          ? Colors.white
+                          : AppColors.text,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -322,7 +470,7 @@ class _AttachmentBox extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -350,7 +498,7 @@ class _AttachmentBox extends StatelessWidget {
           if (file != null) ...[
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(10),
               child: Image.file(file!, height: 150, width: double.infinity, fit: BoxFit.cover),
             ),
             const SizedBox(height: 8),
