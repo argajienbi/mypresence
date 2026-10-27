@@ -4,7 +4,7 @@ name: Build APK (debug)
 on:
   workflow_dispatch:
   push:
-    branches: [ "uti/firebase-mypresence-prod", "uti/redesign-myadmin" ]
+    branches: [ "uti/firebase-mypresence-prod", "uti/redesign-myadmin" 
     jobs:
   build-apk:
     runs-on: ubuntu-latest
