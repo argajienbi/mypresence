@@ -33,7 +33,7 @@ class _RequestStatusDetailSheet extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: Column(
             children: [
@@ -57,7 +57,7 @@ class _RequestStatusDetailSheet extends StatelessWidget {
                       height: 48,
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: .12),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(_kindIcon(item.kind), color: color),
                     ),
@@ -107,6 +107,12 @@ class _RequestStatusDetailSheet extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.bg,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -542,7 +548,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: FontWeight.w900,
         color: AppColors.text,
       ),

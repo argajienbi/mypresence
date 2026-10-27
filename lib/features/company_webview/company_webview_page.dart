@@ -91,36 +91,116 @@ class _CompanyWebViewPageState extends State<CompanyWebViewPage> {
     final title = _config?.title.trim().isNotEmpty == true ? _config!.title : 'Website Perusahaan';
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: () => _controller?.reload() ?? _load(),
-            icon: const Icon(Icons.refresh_rounded),
+      body: Column(
+        children: [
+          _CompanyWebHeader(
+            title: title,
+            onRefresh: () => _controller?.reload() ?? _load(),
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : _error.isNotEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: AppCard(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.public_off_rounded, color: AppColors.orange, size: 44),
+                                const SizedBox(height: 12),
+                                Text(_error, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900)),
+                                const SizedBox(height: 14),
+                                FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh_rounded), label: const Text('Coba Lagi')),
+                              ],
+                            ),
+                          ),
+                        )
+                      : WebViewWidget(controller: _controller!),
+            ),
           ),
         ],
       ),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-            : _error.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: AppCard(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.public_off_rounded, color: AppColors.orange, size: 44),
-                          const SizedBox(height: 12),
-                          Text(_error, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 14),
-                          FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh_rounded), label: const Text('Coba Lagi')),
-                        ],
+    );
+  }
+}
+
+/// Header teal datar (pola _LeaveFormHeader): AppBar standar tidak dipakai
+/// di sini agar halaman ini mengikuti bahasa myadmin.
+class _CompanyWebHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onRefresh;
+
+  const _CompanyWebHeader({required this.title, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .35),
+                  ),
+                ),
+                child: const Icon(Icons.public_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  )
-                : WebViewWidget(controller: _controller!),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Refresh',
+                child: InkWell(
+                  onTap: onRefresh,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .14),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .35),
+                      ),
+                    ),
+                    child: const Icon(Icons.refresh_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

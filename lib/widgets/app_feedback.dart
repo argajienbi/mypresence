@@ -189,7 +189,7 @@ Future<T?> showAppBottomSheet<T>({
               EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: .18),

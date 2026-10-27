@@ -40,7 +40,7 @@ class _AttendanceLocationSheet extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
           ),
           child: Column(
             children: [
@@ -71,6 +71,12 @@ class _AttendanceLocationSheet extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.bg,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -116,7 +122,7 @@ class _AttendanceLocationSheet extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(10),
                     child: SizedBox(
                       height: 280,
                       child: LeafletMapView(
@@ -155,6 +161,13 @@ class _AttendanceLocationSheet extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      side: const BorderSide(color: AppColors.line),
+                    ),
                     child: const Text('Tutup'),
                   ),
                 ),

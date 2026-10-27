@@ -146,7 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
             physics: const ClampingScrollPhysics(),
             child: Column(
               children: [
-                // Header gradient biru + tombol kembali + logo (mockup 06)
+                // Header gradient teal + tombol kembali + logo (mockup 06)
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.fromLTRB(24, topInset + 44, 24, 40),
@@ -186,7 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             height: 76,
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
+                              borderRadius: BorderRadius.circular(10),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: .12),
@@ -362,7 +362,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 height: 22,
                                 child: Checkbox(
                                   value: _agree,
-                                  activeColor: AppColors.green,
+                                  activeColor: AppColors.primary,
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(5)),
                                   onChanged: _loading
@@ -398,10 +398,37 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       AuthErrorBanner(message: _error),
                       const SizedBox(height: 14),
-                      GreenPrimaryButton(
-                          label: 'Daftar',
-                          onPressed: _register,
-                          loading: _loading),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Daftar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -121,7 +121,7 @@ class _LocationDetailSheet extends StatelessWidget {
                               horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: .14),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -333,7 +333,7 @@ class _StatCard extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: AppColors.primary, size: 20),
           ),

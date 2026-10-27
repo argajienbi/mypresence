@@ -36,14 +36,13 @@ class NotificationDetailPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                border:
-                    Border.all(color: AppColors.primary.withValues(alpha: .08)),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.line),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: .06),
-                    blurRadius: 26,
-                    offset: const Offset(0, 14),
+                    color: Colors.black.withValues(alpha: .08),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -108,7 +107,7 @@ class NotificationDetailPage extends StatelessWidget {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18)),
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                         child: Text(_referenceButtonLabel(notification.refType),
                             style:
@@ -181,10 +180,10 @@ class _DetailHeader extends StatelessWidget {
       child: Row(
         children: [
           Material(
-            color: Colors.white.withValues(alpha: .78),
-            shape: const CircleBorder(),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
             child: InkWell(
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(10),
               onTap: onBack,
               child: const SizedBox(
                 width: 44,
@@ -256,7 +255,7 @@ class _MessageCard extends StatelessWidget {
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .04),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: .12)),
       ),
       child: Text(notification.displayBody,
@@ -281,7 +280,7 @@ class _DetailInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.line)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,7 +367,7 @@ class _InformationBox extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: .08),
-          borderRadius: BorderRadius.circular(18)),
+          borderRadius: BorderRadius.circular(10)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

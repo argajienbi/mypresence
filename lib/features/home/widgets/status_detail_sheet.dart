@@ -65,7 +65,7 @@ class _StatusDetailSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: .16),
@@ -147,7 +147,7 @@ class _StatusDetailSheet extends StatelessWidget {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
@@ -182,7 +182,7 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: .30)),
       ),
       child: Row(
@@ -376,7 +376,7 @@ class _MiniInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: .18)),
       ),
       child: Column(
@@ -413,7 +413,7 @@ class _IconBox extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: color.withValues(alpha: .11),
-        borderRadius: BorderRadius.circular(size * .32),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(icon, color: color, size: size * .48),
     );
@@ -429,10 +429,10 @@ class _CloseButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.line.withValues(alpha: .55),
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(10),
         child: const SizedBox(
           width: 44,
           height: 44,

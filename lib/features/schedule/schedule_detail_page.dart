@@ -104,6 +104,8 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         title: const Text('Detail Jadwal'),
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -111,10 +113,11 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
         ),
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
           children: [
             _HeroScheduleCard(
               date: _selectedDate,
@@ -339,7 +342,7 @@ class _HeroScheduleCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: status.color.withValues(alpha: .06),
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: status.color.withValues(alpha: .18)),
       ),
       child: Row(
@@ -380,7 +383,7 @@ class _ModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.line)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.line)),
       child: Row(
         children: [
           _ModeButton(label: 'Harian', selected: mode == ScheduleViewMode.day, onTap: () => onChanged(ScheduleViewMode.day)),
@@ -404,11 +407,11 @@ class _ModeButton extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: selected ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: selected ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(10)),
           alignment: Alignment.center,
           child: Text(label, style: TextStyle(color: selected ? Colors.white : AppColors.muted, fontWeight: FontWeight.w900)),
         ),
@@ -463,13 +466,13 @@ class _DateStrip extends StatelessWidget {
           final color = schedule?.isWorkday == true ? AppColors.green : AppColors.muted;
           return InkWell(
             onTap: () => onPick(date),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
               width: 62,
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
                 color: selected ? AppColors.primary : Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: selected ? AppColors.primary : AppColors.line),
               ),
               child: Column(
@@ -500,7 +503,7 @@ class _TimeLineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.line)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.line)),
       child: Row(
         children: [
           Expanded(child: _TimeBox(icon: Icons.login_rounded, color: AppColors.green, label: 'Clock In', value: checkIn, status: status.label)),
@@ -558,7 +561,7 @@ class _InfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.line)),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.line)),
       child: Column(children: children),
     );
   }
@@ -601,10 +604,10 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.primary.withValues(alpha: .10),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         child: SizedBox(width: 48, height: 48, child: Icon(icon, color: AppColors.primary, size: 30)),
       ),
     );
@@ -623,7 +626,7 @@ class _IconBox extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: color.withValues(alpha: .11), borderRadius: BorderRadius.circular(size * .32)),
+      decoration: BoxDecoration(color: color.withValues(alpha: .11), borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: color, size: size * .48),
     );
   }
