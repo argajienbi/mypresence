@@ -8,6 +8,7 @@ import '../../services/attendance_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_feedback.dart';
 import '../../widgets/app_page_header.dart';
 import 'attendance_detail_sheet.dart';
 import 'history_models.dart';
@@ -315,11 +316,10 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   void _showCalendarSheet() {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _CalendarSheet(
+      backgroundColor: AppColors.bg,
+      child: _CalendarSheet(
         month: _month,
         dailyStatuses: _dailyStatuses,
         overtimeRows: _overtimeRows,
@@ -328,10 +328,10 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   void _showSummaryDetail(String title, List<String> dates, Color color) {
-    showModalBottomSheet<void>(
+    showAppBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _DateListSheet(title: title, dates: dates, color: color),
+      backgroundColor: AppColors.bg,
+      child: _DateListSheet(title: title, dates: dates, color: color),
     );
   }
 
@@ -1857,12 +1857,7 @@ class _CalendarSheet extends StatelessWidget {
       initialChildSize: .78,
       minChildSize: .48,
       maxChildSize: .94,
-      builder: (context, controller) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: ListView(
+      builder: (context, controller) => ListView(
           controller: controller,
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           children: [
@@ -1967,7 +1962,6 @@ class _CalendarSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -2017,11 +2011,7 @@ class _DateListSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final parsedDates =
         dates.map(DateTime.tryParse).whereType<DateTime>().toList()..sort();
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: SafeArea(
         top: false,

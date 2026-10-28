@@ -4,17 +4,16 @@ import '../../core/app_theme.dart';
 import '../../core/models/request_status_item.dart';
 import '../../core/utils.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_feedback.dart';
 import '../../widgets/attachment_preview.dart';
 
 Future<void> showRequestStatusDetailSheet({
   required BuildContext context,
   required RequestStatusItem item,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _RequestStatusDetailSheet(item: item),
+    child: _RequestStatusDetailSheet(item: item),
   );
 }
 
@@ -30,14 +29,9 @@ class _RequestStatusDetailSheet extends StatelessWidget {
     return SafeArea(
       child: FractionallySizedBox(
         heightFactor: .94,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
               Container(
                 width: 46,
                 height: 5,
@@ -203,7 +197,6 @@ class _RequestStatusDetailSheet extends StatelessWidget {
               ),
             ],
           ),
-        ),
       ),
     );
   }

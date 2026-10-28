@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_theme.dart';
+import '../../../widgets/app_feedback.dart';
 
 class StatusDetailData {
   final String status;
@@ -30,11 +31,9 @@ Future<void> showStatusDetailSheet({
   required BuildContext context,
   required StatusDetailData data,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _StatusDetailSheet(data: data),
+    child: _StatusDetailSheet(data: data),
   );
 }
 
@@ -61,19 +60,7 @@ class _StatusDetailSheet extends StatelessWidget {
     return SafeArea(
       child: Container(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .88),
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .16),
-              blurRadius: 30,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

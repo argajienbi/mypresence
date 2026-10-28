@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
 import '../services/storage_service.dart';
+import 'app_feedback.dart';
 
 class AttachmentPreviewTile extends StatelessWidget {
   final String photoUrl;
@@ -165,11 +166,9 @@ Future<void> showAttachmentPreviewSheet({
   String warningTitle = 'Perhatian',
   IconData warningIcon = Icons.info_outline_rounded,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _AttachmentPreviewSheet(
+    child: _AttachmentPreviewSheet(
       title: title,
       photoUrl: photoUrl,
       photoPath: photoPath,
@@ -215,46 +214,41 @@ class _AttachmentPreviewSheet extends StatelessWidget {
     return SafeArea(
       child: FractionallySizedBox(
         heightFactor: .92,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 46,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 46,
+              height: 5,
+              decoration: BoxDecoration(
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(999),
               ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 0, 12, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 12, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
               ),
+            ),
               if (_hasWarning) ...[
                 const SizedBox(height: 2),
                 Padding(
@@ -347,7 +341,6 @@ class _AttachmentPreviewSheet extends StatelessWidget {
               ),
             ],
           ),
-        ),
       ),
     );
   }

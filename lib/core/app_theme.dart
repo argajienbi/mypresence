@@ -98,6 +98,36 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
+      // Semua popup mengikuti token radius 10, termasuk yang dibuat
+      // langsung (bukan lewat helper di widgets/app_feedback.dart).
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+        ),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        headerBackgroundColor: AppColors.primary,
+        headerForegroundColor: Colors.white,
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+      ),
+      timePickerTheme: const TimePickerThemeData(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        hourMinuteColor: AppColors.primarySoft,
+        dayPeriodColor: AppColors.primarySoft,
+      ),
     );
   }
 }

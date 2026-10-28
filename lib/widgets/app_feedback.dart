@@ -169,6 +169,8 @@ Future<T?> showAppBottomSheet<T>({
   required BuildContext context,
   required Widget child,
   bool dismissible = true,
+  // Sheet riwayat memakai abu-abu latar (AppColors.bg), bukan putih.
+  Color backgroundColor = Colors.white,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -188,7 +190,7 @@ Future<T?> showAppBottomSheet<T>({
           padding:
               EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
@@ -231,7 +233,7 @@ Future<bool?> showAppConfirmationDialog({
             padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: .18),

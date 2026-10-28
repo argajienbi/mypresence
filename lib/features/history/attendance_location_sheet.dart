@@ -3,17 +3,16 @@ import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
 import '../../core/utils.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_feedback.dart';
 import '../home/widgets/leaflet_map_view.dart';
 
 Future<void> showAttendanceLocationSheet({
   required BuildContext context,
   required Map<String, dynamic> attendance,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _AttendanceLocationSheet(attendance: attendance),
+    child: _AttendanceLocationSheet(attendance: attendance),
   );
 }
 
@@ -37,17 +36,12 @@ class _AttendanceLocationSheet extends StatelessWidget {
     return SafeArea(
       child: FractionallySizedBox(
         heightFactor: .92,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 46,
-                height: 5,
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 46,
+              height: 5,
                 decoration: BoxDecoration(
                   color: AppColors.line,
                   borderRadius: BorderRadius.circular(999),
@@ -174,7 +168,6 @@ class _AttendanceLocationSheet extends StatelessWidget {
               ),
             ],
           ),
-        ),
       ),
     );
   }

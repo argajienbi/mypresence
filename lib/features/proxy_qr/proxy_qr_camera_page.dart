@@ -572,7 +572,7 @@ class _CameraBottomSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
       child: SafeArea(
         top: false,

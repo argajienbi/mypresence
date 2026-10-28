@@ -9,6 +9,7 @@ import '../../core/utils.dart';
 import '../../services/attendance_correction_service.dart';
 import '../../services/schedule_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/app_feedback.dart';
 import '../../widgets/attachment_preview.dart';
 import 'attendance_location_sheet.dart';
 import '../corrections/attendance_correction_form_page.dart';
@@ -19,11 +20,9 @@ Future<void> showAttendanceDetailSheet({
   required AppSession session,
   required DailyHistoryStatus item,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _AttendanceDetailSheet(session: session, item: item),
+    child: _AttendanceDetailSheet(session: session, item: item),
   );
 }
 
@@ -58,19 +57,7 @@ class _AttendanceDetailSheet extends StatelessWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * .90,
         ),
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .16),
-              blurRadius: 30,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
